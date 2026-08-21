@@ -11,3 +11,4 @@ export async function POST(request: NextRequest) {
     .select('*').eq('id', broker_connection_id).eq('user_id', user.id).single()
   if (!conn) return NextResponse.json({ error: "Not found" }, { status: 404 })
   const synced = await syncMetaTrades(user.id, conn.id, conn.account_id)
+  return NextResponse.json({ synced })
