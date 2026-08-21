@@ -1,17 +1,16 @@
-import MetaApi from 'metaapi.cloud-sdk'
 import { createClient } from '@/lib/supabase/server'
 import { detectTradingSession } from '@/lib/utils'
 
-const api = new MetaApi(process.env.META_API_TOKEN!)
-
-// Connect a MetaTrader account (call once during broker onboarding)
 export async function connectMetaAccount(userId: string, opts: {
   login: string
   password: string
-  server: string     // e.g. "ICMarkets-Demo"
+  server: string
   platform: 'mt4' | 'mt5'
   brokerConnectionId: string
 }) {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const MetaApi = require('metaapi.cloud-sdk').default
+  const api = new MetaApi(process.env.META_API_TOKEN!)
   const account = await api.metatraderAccountApi.createAccount({
     name: `TraderMind-${opts.login}`,
     type: 'cloud',
@@ -24,25 +23,30 @@ export async function connectMetaAccount(userId: string, opts: {
   await account.deploy()
   await account.waitConnected()
   const supabase = await createClient()
-  await supabase.from('broker_connections')
+  await supabase
+    .from('broker_connections')
     .update({ account_id: account.id, last_sync_at: new Date().toISOString() })
     .eq('id', opts.brokerConnectionId)
   return account.id
 }
 
-// Sync trade history (triggered manually by the user pressing Sync)
 export async function syncMetaTrades(
   userId: string,
   brokerConnectionId: string,
   metaAccountId: string
 ) {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const MetaApi = require('metaapi.cloud-sdk').default
+  const api = new MetaApi(process.env.META_API_TOKEN!)
   const supabase = await createClient()
   const account = await api.metatraderAccountApi.getAccount(metaAccountId)
   const startDate = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)
   const historyApi = account.getHistoricalTradeApi()
   const deals = await historyApi.getHistoricalDeals(startDate, new Date())
-  const trades = deals.filter(d => ['DEAL_TYPE_BUY','DEAL_TYPE_SELL'].includes(d.type))
-    .map(deal => ({
+
+  const trades = deals
+    .filter((d: any) => ['DEAL_TYPE_BUY', 'DEAL_TYPE_SELL'].includes(d.type))
+    .map((deal: any) => ({
       user_id: userId,
       broker_connection_id: brokerConnectionId,
       external_trade_id: deal.id,
@@ -59,12 +63,29 @@ export async function syncMetaTrades(
       session: detectTradingSession(deal.time),
       instrument_type: 'forex' as const,
     }))
+
   if (trades.length > 0) {
-    await supabase.from('trades')
+    await supabase
+      .from('trades')
       .upsert(trades, { onConflict: 'user_id,external_trade_id' })
   }
-  await supabase.from('broker_connections')
+
+  await supabase
+    .from('broker_connections')
     .update({ last_sync_at: new Date().toISOString() })
     .eq('id', brokerConnectionId)
+
   return trades.length
+}
+
+export async function getAccountInfo(metaAccountId: string) {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const MetaApi = require('metaapi.cloud-sdk').default
+  const api = new MetaApi(process.env.META_API_TOKEN!)
+  const account = await api.metatraderAccountApi.getAccount(metaAccountId)
+  const conn = account.getRPCConnection()
+  await conn.connect()
+  await conn.waitSynchronized()
+  const info = await conn.getAccountInformation()
+  return { balance: info.balance, equity: info.equity, currency: info.currency }
 }
