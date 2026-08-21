@@ -1,13 +1,13 @@
-// ============================================================
-// TRADERMIND — AI COACHING LAYER
-// Converts deterministic analytics into human coaching insights.
-// The LLM NEVER does calculations — only interpretation.
-// ============================================================
-
 import OpenAI from 'openai'
 import type { PerformanceAnalytics, AIReport, CoachingInsight } from '@/types'
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+// ── DO NOT instantiate OpenAI at module level ──
+// It runs at build time and fails without the env var.
+// Create it inside each function instead.
+
+function getOpenAI() {
+  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+}
 
 const COACH_SYSTEM_PROMPT = `You are TraderMind AI — an elite trading performance coach and behavioral analyst.
 
@@ -25,16 +25,16 @@ Your communication style:
 
 Always ground every insight in the analytics data provided.`
 
-// ── WEEKLY / MONTHLY REPORT ───────────────────────────────────
 export async function generateAIReport(
   analytics: PerformanceAnalytics,
   period: 'weekly' | 'monthly',
   userName: string
 ): Promise<Omit<AIReport, 'id' | 'user_id' | 'period_start' | 'period_end' | 'analytics' | 'created_at'>> {
+  const openai = getOpenAI()
   const prompt = buildReportPrompt(analytics, period, userName)
 
   const response = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
+    model: 'gpt-4o',
     temperature: 0.4,
     messages: [
       { role: 'system', content: COACH_SYSTEM_PROMPT },
@@ -81,12 +81,6 @@ function buildReportPrompt(
     .map(([flag, count]) => `${flag.replace(/_/g, ' ')}: ×${count}`)
     .join(', ')
 
-  const emotionSummary = Object.entries(analytics.emotion_distribution)
-    .filter(([, pct]) => pct > 0)
-    .sort((a, b) => Number(b[1]) - Number(a[1]))
-    .map(([e, pct]) => `${e.replace(/_/g, ' ')}: ${pct}%`)
-    .join(', ')
-
   return `
 Generate a ${period} performance coaching report for trader ${userName}.
 
@@ -97,34 +91,16 @@ Win Rate: ${analytics.win_rate}%
 Net PnL: $${analytics.net_pnl}
 Profit Factor: ${analytics.profit_factor}
 Avg Risk/Trade: ${analytics.avg_risk_per_trade}%
-Max Risk/Trade: ${analytics.max_risk_per_trade}%
-Avg R:R: ${analytics.avg_reward_risk}
 Max Drawdown: ${analytics.max_drawdown_pct}%
-
-=== STREAKS ===
-Current Win Streak: ${analytics.current_win_streak}
-Current Loss Streak: ${analytics.current_loss_streak}
-Best Win Streak: ${analytics.max_win_streak}
-Worst Loss Streak: ${analytics.max_loss_streak}
 
 === SESSION PERFORMANCE ===
 ${sessionSummary}
 
-Best Day: ${analytics.best_day_of_week}
-Worst Day: ${analytics.worst_day_of_week}
-Best Hour: ${analytics.best_hour}:00 UTC
-
 === TOP INSTRUMENTS ===
 ${topInstruments}
 
-=== STRATEGY PERFORMANCE ===
-${analytics.strategy_performance.map(s => `${s.strategy_name}: ${s.total_trades} trades, ${s.win_rate}% WR, best session: ${s.best_session}`).join('\n')}
-
 === BEHAVIORAL FLAGS ===
 ${flagSummary || 'None detected'}
-
-=== EMOTIONAL STATES ===
-${emotionSummary}
 
 === SCORES ===
 Discipline Score: ${analytics.discipline_score}/100
@@ -134,32 +110,32 @@ Emotional Stability: ${analytics.emotional_stability_score}/100
 
 Respond ONLY with a JSON object with these exact keys:
 {
-  "behavioral_analysis": "2-3 paragraphs analyzing behavioral patterns, written as a coach",
-  "psychological_patterns": "1-2 paragraphs on psychological observations and emotional patterns",
-  "discipline_feedback": "1-2 paragraphs on rule adherence, consistency, and discipline quality",
-  "risk_analysis": "1-2 paragraphs on risk management quality and patterns",
-  "strategy_consistency": "1-2 paragraphs on strategy usage and consistency",
-  "improvement_suggestions": ["5-7 specific, actionable improvement suggestions"],
-  "key_insights": ["3-5 most important insights as concise bullet points, referencing specific data"]
+  "behavioral_analysis": "2-3 paragraphs analyzing behavioral patterns",
+  "psychological_patterns": "1-2 paragraphs on psychological observations",
+  "discipline_feedback": "1-2 paragraphs on rule adherence and consistency",
+  "risk_analysis": "1-2 paragraphs on risk management quality",
+  "strategy_consistency": "1-2 paragraphs on strategy usage",
+  "improvement_suggestions": ["5-7 specific actionable suggestions"],
+  "key_insights": ["3-5 most important insights referencing specific data"]
 }
 `
 }
 
-// ── REAL-TIME COACHING CHAT ───────────────────────────────────
 export async function chatWithCoach(
   userMessage: string,
   analytics: PerformanceAnalytics,
   conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }>,
 ): Promise<string> {
+  const openai = getOpenAI()
+
   const contextPrompt = `
 You have access to this trader's current performance data:
 - Win Rate: ${analytics.win_rate}%
 - Net PnL: $${analytics.net_pnl}
 - Discipline Score: ${analytics.discipline_score}/100
 - Avg Risk: ${analytics.avg_risk_per_trade}%
-- Top session: ${getBestSession(analytics)}
+- Best session: ${getBestSession(analytics)}
 - Key behavioral flags: ${getTopFlags(analytics)}
-- Emotional state distribution: ${getTopEmotions(analytics)}
 
 Answer questions about their trading behavior, performance patterns, and psychology.
 Do NOT predict markets. Do NOT give buy/sell signals.
@@ -172,7 +148,7 @@ Do NOT predict markets. Do NOT give buy/sell signals.
   ]
 
   const response = await openai.chat.completions.create({
-    model: 'gpt-4o',
+    model: 'gpt-4o-mini',
     temperature: 0.5,
     max_tokens: 600,
     messages,
@@ -181,37 +157,35 @@ Do NOT predict markets. Do NOT give buy/sell signals.
   return response.choices[0]?.message?.content ?? 'Unable to generate response.'
 }
 
-// ── PROACTIVE INSIGHTS ────────────────────────────────────────
 export async function generateProactiveInsights(
   analytics: PerformanceAnalytics,
   recentTrades: number,
   currentStreak: { type: 'win' | 'loss'; count: number }
 ): Promise<CoachingInsight[]> {
+  const openai = getOpenAI()
+
   const prompt = `
 Given this trader's data, generate 2-3 proactive coaching insights.
-They should be timely and relevant to what's happening RIGHT NOW in their trading.
 
 Recent context:
 - Recent trades this week: ${recentTrades}
 - Current streak: ${currentStreak.count} ${currentStreak.type}s
 - Discipline score: ${analytics.discipline_score}/100
-- Key flags this period: ${getTopFlags(analytics)}
+- Key flags: ${getTopFlags(analytics)}
 
 Generate insights as JSON array:
 [
   {
     "insight_type": "pattern|warning|achievement|suggestion",
     "title": "Short title (max 8 words)",
-    "body": "Specific coaching insight (2-3 sentences, reference data)",
+    "body": "Specific coaching insight (2-3 sentences)",
     "priority": 1-10
   }
 ]
-
-Focus on what matters most RIGHT NOW. Be direct. Reference specific numbers.
 `
 
   const response = await openai.chat.completions.create({
-    model: 'gpt-4o',
+    model: 'gpt-4o-mini',
     temperature: 0.4,
     messages: [
       { role: 'system', content: COACH_SYSTEM_PROMPT },
@@ -236,7 +210,6 @@ Focus on what matters most RIGHT NOW. Be direct. Reference specific numbers.
   }))
 }
 
-// ── TRADE NARRATIVE ───────────────────────────────────────────
 export async function generateTradeNarrative(
   trade: {
     symbol: string
@@ -250,39 +223,22 @@ export async function generateTradeNarrative(
   },
   analytics: PerformanceAnalytics
 ): Promise<string> {
+  const openai = getOpenAI()
   const outcome = trade.pnl > 0 ? `win of $${trade.pnl}` : `loss of $${Math.abs(trade.pnl)}`
 
-  const prompt = `
-Analyze this specific trade from a behavioral and psychological perspective.
-
-Trade: ${trade.symbol} ${trade.direction}, ${outcome}, ${trade.rr}R
-Session: ${trade.session}
-Emotional state: ${trade.emotion}
-Alignment score: ${trade.alignmentScore}/100
-Trader notes: ${trade.notes ?? 'none'}
-
-Historical context:
-- Win rate in ${trade.session}: ${analytics.session_performance[trade.session as keyof typeof analytics.session_performance]?.win_rate ?? 'N/A'}%
-- Overall discipline score: ${analytics.discipline_score}/100
-
-Write 2-3 sentences analyzing the BEHAVIORAL quality of this trade — not the outcome.
-Focus on decision quality, emotional state, and what the trader can learn.
-`
-
   const response = await openai.chat.completions.create({
-    model: 'gpt-4o',
+    model: 'gpt-4o-mini',
     temperature: 0.4,
     max_tokens: 200,
     messages: [
       { role: 'system', content: COACH_SYSTEM_PROMPT },
-      { role: 'user', content: prompt },
+      { role: 'user', content: `Analyze this trade behaviorally: ${trade.symbol} ${trade.direction}, ${outcome}, emotion: ${trade.emotion}, alignment: ${trade.alignmentScore}/100. Write 2-3 sentences on decision quality, not outcome.` },
     ],
   })
 
   return response.choices[0]?.message?.content ?? ''
 }
 
-// ── HELPERS ───────────────────────────────────────────────────
 function getBestSession(analytics: PerformanceAnalytics): string {
   return Object.entries(analytics.session_performance)
     .sort((a, b) => b[1].win_rate - a[1].win_rate)[0]?.[0] ?? 'london'
@@ -295,12 +251,4 @@ function getTopFlags(analytics: PerformanceAnalytics): string {
     .slice(0, 3)
     .map(([k, v]) => `${k.replace(/_/g, ' ')} (×${v})`)
     .join(', ') || 'none'
-}
-
-function getTopEmotions(analytics: PerformanceAnalytics): string {
-  return Object.entries(analytics.emotion_distribution)
-    .sort((a, b) => Number(b[1]) - Number(a[1]))
-    .slice(0, 3)
-    .map(([k, v]) => `${k.replace(/_/g, ' ')} ${v}%`)
-    .join(', ')
 }
