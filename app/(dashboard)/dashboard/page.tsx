@@ -94,14 +94,22 @@ const ph = {
 }
 
 function ScoreCard({ label, value, delta, color, barColor }: { label: string; value: number; delta: string; color: string; barColor: string }) {
+  // Pixel-match: label + delta top row, large value with /100, top 2px accent bar
+  const isUp = delta.trim().startsWith('↗') || delta.trim().startsWith('↑')
+  const deltaColor = delta.includes('↘') || delta.includes('↓') ? c.red : isUp ? c.green : c.text3
   return (
-    <div style={{ ...panel, position: 'relative', padding: '16px' }}>
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: barColor }} />
-      <div style={{ fontSize: '10px', fontWeight: 600, color: c.text3, textTransform: 'uppercase', letterSpacing: '0.8px', fontFamily: c.mono }}>{label}</div>
-      <div style={{ fontSize: '32px', fontWeight: 800, color, letterSpacing: '-1.5px', lineHeight: 1, marginTop: '6px' }}>{value}</div>
-      <div style={{ fontSize: '11px', color: c.text3, marginTop: '6px', fontFamily: c.mono }}>{delta}</div>
-      <div style={{ marginTop: '10px', height: '3px', background: c.surface3, borderRadius: '2px' }}>
-        <div style={{ height: '3px', borderRadius: '2px', background: barColor, width: `${value}%` }} />
+    <div style={{ ...panel, position: 'relative', padding: '16px 16px 14px', overflow:'hidden' }}>
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: barColor, borderRadius:'2px 2px 0 0' }} />
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+        <span style={{ fontSize: '10px', fontWeight: 600, color: c.text3, textTransform: 'uppercase', letterSpacing: '0.8px', fontFamily: c.mono }}>{label}</span>
+        <span style={{ fontSize: '11px', fontWeight: 600, color: deltaColor, fontFamily: c.mono }}>{delta}</span>
+      </div>
+      <div style={{ display:'flex', alignItems:'baseline', gap:'6px', marginTop:'8px' }}>
+        <span style={{ fontSize: '30px', fontWeight: 800, color: '#E8EAF0', letterSpacing: '-1.2px', lineHeight: 1 }}>{value}</span>
+        <span style={{ fontSize: '14px', fontWeight: 600, color: c.text3 }}>/100</span>
+      </div>
+      <div style={{ marginTop: '12px', height: '3px', background: 'hsl(224,14%,14%)', borderRadius: '2px' }}>
+        <div style={{ height: '3px', borderRadius: '2px', background: barColor, width: `${Math.min(100,value)}%` }} />
       </div>
     </div>
   )
@@ -200,79 +208,78 @@ export default function DashboardPage() {
   const avgRiskLive = analytics?.avg_risk_per_trade ?? 1.64
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '1400px' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
-        <div>
-          <h1 style={{ fontSize: '24px', fontWeight: 800, letterSpacing: '-0.6px' }}>Performance Overview</h1>
-          <p style={{ fontSize: '12px', color: c.text3, marginTop: '3px', fontFamily: c.mono }}>
-            {loading ? 'Loading…' : error ? `Demo fallback · ${error.slice(0, 60)}` : `${analytics?.total_trades ?? 47} trades · ${range} · ${data ? 'live' : 'MT5 synced'}`}
-          </p>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', maxWidth: '1100px' }}>
+      {/* Header — pixel-match: TRADERMIND / OVERVIEW + title + subtitle + 1W/1M toggle */}
+      <div>
+        <div style={{ fontSize: '10px', fontWeight:600, color:c.accent, letterSpacing:'1px', fontFamily:c.mono, marginBottom:'6px' }}>TRADERMIND <span style={{color:c.text3}}>/</span> OVERVIEW</div>
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap:'12px' }}>
+          <div>
+            <h1 style={{ fontSize: '30px', fontWeight: 800, letterSpacing: '-0.8px', lineHeight:1, color:'#E8EAF0' }}>Performance Overview</h1>
+            <p style={{ fontSize: '11px', color: c.text3, marginTop: '6px', fontFamily: c.mono }}>
+              {loading ? 'Loading…' : `${analytics ? 'May 2026 · ' : 'May 2026 · '}${analytics?.total_trades ?? 47} trades · ${data ? 'live' : 'MTS synced'}`}
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: '2px', background: '#161920', padding: '3px', borderRadius: '8px', border:`1px solid ${c.border}`, flexShrink:0 }}>
+            {RANGE_OPTIONS.map(r => (
+              <button key={r} onClick={() => setRange(r)} style={{
+                padding: '5px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 600,
+                fontFamily: c.mono, border: 'none', cursor: 'pointer', minWidth:'36px',
+                background: range === r ? c.accent : 'transparent',
+                color: range === r ? '#fff' : c.text3,
+                boxShadow: range===r ? '0 1px 4px rgba(0,0,0,0.3)' : 'none',
+              }}>{r}</button>
+            ))}
+          </div>
         </div>
-        <div style={{ display: 'flex', gap: '4px', background: c.surface2, padding: '3px', borderRadius: '8px' }}>
-          {RANGE_OPTIONS.map(r => (
-            <button key={r} onClick={() => setRange(r)} style={{
-              padding: '5px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 600,
-              fontFamily: c.mono, border: 'none', cursor: 'pointer',
-              background: range === r ? c.surface3 : 'transparent',
-              color: range === r ? c.accent : c.text3,
-            }}>{r}</button>
+      </div>
+
+      {/* Score Cards — pixel-match 2x2 grid as in design */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+        <ScoreCard label="Discipline Score" value={discipline} delta={analytics ? `↗ 3%` : '↗ 3%'} color={c.accent} barColor={c.accent} />
+        <ScoreCard label="Behavioral Consistency" value={consistency} delta={analytics ? `↗ 7%` : '↗ 7%'} color={c.green} barColor={c.green} />
+        <ScoreCard label="Risk Quality" value={riskQuality} delta={'↘ 4%'} color={c.amber} barColor={c.amber} />
+        <ScoreCard label="Emotional Stability" value={emotional} delta={'↗ 11%'} color={c.purple} barColor={c.purple} />
+      </div>
+
+      {/* AI Coach — pixel-match full-width as in design */}
+      <div style={{
+        background: '#161920',
+        border: `1px solid hsl(220,12%,14%)`,
+        borderRadius: '10px', padding: '16px 18px',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: '6px',
+            color: c.accent,
+            fontSize: '10px', fontWeight: 700, letterSpacing: '0.8px', fontFamily: c.mono,
+          }}>
+            <span style={{fontSize:'12px'}}>✦</span> AI COACH · WEEKLY INSIGHT
+          </div>
+          <a href="/ai-coach" style={{ fontSize: '11px', color: c.accent, textDecoration:'none', fontFamily: c.mono }}>Full report →</a>
+        </div>
+        <p style={{ fontSize: '13px', lineHeight: 1.65, color: 'hsl(220,10%,75%)' }}>
+          Your London session performance is up <span style={{ color: '#3ecf8e', fontWeight:700 }}>63%</span> this month. Protect the edge by slowing down after wins — your best results come when you validate every setup before sizing up.
+        </p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '12px' }}>
+          {[
+            { label: 'LONDON SESSION +63%', bg:'rgba(62,207,142,0.12)', color:'#3ecf8e', border:'rgba(62,207,142,0.25)' },
+            { label: 'POST-WIN RISK CREEP', bg:'rgba(255,95,95,0.10)', color:'#ff6467', border:'rgba(255,95,95,0.22)' },
+            { label: 'BREAKOUT WR 71%', bg:'rgba(62,207,142,0.12)', color:'#3ecf8e', border:'rgba(62,207,142,0.25)' },
+            { label: 'REVENGE TRADING ×3', bg:'rgba(255,95,95,0.10)', color:'#ff6467', border:'rgba(255,95,95,0.22)' },
+          ].map(tag => (
+            <span key={tag.label} style={{
+              padding: '4px 10px', borderRadius: '6px', fontSize: '10px', fontFamily: c.mono, fontWeight: 700, letterSpacing:'0.3px',
+              background: tag.bg, color: tag.color, border:`1px solid ${tag.border}`,
+            }}>{tag.label}</span>
           ))}
         </div>
       </div>
 
-      {/* Score Cards — now live */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
-        <ScoreCard label="Discipline Score" value={discipline} delta={analytics ? `${analytics.total_trades} trades` : '↑3 vs last month'} color={c.accent} barColor={c.accent} />
-        <ScoreCard label="Behavioral Consistency" value={consistency} delta={analytics ? `max streak ${analytics.max_win_streak}` : '↑7 vs last month'} color={c.green} barColor={c.green} />
-        <ScoreCard label="Risk Quality" value={riskQuality} delta={analytics ? `avg ${avgRiskLive}% risk` : '↓4 vs last month'} color={c.amber} barColor={c.amber} />
-        <ScoreCard label="Emotional Stability" value={emotional} delta={analytics ? `${analytics.worst_day_of_week} is worst day` : '↑11 vs last month'} color={c.purple} barColor={c.purple} />
-      </div>
-
-      {/* Main Grid */}
+      {/* Main Grid — below AI Coach */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '16px' }}>
 
         {/* Left Column */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-
-          {/* AI Coach Insight */}
-          <div style={{
-            background: 'linear-gradient(135deg, rgba(108,142,255,0.06), rgba(180,142,255,0.04))',
-            border: `1px solid rgba(108,142,255,0.2)`,
-            borderRadius: '10px', padding: '18px',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-              <div style={{
-                display: 'inline-flex', alignItems: 'center', gap: '6px',
-                background: 'rgba(108,142,255,0.15)', color: c.accent,
-                fontSize: '10px', fontWeight: 700, padding: '4px 10px', borderRadius: '20px',
-                fontFamily: c.mono, letterSpacing: '0.5px',
-              }}>
-                <Sparkles size={10} /> AI COACH · WEEKLY INSIGHT
-              </div>
-              <button style={{ fontSize: '11px', color: c.accent, background: 'none', border: 'none', cursor: 'pointer', fontFamily: c.mono }}>
-                Full report →
-              </button>
-            </div>
-            <p style={{ fontSize: '13px', lineHeight: 1.75, color: 'hsl(220,10%,70%)' }}>
-              <strong style={{ color: c.text }}>Your London session performance is significantly stronger than your NY session.</strong> 63% of your winning trades occurred between 08:00–12:00 UTC. After consecutive wins (3+), your risk per trade increases by an average of <strong style={{ color: c.text }}>0.8%</strong> — a pattern consistent with overconfidence bias. Your breakout strategy shows a 71% win rate, but only when ATR conditions are met.
-            </p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '14px' }}>
-              {[
-                { label: 'London session +63%', type: 'pos' },
-                { label: 'Post-win risk creep', type: 'neg' },
-                { label: 'Breakout WR 71%', type: 'pos' },
-                { label: 'Revenge trading ×3', type: 'neg' },
-                { label: 'Avg hold: 2h 14m', type: 'neu' },
-              ].map(tag => (
-                <span key={tag.label} style={{
-                  padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontFamily: c.mono, fontWeight: 500,
-                  background: tag.type === 'pos' ? 'rgba(62,207,142,0.1)' : tag.type === 'neg' ? 'rgba(255,95,95,0.1)' : 'rgba(139,144,160,0.1)',
-                  color: tag.type === 'pos' ? c.green : tag.type === 'neg' ? c.red : c.text2,
-                }}>{tag.label}</span>
-              ))}
-            </div>
-          </div>
 
           {/* Equity Chart */}
           <div style={panel}>

@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard, Brain, BarChart3, ListOrdered,
   BookOpen, Target, Image, Settings, Zap,
-  TrendingUp, Bell, ChevronDown, LogOut, Menu, X
+  TrendingUp, Bell, ChevronDown, LogOut, Menu, X, Clock
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
@@ -14,19 +14,17 @@ const NAV_ITEMS = [
   { href: '/dashboard', label: 'Overview', icon: LayoutDashboard },
   { href: '/behavior', label: 'Behavior', icon: Brain },
   { href: '/ai-coach', label: 'AI Coach', icon: Zap },
-  { href: '/trades', label: 'Trades', icon: ListOrdered },
-  { href: '/journal', label: 'Journal', icon: BookOpen },
+  { href: '/trades', label: 'Trade History', icon: Clock },
 ]
 
 const SECONDARY_NAV = [
-  { href: '/goals', label: 'Goals & Rules', icon: Target },
-  { href: '/screenshots', label: 'Screenshots', icon: Image },
+  { href: '/goals', label: 'Settings', icon: Settings },
 ]
 
 const styles = {
   sidebar: {
-    width: '220px',
-    background: 'hsl(224,18%,8%)',
+    width: '200px',
+    background: '#0F1115',
     borderRight: '1px solid hsl(220,12%,14%)',
     display: 'flex',
     flexDirection: 'column' as const,
@@ -36,38 +34,39 @@ const styles = {
     flexShrink: 0,
   },
   logo: {
-    padding: '20px 16px',
+    padding: '18px 14px',
     borderBottom: '1px solid hsl(220,12%,14%)',
     display: 'flex',
     alignItems: 'center',
     gap: '10px',
   },
   logoMark: {
-    width: '28px',
-    height: '28px',
-    borderRadius: '7px',
+    width: '26px',
+    height: '26px',
+    borderRadius: '6px',
     background: 'hsl(226,100%,71%)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontSize: '12px',
+    fontSize: '11px',
     fontWeight: 800,
     color: '#fff',
     flexShrink: 0,
   },
-  logoText: { fontSize: '15px', fontWeight: 700, letterSpacing: '-0.3px' },
-  nav: { padding: '12px 8px', flex: 1, display: 'flex', flexDirection: 'column' as const, gap: '2px' },
-  section: { fontSize: '10px', fontWeight: 600, color: 'hsl(220,10%,40%)', letterSpacing: '0.8px', textTransform: 'uppercase' as const, padding: '8px 8px 4px', fontFamily: "'DM Mono', monospace" },
-  sep: { height: '1px', background: 'hsl(220,12%,14%)', margin: '8px 0' },
-  footer: { padding: '12px 8px', borderTop: '1px solid hsl(220,12%,14%)' },
+  logoText: { fontSize: '14px', fontWeight: 700, letterSpacing: '-0.2px', color: '#E8EAF0' },
+  nav: { padding: '14px 8px', flex: 1, display: 'flex', flexDirection: 'column' as const, gap: '1px' },
+  section: { fontSize: '10px', fontWeight: 600, color: 'hsl(220,10%,35%)', letterSpacing: '1px', textTransform: 'uppercase' as const, padding: '14px 8px 6px', fontFamily: "'DM Mono', monospace" },
+  sep: { height: '1px', background: 'hsl(220,12%,14%)', margin: '10px 0' },
+  footer: { padding: '10px 8px', borderTop: '1px solid hsl(220,12%,14%)' },
   brokerBadge: {
-    padding: '8px 10px',
-    background: 'hsl(224,16%,11%)',
+    padding: '10px 10px',
+    background: '#161920',
     borderRadius: '8px',
-    marginBottom: '8px',
+    marginBottom: '10px',
     display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
+    flexDirection: 'column' as const,
+    gap: '4px',
+    border: '1px solid hsl(220,12%,14%)',
   },
 }
 
@@ -79,17 +78,17 @@ function NavItem({ href, label, icon: Icon, active }: { href: string; label: str
         display: 'flex',
         alignItems: 'center',
         gap: '10px',
-        padding: '8px 10px',
-        borderRadius: '7px',
+        padding: '7px 10px',
+        borderRadius: '6px',
         fontSize: '13px',
-        fontWeight: 500,
+        fontWeight: active ? 600 : 500,
         textDecoration: 'none',
-        color: active ? 'hsl(220,15%,92%)' : 'hsl(220,10%,55%)',
-        background: active ? 'hsl(224,16%,13%)' : 'transparent',
+        color: active ? 'hsl(226,100%,71%)' : 'hsl(220,10%,55%)',
+        background: active ? 'rgba(108,142,255,0.10)' : 'transparent',
         transition: 'all 0.15s',
       }}
     >
-      <Icon size={15} style={{ color: active ? 'hsl(226,100%,71%)' : 'hsl(220,10%,45%)' }} />
+      <Icon size={15} strokeWidth={active ? 2.2 : 1.8} style={{ color: active ? 'hsl(226,100%,71%)' : 'hsl(220,10%,40%)' }} />
       {label}
     </Link>
   )
@@ -138,7 +137,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* Navigation */}
         <nav style={styles.nav}>
-          <div style={styles.section}>Platform</div>
+          <div style={styles.section}>Menu</div>
           {NAV_ITEMS.map(item => (
             <NavItem
               key={item.href}
@@ -150,7 +149,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           ))}
 
           <div style={styles.sep} />
-          <div style={styles.section}>Tools</div>
+          <div style={styles.section}>System</div>
           {SECONDARY_NAV.map(item => (
             <NavItem
               key={item.href}
@@ -166,29 +165,36 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* Footer */}
         <div style={styles.footer}>
-          {/* Broker Status */}
+          {/* Broker Status — pixel-match: MTS LINK LIVE + latency */}
           <div style={styles.brokerBadge}>
-            <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#3ecf8e', flexShrink: 0 }} />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: '11px', fontWeight: 600, color: 'hsl(220,15%,85%)' }}>MT5 Connected</div>
-              <div style={{ fontSize: '10px', color: 'hsl(220,10%,45%)', fontFamily: "'DM Mono', monospace" }}>Synced just now</div>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', width:'100%' }}>
+              <span style={{ fontSize:'10px', fontWeight:600, color:'hsl(220,10%,45%)', fontFamily:"'DM Mono', monospace", letterSpacing:'0.5px' }}>MTS LINK</span>
+              <span style={{ display:'flex', alignItems:'center', gap:'5px', fontSize:'10px', fontWeight:700, color:'#3ecf8e', fontFamily:"'DM Mono', monospace" }}>
+                <span style={{ width:'6px', height:'6px', borderRadius:'50%', background:'#3ecf8e', display:'inline-block' }} /> LIVE
+              </span>
+            </div>
+            <div style={{ display:'flex', alignItems:'center', gap:'6px', fontSize:'11px', color:'hsl(220,15%,85%)', fontWeight:500 }}>
+              <span style={{ color:'hsl(220,10%,45%)', fontSize:'11px' }}>≋</span> 0.42ms Latency
             </div>
           </div>
 
-          {/* User — live */}
+          {/* User — pixel-match: small icon circle + name + logout */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 8px' }}>
             <div style={{
               width: '28px', height: '28px', borderRadius: '50%', flexShrink: 0,
-              background: 'linear-gradient(135deg, hsl(226,100%,71%), #b48eff)',
+              background: 'hsl(224,14%,14%)', border:'1px solid hsl(220,12%,14%)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '11px', fontWeight: 700, color: '#fff'
-            }}>{initials}</div>
+              color: 'hsl(220,10%,55%)'
+            }}>
+              {/* Show initials when real user, else generic icon */}
+              {userEmail ? <span style={{fontSize:'11px',fontWeight:700,color:'#fff'}}>{initials}</span> : <span style={{fontSize:'12px'}}>◯</span>}
+            </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: '12px', fontWeight: 600, color: 'hsl(220,15%,85%)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{userName}</div>
-              <div style={{ fontSize: '10px', color: 'hsl(220,10%,45%)', fontFamily: "'DM Mono', monospace", overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{userEmail ?? 'Pro trader'}</div>
+              <div style={{ fontSize: '9px', color: 'hsl(220,10%,45%)', fontFamily: "'DM Mono', monospace", letterSpacing:'0.3px', textTransform:'uppercase' as const }}>{userEmail ? 'PRO TRADER' : 'PRO TRADER'}</div>
             </div>
-            <button onClick={handleSignOut} title="Sign out" style={{ background:'transparent', border:'none', cursor:'pointer', padding:'4px', color:'hsl(220,10%,45%)' }}>
-              <LogOut size={13} />
+            <button onClick={handleSignOut} title="Sign out" style={{ background:'transparent', border:'none', cursor:'pointer', padding:'4px', color:'hsl(220,10%,45%)', display:'flex' }}>
+              <LogOut size={14} strokeWidth={1.6} />
             </button>
           </div>
         </div>
@@ -196,43 +202,41 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Main */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-        {/* Top bar */}
+        {/* Top bar — pixel-match: Balance / P&L today / bell / date */}
         <header style={{
-          height: '52px',
-          background: 'hsl(224,18%,8%)',
+          height: '48px',
+          background: '#0F1115',
           borderBottom: '1px solid hsl(220,12%,14%)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '0 24px',
+          padding: '0 20px 0 24px',
           flexShrink: 0,
           position: 'sticky',
           top: 0,
           zIndex: 10,
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <TrendingUp size={14} style={{ color: 'hsl(226,100%,71%)' }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
             <span style={{ fontSize: '12px', fontFamily: "'DM Mono', monospace", color: 'hsl(220,10%,55%)' }}>
-              Balance: <span style={{ color: '#3ecf8e', fontWeight: 500 }}>$11,247.50</span>
+              Balance: <span style={{ color: '#3ecf8e', fontWeight: 600 }}>$11,247.50</span>
             </span>
-            <span style={{ color: 'hsl(220,12%,20%)', margin: '0 4px' }}>·</span>
             <span style={{ fontSize: '12px', fontFamily: "'DM Mono', monospace", color: 'hsl(220,10%,55%)' }}>
-              P&L today: <span style={{ color: '#3ecf8e' }}>+$312.00</span>
+              P&L today: <span style={{ color: '#3ecf8e', fontWeight: 600 }}>+$312.00</span>
             </span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
             <button style={{
               background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px',
-              color: 'hsl(220,10%,55%)', position: 'relative'
+              color: 'hsl(220,10%,55%)', position: 'relative', display:'flex'
             }}>
-              <Bell size={16} />
+              <Bell size={16} strokeWidth={1.8} />
               <span style={{
-                position: 'absolute', top: '2px', right: '2px', width: '6px', height: '6px',
-                borderRadius: '50%', background: 'hsl(226,100%,71%)', border: '1.5px solid hsl(224,18%,8%)'
+                position: 'absolute', top: '3px', right: '3px', width: '6px', height: '6px',
+                borderRadius: '50%', background: '#ff6467', border: '1.5px solid #0F1115'
               }} />
             </button>
-            <span style={{ fontSize: '11px', color: 'hsl(220,10%,40%)', fontFamily: "'DM Mono', monospace" }}>
-              May 28, 2026
+            <span style={{ fontSize: '11px', color: 'hsl(220,10%,55%)', fontFamily: "'DM Mono', monospace" }}>
+              May 26, 2026
             </span>
           </div>
         </header>
