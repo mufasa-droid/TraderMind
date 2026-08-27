@@ -116,8 +116,8 @@ export function sessionTime(session: string): string {
   const times: Record<string, string> = {
     asian: '00:00–08:00 UTC',
     london: '08:00–12:00 UTC',
-    new_york: '13:00–17:00 UTC',
     overlap: '12:00–16:00 UTC',
+    new_york: '16:00–22:00 UTC',
   }
   return times[session] ?? ''
 }
@@ -155,9 +155,11 @@ export function getDateRange(label: '1W' | '1M' | '3M' | 'YTD' | 'ALL') {
 export function detectTradingSession(timestamp: string | Date): 'asian' | 'london' | 'new_york' | 'overlap' {
   const d = typeof timestamp === 'string' ? new Date(timestamp) : timestamp
   const hour = d.getUTCHours()
+  // Discrete buckets — no shadowing:
+  //  08-12 London, 12-16 Overlap, 16-22 New York, else Asian
   if (hour >= 12 && hour < 16) return 'overlap'
   if (hour >= 8 && hour < 12) return 'london'
-  if (hour >= 13 && hour < 17) return 'new_york'
+  if (hour >= 16 && hour < 22) return 'new_york'
   return 'asian'
 }
 

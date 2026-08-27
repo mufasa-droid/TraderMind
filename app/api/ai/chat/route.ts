@@ -23,17 +23,17 @@ export async function POST(request: NextRequest) {
     .gte('opened_at', start)
     .order('opened_at', { ascending: true })
 
-  const { data: logs } = await supabase
-    .from('behavioral_logs')
-    .select('*')
-    .eq('user_id', user.id)
-    .gte('logged_at', start)
+  const [{ data: logs }, { data: settings }] = await Promise.all([
+    supabase.from('behavioral_logs').select('*').eq('user_id', user.id).gte('logged_at', start),
+    supabase.from('user_settings').select('max_risk_per_trade_pct, max_daily_loss_pct').eq('user_id', user.id).maybeSingle(),
+  ])
 
   const analytics = computePerformanceAnalytics(
     (trades ?? []) as Trade[],
     (logs ?? []) as BehavioralLog[],
     start,
-    end
+    end,
+    settings ?? undefined
   )
 
   const reply = await chatWithCoach(message, analytics, history ?? [])

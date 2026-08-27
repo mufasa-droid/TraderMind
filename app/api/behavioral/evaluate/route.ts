@@ -11,12 +11,12 @@ export async function POST(request: NextRequest) {
 
   const body: TradeEvaluationRequest = await request.json()
 
-  // Fetch user settings
+  // Fetch user settings — use maybeSingle to avoid throw when no row
   const { data: settings } = await supabase
     .from('user_settings')
     .select('*')
     .eq('user_id', user.id)
-    .single()
+    .maybeSingle()
 
   if (!settings) return NextResponse.json({ error: 'User settings not found' }, { status: 404 })
 
@@ -40,7 +40,8 @@ export async function POST(request: NextRequest) {
     (trades ?? []) as Trade[],
     (logs ?? []) as BehavioralLog[],
     start,
-    end
+    end,
+    { max_risk_per_trade_pct: settings.max_risk_per_trade_pct, max_daily_loss_pct: settings.max_daily_loss_pct }
   )
 
   const result = evaluateTrade(body, analytics, {

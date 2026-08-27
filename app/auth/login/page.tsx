@@ -2,7 +2,9 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Eye, EyeOff, ArrowRight } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
 
 
 const c = {
@@ -12,8 +14,10 @@ const c = {
 }
 
 export default function LoginPage() {
+  const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [email, setEmail] = useState(
   process.env.NEXT_PUBLIC_DEMO_USER_EMAIL ?? ''
   )
@@ -24,20 +28,36 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    // In production: call Supabase auth
-    await new Promise(r => setTimeout(r, 800))
-    window.location.href = '/dashboard'
+    setError(null)
+    try {
+      const supabase = createClient()
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+      if (signInError) {
+        if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+          console.warn('Demo mode: Supabase sign-in failed, navigating to dashboard anyway:', signInError.message)
+          router.push('/dashboard')
+          router.refresh()
+          return
+        }
+        setError(signInError.message)
+        return
+      }
+      router.push('/dashboard')
+      router.refresh()
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      console.error('Sign-in exception:', msg)
+      if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+        console.warn('Demo mode: exception bypass → /dashboard')
+        router.push('/dashboard')
+        router.refresh()
+        return
+      }
+      setError(msg)
+    } finally {
+      setLoading(false)
+    }
   }
-
-  {process.env.NEXT_PUBLIC_DEMO_MODE === "true" && (
-    <div style={{
-      padding: "10px 14px", borderRadius: "8px", marginBottom: "16px",
-      background: "rgba(79,110,247,0.1)", border: "1px solid rgba(79,110,247,0.3)",
-      fontSize: "12px", color: "hsl(226,100%,71%)", textAlign: "center",
-    }}>
-      ✦ Portfolio Demo — credentials pre-filled. Click Sign In.
-    </div>
-  )}
 
   return (
     <div style={{ background: 'hsl(222,20%,5%)', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
@@ -48,10 +68,31 @@ export default function LoginPage() {
           <span style={{ fontSize: '18px', fontWeight: 700, color: c.text }}>TraderMind</span>
         </div>
 
+        {/* Demo Banner — now correctly inside return */}
+        {process.env.NEXT_PUBLIC_DEMO_MODE === "true" && (
+          <div style={{
+            padding: "10px 14px", borderRadius: "8px", marginBottom: "16px",
+            background: "rgba(79,110,247,0.1)", border: "1px solid rgba(79,110,247,0.3)",
+            fontSize: "12px", color: "hsl(226,100%,71%)", textAlign: "center",
+          }}>
+            ✦ Portfolio Demo — credentials pre-filled. Click Sign In.
+          </div>
+        )}
+
         {/* Card */}
         <div style={{ background: c.surface, border: `1px solid ${c.border}`, borderRadius: '14px', padding: '32px' }}>
           <h1 style={{ fontSize: '22px', fontWeight: 800, letterSpacing: '-0.5px', marginBottom: '6px' }}>Welcome back</h1>
           <p style={{ fontSize: '13px', color: c.text2, marginBottom: '28px' }}>Sign in to your TraderMind account</p>
+
+          {error && (
+            <div style={{
+              padding: '10px 12px', borderRadius: '8px', marginBottom: '16px',
+              background: 'rgba(255,95,95,0.08)', border: '1px solid rgba(255,95,95,0.25)',
+              fontSize: '12px', color: '#ff5f5f', lineHeight: 1.5,
+            }}>
+              {error}
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div>

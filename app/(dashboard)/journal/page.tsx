@@ -1,7 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Plus, BookOpen, Camera, Smile, Brain, TrendingDown } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
+import type { BehavioralLog } from '@/types'
 
 const c = {
   green: '#3ecf8e', red: '#ff5f5f', amber: '#f5a623',
@@ -24,24 +26,44 @@ const EMOTIONS = [
   { id: 'revenge_trading', label: 'Revenge', color: c.red },
 ]
 
-const RECENT_ENTRIES = [
+const DEMO_ENTRIES = [
   {
-    id: 1, date: 'May 26 · 08:28', type: 'pre_trade', emotion: 'focused', trade: 'EURUSD Long',
+    id: 1, date: 'May 26 · 08:28', type: 'pre_trade' as const, emotion: 'focused', trade: 'EURUSD Long',
     confidence: 8, stress: 2, notes: 'Clean breakout setup on H1. ATR conditions met. Waiting for London open momentum.',
     screenshot: true,
   },
   {
-    id: 2, date: 'May 26 · 09:10', type: 'post_trade', emotion: 'revenge_trading', trade: 'GBPJPY Short',
+    id: 2, date: 'May 26 · 09:10', type: 'post_trade' as const, emotion: 'revenge_trading', trade: 'GBPJPY Short',
     confidence: 4, stress: 8, notes: 'Entered immediately after EURUSD stop out. Should not have traded. Violated 30-minute rule.',
     lesson: 'Implementing mandatory 30-min break after any stopped trade.',
     screenshot: false,
   },
   {
-    id: 3, date: 'May 25 · 12:40', type: 'pre_trade', emotion: 'calm', trade: 'XAUUSD Long',
+    id: 3, date: 'May 25 · 12:40', type: 'pre_trade' as const, emotion: 'calm', trade: 'XAUUSD Long',
     confidence: 9, stress: 1, notes: 'Gold showing strong momentum. ATR expanding. London-NY overlap — historically my best period for gold.',
     screenshot: true,
   },
 ]
+
+function formatLogDate(iso: string){
+  const d = new Date(iso)
+  return d.toLocaleString('en-US', { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit', hour12:false })
+}
+
+function mapLog(l: BehavioralLog){
+  return {
+    id: l.id,
+    date: formatLogDate(l.logged_at),
+    type: l.log_type as 'pre_trade'|'post_trade'|'daily',
+    emotion: l.emotion,
+    trade: l.trade_id ? `Trade ${l.trade_id.slice(0,6)}` : (l.strategy_used ?? '—'),
+    confidence: l.confidence_level,
+    stress: l.stress_level,
+    notes: l.setup_notes ?? l.pre_trade_reasoning ?? l.post_trade_reflection ?? '',
+    lesson: l.lesson_learned,
+    screenshot: !!l.screenshot_url,
+  }
+}
 
 function SliderInput({ label, value, onChange, color }: { label: string; value: number; onChange: (v: number) => void; color: string }) {
   return (
@@ -65,6 +87,64 @@ export default function JournalPage() {
   const [focus, setFocus] = useState(8)
   const [notes, setNotes] = useState('')
   const [logType, setLogType] = useState<'pre_trade' | 'post_trade' | 'daily'>('pre_trade')
+  const [entries, setEntries] = useState<ReturnType<typeof mapLog>[]>(DEMO_ENTRIES as any)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(()=>{
+    let cancelled=false
+    const supabase = createClient()
+    supabase.from('behavioral_logs').select('*').order('logged_at',{ascending:false}).limit(20).then(({data,error})=>{
+      if(cancelled) return
+      if(error){ console.warn('journal fetch fallback',error.message); setLoading(false); return }
+      if(data && data.length){
+        setEntries((data as BehavioralLog[]).map(mapLog))
+      }
+      setLoading(false)
+    })
+    return ()=>{cancelled=true}
+  }, [])
+
+  const handleSave = async ()=>{
+    if(!emotion){ setError('Pick an emotional state'); return }
+    if(!notes.trim()){ setError('Add some notes'); return }
+    setSaving(true); setError(null)
+    try{
+      const supabase = createClient()
+      const { data:{user} } = await supabase.auth.getUser()
+      // In demo mode without auth, synthesize a local entry
+      if(!user){
+        const synthetic = {
+          id: Math.random().toString(36).slice(2),
+          date: formatLogDate(new Date().toISOString()),
+          type: logType,
+          emotion: emotion as any,
+          trade: 'Demo',
+          confidence, stress,
+          notes, lesson: undefined, screenshot:false,
+        }
+        setEntries(prev=>[synthetic as any, ...prev].slice(0,20))
+        setNotes(''); setEmotion(''); setShowForm(false)
+        return
+      }
+      const { data, error } = await supabase.from('behavioral_logs').insert({
+        user_id: user.id,
+        log_type: logType,
+        emotion: emotion as any,
+        confidence_level: confidence,
+        fear_level: fear,
+        stress_level: stress,
+        focus_level: focus,
+        setup_notes: notes,
+        logged_at: new Date().toISOString(),
+      }).select().single()
+      if(error) throw error
+      if(data) setEntries(prev=>[mapLog(data as BehavioralLog), ...prev].slice(0,20))
+      setNotes(''); setEmotion(''); setShowForm(false)
+    } catch(e){ setError(e instanceof Error? e.message : String(e)) }
+    finally{ setSaving(false) }
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '1100px' }}>
@@ -73,8 +153,9 @@ export default function JournalPage() {
         <div>
           <h1 style={{ fontSize: '24px', fontWeight: 800, letterSpacing: '-0.6px' }}>Behavioral Journal</h1>
           <p style={{ fontSize: '12px', color: c.text3, marginTop: '3px', fontFamily: c.mono }}>
-            Track emotions, psychology, and trade context
+            {loading ? 'Loading…' : `${entries.length} entries · Track emotions, psychology, and trade context`}
           </p>
+          {error && <p style={{fontSize:'11px',color:c.red,marginTop:'4px',fontFamily:c.mono}}>{error}</p>}
         </div>
         <button onClick={() => setShowForm(!showForm)} style={{
           display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px',
@@ -86,9 +167,9 @@ export default function JournalPage() {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: showForm ? '1fr 380px' : '1fr', gap: '16px' }}>
-        {/* Journal Entries */}
+        {/* Journal Entries — live */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {RECENT_ENTRIES.map(entry => {
+          {entries.map(entry => {
             const emotionData = EMOTIONS.find(e => e.id === entry.emotion)
             return (
               <div key={entry.id} style={{ ...panel, cursor: 'pointer' }}>
@@ -209,11 +290,12 @@ export default function JournalPage() {
                 />
               </div>
 
-              <button style={{
+              {error && <div style={{padding:'8px 10px',borderRadius:'6px',background:'rgba(255,95,95,0.08)',border:'1px solid rgba(255,95,95,0.2)',fontSize:'11px',color:c.red}}>{error}</div>}
+              <button onClick={handleSave} disabled={saving} style={{
                 width: '100%', padding: '10px', borderRadius: '8px', background: c.accent,
-                border: 'none', color: '#fff', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+                border: 'none', color: '#fff', fontSize: '13px', fontWeight: 600, cursor: saving?'not-allowed':'pointer', opacity: saving?0.6:1,
               }}>
-                Save Entry
+                {saving ? 'Saving…' : 'Save Entry'}
               </button>
             </div>
           </div>

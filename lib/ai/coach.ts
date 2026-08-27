@@ -173,15 +173,17 @@ Recent context:
 - Discipline score: ${analytics.discipline_score}/100
 - Key flags: ${getTopFlags(analytics)}
 
-Generate insights as JSON array:
-[
-  {
-    "insight_type": "pattern|warning|achievement|suggestion",
-    "title": "Short title (max 8 words)",
-    "body": "Specific coaching insight (2-3 sentences)",
-    "priority": 1-10
-  }
-]
+Respond ONLY with a JSON object with this exact shape (required for json_object mode):
+{
+  "insights": [
+    {
+      "insight_type": "pattern|warning|achievement|suggestion",
+      "title": "Short title (max 8 words)",
+      "body": "Specific coaching insight (2-3 sentences)",
+      "priority": 1-10
+    }
+  ]
+}
 `
 
   const response = await openai.chat.completions.create({
@@ -195,8 +197,11 @@ Generate insights as JSON array:
   })
 
   const raw = response.choices[0]?.message?.content ?? '{"insights":[]}'
-  const parsed = JSON.parse(raw)
-  const insightsArray = Array.isArray(parsed) ? parsed : (parsed.insights ?? [])
+  let parsed: unknown
+  try { parsed = JSON.parse(raw) } catch { parsed = { insights: [] } }
+  const insightsArray = Array.isArray(parsed)
+    ? parsed
+    : (parsed as Record<string, unknown>).insights as unknown[] ?? (parsed as Record<string, unknown>).data as unknown[] ?? []
 
   return insightsArray.map((insight: Partial<CoachingInsight>) => ({
     id: crypto.randomUUID(),

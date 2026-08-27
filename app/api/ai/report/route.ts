@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
     .gte('generated_at', cutoff)
     .order('generated_at', { ascending: false })
     .limit(1)
-    .single()
+    .maybeSingle()
 
   if (existingReport) {
     return NextResponse.json({ data: existingReport, cached: true })
@@ -70,19 +70,19 @@ export async function POST(request: NextRequest) {
     .gte('logged_at', start)
     .lte('logged_at', end)
 
-  // Fetch user profile for name
-  const { data: profile } = await supabase
-    .from('users')
-    .select('full_name')
-    .eq('id', user.id)
-    .single()
+  // Fetch user profile for name and settings
+  const [{ data: profile }, { data: settings }] = await Promise.all([
+    supabase.from('users').select('full_name').eq('id', user.id).maybeSingle(),
+    supabase.from('user_settings').select('max_risk_per_trade_pct, max_daily_loss_pct').eq('user_id', user.id).maybeSingle(),
+  ])
 
-  // 1. Compute deterministic analytics
+  // 1. Compute deterministic analytics (with real risk settings)
   const analytics = computePerformanceAnalytics(
     trades as Trade[],
     (logs ?? []) as BehavioralLog[],
     start,
-    end
+    end,
+    settings ?? undefined
   )
 
   // 2. Generate AI narratives

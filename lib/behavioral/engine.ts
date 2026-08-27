@@ -25,7 +25,8 @@ export function computePerformanceAnalytics(
   trades: Trade[],
   logs: BehavioralLog[],
   periodStart: string,
-  periodEnd: string
+  periodEnd: string,
+  userSettings?: { max_risk_per_trade_pct: number; max_daily_loss_pct: number }
 ): PerformanceAnalytics {
   const closed = trades.filter(t => t.status === 'closed' && t.net_pnl !== null)
 
@@ -78,8 +79,12 @@ export function computePerformanceAnalytics(
   // Emotion distribution from logs
   const emotionDistribution = computeEmotionDistribution(logs)
 
-  // Behavioral flag counts
-  const behavioralFlags = computeBehavioralFlagCounts(closed, logs)
+  // Behavioral flag counts — use actual user risk settings when available
+  const behavioralFlags = computeBehavioralFlagCounts(
+    closed,
+    logs,
+    userSettings ?? { max_risk_per_trade_pct: 2, max_daily_loss_pct: 3 }
+  )
 
   // Scores (0–100)
   const disciplineScore = computeDisciplineScore(closed, logs, behavioralFlags)
@@ -126,8 +131,10 @@ export function computePerformanceAnalytics(
 // ── MAX DRAWDOWN ──────────────────────────────────────────────
 function computeMaxDrawdown(trades: Trade[]): { maxDrawdown: number; maxDrawdownPct: number } {
   if (!trades.length) return { maxDrawdown: 0, maxDrawdownPct: 0 }
-  let peak = 0
+  // Initialize peak to first running value so initial losing streak correctly
+  // produces a drawdown pct instead of 0 (previous impl used peak=0 denominator guard).
   let runningPnl = 0
+  let peak = Number.NEGATIVE_INFINITY
   let maxDD = 0
   let maxDDPct = 0
 
@@ -135,7 +142,9 @@ function computeMaxDrawdown(trades: Trade[]): { maxDrawdown: number; maxDrawdown
     runningPnl += trade.net_pnl ?? 0
     if (runningPnl > peak) peak = runningPnl
     const dd = peak - runningPnl
-    const ddPct = peak > 0 ? (dd / peak) * 100 : 0
+    // Use absolute peak magnitude when peak is negative (all-losing equity curve)
+    const peakDenom = peak !== 0 && Number.isFinite(peak) ? Math.abs(peak) : 0
+    const ddPct = peakDenom > 0 ? (dd / peakDenom) * 100 : (dd > 0 ? 100 : 0)
     if (dd > maxDD) { maxDD = dd; maxDDPct = ddPct }
   }
   return { maxDrawdown: maxDD, maxDrawdownPct: maxDDPct }
@@ -150,19 +159,33 @@ function computeStreaks(trades: Trade[]) {
   let ws = 0, ls = 0
 
   for (const t of trades) {
-    if ((t.net_pnl ?? 0) > 0) {
+    const pnl = t.net_pnl ?? 0
+    if (pnl > 0) {
       ws++; ls = 0
       if (ws > maxWinStreak) maxWinStreak = ws
-    } else {
+    } else if (pnl < 0) {
       ls++; ws = 0
       if (ls > maxLossStreak) maxLossStreak = ls
+    } else {
+      // Breakeven — resets both streaks, not counted as win/loss
+      ws = 0; ls = 0
     }
   }
-  // Current streaks: look from end
-  for (let i = trades.length - 1; i >= 0; i--) {
-    if ((trades[i].net_pnl ?? 0) > 0) { currentWinStreak++; break }
-    else currentLossStreak++
-    break
+  // Current streaks: walk backwards until streak breaks
+  if (trades.length > 0) {
+    const lastPnl = trades[trades.length - 1].net_pnl ?? 0
+    if (lastPnl > 0) {
+      for (let i = trades.length - 1; i >= 0; i--) {
+        if ((trades[i].net_pnl ?? 0) > 0) currentWinStreak++
+        else break
+      }
+    } else if (lastPnl < 0) {
+      for (let i = trades.length - 1; i >= 0; i--) {
+        if ((trades[i].net_pnl ?? 0) < 0) currentLossStreak++
+        else break
+      }
+    }
+    // pnl === 0 => both streaks remain 0
   }
   return { currentWinStreak, currentLossStreak, maxWinStreak, maxLossStreak }
 }
@@ -358,7 +381,8 @@ export function detectBehavioralFlags(
 
 function computeBehavioralFlagCounts(
   trades: Trade[],
-  logs: BehavioralLog[]
+  logs: BehavioralLog[],
+  userSettings: { max_risk_per_trade_pct: number; max_daily_loss_pct: number } = { max_risk_per_trade_pct: 2, max_daily_loss_pct: 3 }
 ): Record<BehavioralFlagType, number> {
   const flagTypes: BehavioralFlagType[] = [
     'revenge_trading','overtrading','emotional_instability','excessive_risk',
@@ -366,7 +390,7 @@ function computeBehavioralFlagCounts(
     'rule_violation','post_win_risk_creep','loss_chasing','early_exit','late_entry'
   ]
   const counts = {} as Record<BehavioralFlagType, number>
-  const flags = detectBehavioralFlags(trades, logs, { max_risk_per_trade_pct: 2, max_daily_loss_pct: 3 })
+  const flags = detectBehavioralFlags(trades, logs, userSettings)
   for (const ft of flagTypes) {
     counts[ft] = flags.filter(f => f.flag_type === ft).length
   }

@@ -1,13 +1,14 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard, Brain, BarChart3, ListOrdered,
   BookOpen, Target, Image, Settings, Zap,
   TrendingUp, Bell, ChevronDown, LogOut, Menu, X
 } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { createClient } from '@/lib/supabase/client'
 
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'Overview', icon: LayoutDashboard },
@@ -96,6 +97,31 @@ function NavItem({ href, label, icon: Icon, active }: { href: string; label: str
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const router = useRouter()
+  const [userEmail, setUserEmail] = useState<string | null>(null)
+  const [userName, setUserName] = useState<string>('Alex Kim')
+  const [initials, setInitials] = useState('AK')
+
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        setUserEmail(user.email ?? null)
+        const name = (user.user_metadata?.full_name as string) || user.email?.split('@')[0] || 'Trader'
+        setUserName(name)
+        setInitials(name.split(' ').map(s=> s[0]).join('').slice(0,2).toUpperCase())
+      } else if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+        // keep demo placeholder
+      }
+    })
+  }, [])
+
+  const handleSignOut = async () => {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.push('/auth/login')
+    router.refresh()
+  }
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: 'hsl(222,20%,5%)' }}>
@@ -149,19 +175,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
           </div>
 
-          {/* User */}
+          {/* User — live */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 8px' }}>
             <div style={{
               width: '28px', height: '28px', borderRadius: '50%', flexShrink: 0,
               background: 'linear-gradient(135deg, hsl(226,100%,71%), #b48eff)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: '11px', fontWeight: 700, color: '#fff'
-            }}>AK</div>
+            }}>{initials}</div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: '12px', fontWeight: 600, color: 'hsl(220,15%,85%)' }}>Alex Kim</div>
-              <div style={{ fontSize: '10px', color: 'hsl(220,10%,45%)', fontFamily: "'DM Mono', monospace" }}>Pro trader</div>
+              <div style={{ fontSize: '12px', fontWeight: 600, color: 'hsl(220,15%,85%)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{userName}</div>
+              <div style={{ fontSize: '10px', color: 'hsl(220,10%,45%)', fontFamily: "'DM Mono', monospace", overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{userEmail ?? 'Pro trader'}</div>
             </div>
-            <Settings size={13} style={{ color: 'hsl(220,10%,45%)', cursor: 'pointer' }} />
+            <button onClick={handleSignOut} title="Sign out" style={{ background:'transparent', border:'none', cursor:'pointer', padding:'4px', color:'hsl(220,10%,45%)' }}>
+              <LogOut size={13} />
+            </button>
           </div>
         </div>
       </aside>

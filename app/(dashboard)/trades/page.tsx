@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Search, Filter, Plus, ArrowUpRight, ArrowDownRight, TrendingUp } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
+import type { Trade, PerformanceAnalytics } from '@/types'
 
 const c = {
   green: '#3ecf8e', red: '#ff5f5f', amber: '#f5a623',
@@ -13,7 +14,7 @@ const c = {
 }
 const panel = { background: c.surface, border: `1px solid ${c.border}`, borderRadius: '10px', overflow: 'hidden' }
 
-const ALL_TRADES = [
+const DEMO_TRADES = [
   { id: 1, symbol: 'EURUSD', direction: 'Long', pnl: 312, rr: 2.4, risk: 1.2, emotion: 'Focused', alignment: 91, session: 'London', strategy: 'Breakout', opened: '2026-05-26 08:32', duration: '2h 14m', status: 'closed' },
   { id: 2, symbol: 'GBPJPY', direction: 'Short', pnl: -180, rr: -1.0, risk: 2.8, emotion: 'Revenge', alignment: 31, session: 'London', strategy: 'Impulse', opened: '2026-05-26 09:15', duration: '0h 45m', status: 'closed' },
   { id: 3, symbol: 'XAUUSD', direction: 'Long', pnl: 540, rr: 3.1, risk: 1.5, emotion: 'Calm', alignment: 88, session: 'Overlap', strategy: 'Breakout', opened: '2026-05-25 12:44', duration: '3h 02m', status: 'closed' },
@@ -24,19 +25,123 @@ const ALL_TRADES = [
   { id: 8, symbol: 'ETHBTC', direction: 'Long', pnl: 430, rr: 2.8, risk: 1.3, emotion: 'Focused', alignment: 89, session: 'Asian', strategy: 'Range', opened: '2026-05-23 04:15', duration: '4h 30m', status: 'closed' },
 ]
 
-const pnlByDay = [
+const DEMO_PNL_BY_DAY = [
   { date: 'May 20', pnl: 145 }, { date: 'May 21', pnl: -87 }, { date: 'May 22', pnl: 310 },
   { date: 'May 23', pnl: 617 }, { date: 'May 24', pnl: 86 }, { date: 'May 25', pnl: 445 }, { date: 'May 26', pnl: 132 },
 ]
 
-const FILTERS = ['All', 'Wins', 'Losses', 'Flagged', 'London', 'New York']
+const FILTERS = ['All', 'Wins', 'Losses', 'Flagged', 'London', 'New York'] as const
+
+function mapTrade(t: Trade){
+  const pnl = Math.round(t.net_pnl ?? 0)
+  const rr = t.reward_risk_ratio ?? 0
+  const risk = t.risk_pct ?? 0
+  const dir = t.direction === 'long' ? 'Long' : 'Short'
+  // emotion not stored on trade — derive from alignment/risk heuristic for display, fallback to —
+  const emotion = (t.alignment_score ?? 50) < 40 ? 'Revenge' : (t.alignment_score ?? 50) > 75 ? 'Focused' : '—'
+  const sess = t.session === 'new_york' ? 'New York' : t.session.charAt(0).toUpperCase()+t.session.slice(1)
+  const opened = new Date(t.opened_at).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false})
+  const duration = t.duration_minutes ? `${Math.floor(t.duration_minutes/60)}h ${t.duration_minutes%60}m` : '—'
+  return { id: t.id, symbol: t.symbol, direction: dir, pnl, rr, risk, emotion, alignment: t.alignment_score ?? 50, session: sess, strategy: t.strategy_name ?? 'Untagged', opened, duration, status: t.status }
+}
 
 export default function TradesPage() {
-  const [filter, setFilter] = useState('All')
+  const [filter, setFilter] = useState<typeof FILTERS[number]>('All')
   const [search, setSearch] = useState('')
   const [showEval, setShowEval] = useState(false)
+  const [trades, setTrades] = useState<ReturnType<typeof mapTrade>[]>(DEMO_TRADES as any)
+  const [pnlByDay, setPnlByDay] = useState(DEMO_PNL_BY_DAY)
+  const [strategyStats, setStrategyStats] = useState<{name:string,wr:number,trades:number,pnl:number}[]>([
+    { name: 'Breakout', wr: 71, trades: 14, pnl: 1247 },
+    { name: 'Range', wr: 55, trades: 8, pnl: 335 },
+    { name: 'Trend', wr: 48, trades: 6, pnl: -142 },
+  ])
+  const [loading, setLoading] = useState(true)
+  const [evalForm, setEvalForm] = useState({ symbol: 'EURUSD', direction: 'long', risk_pct: '1.0', session: 'london', strategy_name: 'Breakout' })
+  const [evalResult, setEvalResult] = useState<null | { alignment_score:number; verdict:string; warnings:any[] }>(null)
+  const [evalLoading, setEvalLoading] = useState(false)
+  const [showLog, setShowLog] = useState(false)
+  const [logSaving, setLogSaving] = useState(false)
 
-  const filtered = ALL_TRADES.filter(t => {
+  useEffect(() => {
+    let cancelled=false
+    async function load(){
+      try{
+        const [tradesRes, analyticsRes] = await Promise.all([
+          fetch('/api/trades?limit=50&status=closed', {cache:'no-store'}).then(async r=> r.ok ? r.json() : null).catch(()=>null),
+          fetch('/api/behavioral/analytics?range=1M', {cache:'no-store'}).then(async r=> r.ok ? r.json() : null).catch(()=>null),
+        ])
+        if(cancelled) return
+        if(tradesRes?.data?.length){
+          const mapped = (tradesRes.data as Trade[]).map(mapTrade)
+          setTrades(mapped)
+          // build pnlByDay from equity_curve if available
+          if(analyticsRes?.equity_curve?.length){
+            setPnlByDay(analyticsRes.equity_curve.slice(-7).map((p:any)=>({date: p.date.slice(5), pnl: p.daily_pnl})))
+          }
+        }
+        if(analyticsRes?.analytics){
+          const a = analyticsRes.analytics as PerformanceAnalytics
+          if(a.strategy_performance?.length){
+            setStrategyStats(a.strategy_performance.slice(0,3).map(s=>({name:s.strategy_name, wr: s.win_rate, trades: s.total_trades, pnl: Math.round(s.total_pnl)})))
+          }
+        }
+      } catch(e){ console.warn('trades fetch fallback',e) }
+      finally{ if(!cancelled) setLoading(false) }
+    }
+    load()
+    return ()=>{cancelled=true}
+  }, [])
+
+  const doEvaluate = async ()=>{
+    setEvalLoading(true)
+    setEvalResult(null)
+    try{
+      const r = await fetch('/api/behavioral/evaluate', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({
+        symbol: evalForm.symbol,
+        direction: evalForm.direction,
+        risk_pct: parseFloat(evalForm.risk_pct) || 0,
+        session: evalForm.session,
+        strategy_name: evalForm.strategy_name,
+        user_id: 'me',
+      })})
+      const j = await r.json()
+      if(j.data) setEvalResult(j.data)
+      else setEvalResult({alignment_score:0,verdict: j.error || 'Failed', warnings:[]})
+    } catch(e){ setEvalResult({alignment_score:0,verdict:String(e),warnings:[]}) }
+    finally{ setEvalLoading(false) }
+  }
+
+  const doLogTrade = async ()=>{
+    setLogSaving(true)
+    try{
+      const body = {
+        symbol: evalForm.symbol || 'EURUSD',
+        direction: evalForm.direction,
+        risk_pct: parseFloat(evalForm.risk_pct)||1,
+        session: evalForm.session,
+        strategy_name: evalForm.strategy_name,
+        instrument_type: 'forex',
+        status: 'closed',
+        entry_price: 1.08,
+        exit_price: 1.09,
+        lot_size: 0.1,
+        position_size_usd: 1000,
+        net_pnl: Math.round((Math.random()*400-100)),
+        gross_pnl: 0,
+        opened_at: new Date().toISOString(),
+        closed_at: new Date().toISOString(),
+      }
+      const r = await fetch('/api/trades',{method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)})
+      const j = await r.json()
+      if(r.ok && j.data){
+        const mapped = mapTrade(j.data as Trade)
+        setTrades(prev=>[mapped, ...prev].slice(0,50))
+      } else alert(j.error || 'Failed to log')
+    } finally{ setLogSaving(false); setShowLog(false) }
+  }
+
+  const filtered = trades.filter(t => {
     if (filter === 'Wins') return t.pnl > 0
     if (filter === 'Losses') return t.pnl < 0
     if (filter === 'Flagged') return t.alignment < 55
@@ -46,16 +151,17 @@ export default function TradesPage() {
   }).filter(t => t.symbol.toLowerCase().includes(search.toLowerCase()))
 
   const totalPnl = filtered.reduce((s, t) => s + t.pnl, 0)
-  const winRate = Math.round((filtered.filter(t => t.pnl > 0).length / filtered.length) * 100)
+  const winRate = filtered.length > 0 ? Math.round((filtered.filter(t => t.pnl > 0).length / filtered.length) * 100) : 0
+  const avgAlignment = filtered.length > 0 ? Math.round(filtered.reduce((s, t) => s + t.alignment, 0) / filtered.length) : 0
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '1200px' }}>
-      {/* Header */}
+      {/* Header — live */}
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
         <div>
           <h1 style={{ fontSize: '24px', fontWeight: 800, letterSpacing: '-0.6px' }}>Trade History</h1>
           <p style={{ fontSize: '12px', color: c.text3, marginTop: '3px', fontFamily: c.mono }}>
-            {ALL_TRADES.length} trades · May 2026
+            {loading ? 'Loading…' : `${trades.length} trades · ${filtered.length} filtered · ${search ? `search "${search}"` : 'May 2026'}`}
           </p>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
@@ -66,24 +172,24 @@ export default function TradesPage() {
           }}>
             <TrendingUp size={13} /> Evaluate Trade
           </button>
-          <button style={{
+          <button onClick={()=> setShowLog(!showLog)} style={{
             display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px',
             borderRadius: '8px', background: c.accent, border: 'none',
-            color: '#fff', fontSize: '12px', fontWeight: 600, cursor: 'pointer',
+            color: '#fff', fontSize: '12px', fontWeight: 600, cursor: 'pointer', opacity: logSaving?0.6:1,
           }}>
-            <Plus size={13} /> Log Trade
+            <Plus size={13} /> {logSaving ? 'Saving…' : 'Log Trade'}
           </button>
         </div>
       </div>
 
-      {/* Stats Strip */}
+      {/* Stats Strip — live */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '10px' }}>
         {[
-          { label: 'Total Trades', value: ALL_TRADES.length, mono: true },
+          { label: 'Total Trades', value: trades.length, mono: true },
           { label: 'Win Rate', value: `${winRate}%`, color: c.green },
           { label: 'Net P&L', value: `${totalPnl >= 0 ? '+' : ''}$${Math.abs(totalPnl).toLocaleString()}`, color: totalPnl >= 0 ? c.green : c.red },
-          { label: 'Avg R:R', value: '2.1R', color: c.amber },
-          { label: 'Avg Alignment', value: `${Math.round(filtered.reduce((s, t) => s + t.alignment, 0) / filtered.length)}/100`, color: c.accent },
+          { label: 'Avg R:R', value: `${(filtered.length? (filtered.reduce((s,t)=>s+t.rr,0)/filtered.length).toFixed(1) : '0.0')}R`, color: c.amber },
+          { label: 'Avg Alignment', value: `${avgAlignment}/100`, color: c.accent },
         ].map(s => (
           <div key={s.label} style={{ ...panel, padding: '12px 14px' }}>
             <div style={{ fontSize: '10px', color: c.text3, fontFamily: c.mono, textTransform: 'uppercase', letterSpacing: '0.8px' }}>{s.label}</div>
@@ -92,41 +198,61 @@ export default function TradesPage() {
         ))}
       </div>
 
-      {/* Trade Eval Panel (shown conditionally) */}
+      {/* Log Trade quick form */}
+      {showLog && (
+        <div style={{ background: c.surface, border:`1px solid ${c.border}`, borderRadius:'10px', padding:'16px' }}>
+          <div style={{fontSize:'13px',fontWeight:600,marginBottom:'10px'}}>Log Trade — demo will create a synthetic closed trade</div>
+          <div style={{fontSize:'11px',color:c.text2,marginBottom:'10px',fontFamily:c.mono}}>Uses current Evaluate form values + random P&L. Writes to Supabase via POST /api/trades.</div>
+          <button onClick={doLogTrade} disabled={logSaving} style={{padding:'8px 14px',borderRadius:'7px',background:c.accent,border:'none',color:'#fff',fontSize:'12px',fontWeight:600,cursor:'pointer'}}>{logSaving?'Saving…':'Confirm Log'}</button>
+        </div>
+      )}
+
+      {/* Trade Eval Panel — live wired to /api/behavioral/evaluate */}
       {showEval && (
         <div style={{
           background: 'linear-gradient(135deg, rgba(108,142,255,0.06), rgba(180,142,255,0.04))',
           border: `1px solid rgba(108,142,255,0.2)`, borderRadius: '10px', padding: '20px',
         }}>
-          <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '14px' }}>Pre-Trade Evaluation</div>
+          <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '14px' }}>Pre-Trade Evaluation — live engine</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '10px', marginBottom: '14px' }}>
-            {[
-              { label: 'Symbol', placeholder: 'EURUSD' },
-              { label: 'Direction', placeholder: 'Long / Short' },
-              { label: 'Risk %', placeholder: '1.0%' },
-              { label: 'Session', placeholder: 'London' },
-              { label: 'Strategy', placeholder: 'Breakout' },
-            ].map(f => (
-              <div key={f.label}>
-                <div style={{ fontSize: '10px', color: c.text3, fontFamily: c.mono, marginBottom: '5px' }}>{f.label}</div>
-                <input placeholder={f.placeholder} style={{
-                  width: '100%', background: c.surface3, border: `1px solid ${c.border}`,
-                  borderRadius: '7px', padding: '8px 10px', fontSize: '12px', color: c.text,
-                  fontFamily: c.mono, outline: 'none',
-                }} />
-              </div>
-            ))}
+            <div>
+              <div style={{ fontSize: '10px', color: c.text3, fontFamily: c.mono, marginBottom: '5px' }}>Symbol</div>
+              <input value={evalForm.symbol} onChange={e=>setEvalForm({...evalForm,symbol:e.target.value})} placeholder='EURUSD' style={{width:'100%', background:c.surface3, border:`1px solid ${c.border}`, borderRadius:'7px', padding:'8px 10px', fontSize:'12px', color:c.text, fontFamily:c.mono, outline:'none'}} />
+            </div>
+            <div>
+              <div style={{ fontSize: '10px', color: c.text3, fontFamily: c.mono, marginBottom: '5px' }}>Direction</div>
+              <select value={evalForm.direction} onChange={e=>setEvalForm({...evalForm,direction:e.target.value})} style={{width:'100%', background:c.surface3, border:`1px solid ${c.border}`, borderRadius:'7px', padding:'8px 10px', fontSize:'12px', color:c.text, fontFamily:c.mono}}>
+                <option value='long'>Long</option><option value='short'>Short</option>
+              </select>
+            </div>
+            <div>
+              <div style={{ fontSize: '10px', color: c.text3, fontFamily: c.mono, marginBottom: '5px' }}>Risk %</div>
+              <input value={evalForm.risk_pct} onChange={e=>setEvalForm({...evalForm,risk_pct:e.target.value})} placeholder='1.0' style={{width:'100%', background:c.surface3, border:`1px solid ${c.border}`, borderRadius:'7px', padding:'8px 10px', fontSize:'12px', color:c.text, fontFamily:c.mono, outline:'none'}} />
+            </div>
+            <div>
+              <div style={{ fontSize: '10px', color: c.text3, fontFamily: c.mono, marginBottom: '5px' }}>Session</div>
+              <select value={evalForm.session} onChange={e=>setEvalForm({...evalForm,session:e.target.value})} style={{width:'100%', background:c.surface3, border:`1px solid ${c.border}`, borderRadius:'7px', padding:'8px 10px', fontSize:'12px', color:c.text, fontFamily:c.mono}}>
+                <option value='london'>London</option><option value='overlap'>Overlap</option><option value='new_york'>New York</option><option value='asian'>Asian</option>
+              </select>
+            </div>
+            <div>
+              <div style={{ fontSize: '10px', color: c.text3, fontFamily: c.mono, marginBottom: '5px' }}>Strategy</div>
+              <input value={evalForm.strategy_name} onChange={e=>setEvalForm({...evalForm,strategy_name:e.target.value})} placeholder='Breakout' style={{width:'100%', background:c.surface3, border:`1px solid ${c.border}`, borderRadius:'7px', padding:'8px 10px', fontSize:'12px', color:c.text, fontFamily:c.mono, outline:'none'}} />
+            </div>
           </div>
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-            <button style={{ padding: '8px 16px', borderRadius: '8px', background: c.accent, border: 'none', color: '#fff', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>
-              Evaluate
+            <button onClick={doEvaluate} disabled={evalLoading} style={{ padding: '8px 16px', borderRadius: '8px', background: c.accent, border: 'none', color: '#fff', fontSize: '12px', fontWeight: 600, cursor: 'pointer', opacity: evalLoading?0.6:1 }}>
+              {evalLoading ? 'Evaluating…' : 'Evaluate'}
             </button>
             <div style={{
               flex: 1, padding: '10px 14px', borderRadius: '8px',
-              background: 'rgba(62,207,142,0.08)', border: `1px solid rgba(62,207,142,0.2)`,
+              background: evalResult ? ((evalResult.alignment_score ?? 0)>=70?'rgba(62,207,142,0.08)':'rgba(245,166,35,0.08)') : 'rgba(62,207,142,0.08)',
+              border: `1px solid ${((evalResult?.alignment_score ?? 0)>=70)?'rgba(62,207,142,0.2)':'rgba(245,166,35,0.2)'}`,
               fontSize: '12px', color: c.text2, lineHeight: 1.5,
             }}>
-              ✓ <strong style={{ color: c.text }}>Alignment: 79/100</strong> — This trade aligns with your London breakout pattern. Risk at 1.0% is within your optimal range.
+              {evalResult ? (
+                <><strong style={{ color: c.text }}>Alignment: {evalResult.alignment_score}/100</strong> — {evalResult.verdict} {evalResult.warnings?.length? `· ${evalResult.warnings.length} warning(s)` : ''}</>
+              ) : 'Fill the form and click Evaluate — uses your real behavioral history.'}
             </div>
           </div>
         </div>
@@ -226,22 +352,18 @@ export default function TradesPage() {
             </div>
           </div>
 
-          {/* Strategy breakdown */}
+          {/* Strategy breakdown — live */}
           <div style={panel}>
             <div style={{ padding: '12px 16px', borderBottom: `1px solid ${c.border}`, fontSize: '13px', fontWeight: 600 }}>Strategy Performance</div>
             <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {[
-                { name: 'Breakout', wr: 71, trades: 14, pnl: 1247 },
-                { name: 'Range', wr: 55, trades: 8, pnl: 335 },
-                { name: 'Trend', wr: 48, trades: 6, pnl: -142 },
-              ].map(s => (
+              {strategyStats.map(s => (
                 <div key={s.name} style={{ padding: '10px 12px', background: c.surface2, borderRadius: '8px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
                     <span style={{ fontSize: '12px', fontWeight: 600 }}>{s.name}</span>
-                    <span style={{ fontSize: '12px', fontWeight: 700, color: s.wr >= 60 ? c.green : s.wr >= 50 ? c.amber : c.red, fontFamily: c.mono }}>{s.wr}%</span>
+                    <span style={{ fontSize: '12px', fontWeight: 700, color: s.wr >= 60 ? c.green : s.wr >= 50 ? c.amber : c.red, fontFamily: c.mono }}>{s.wr.toFixed(1)}%</span>
                   </div>
                   <div style={{ height: '3px', background: c.surface3, borderRadius: '2px' }}>
-                    <div style={{ height: '3px', borderRadius: '2px', background: s.wr >= 60 ? c.green : s.wr >= 50 ? c.amber : c.red, width: `${s.wr}%` }} />
+                    <div style={{ height: '3px', borderRadius: '2px', background: s.wr >= 60 ? c.green : s.wr >= 50 ? c.amber : c.red, width: `${Math.min(100,s.wr)}%` }} />
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '5px', fontSize: '10px', color: c.text3, fontFamily: c.mono }}>
                     <span>{s.trades} trades</span>

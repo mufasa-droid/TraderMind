@@ -13,8 +13,8 @@ export async function GET(request: NextRequest) {
   const rangeLabel = (searchParams.get('range') ?? '1M') as '1W' | '1M' | '3M' | 'YTD' | 'ALL'
   const { start, end } = getDateRange(rangeLabel)
 
-  // Parallel fetch for speed
-  const [tradesRes, logsRes, flagsRes, insightsRes, brokerRes, latestReportRes] = await Promise.all([
+  // Parallel fetch for speed — use maybeSingle for latest report to avoid 406 when empty
+  const [tradesRes, logsRes, flagsRes, insightsRes, brokerRes, latestReportRes, settingsRes] = await Promise.all([
     supabase.from('trades').select('*').eq('user_id', user.id).eq('status', 'closed')
       .gte('opened_at', start).order('opened_at', { ascending: true }),
     supabase.from('behavioral_logs').select('*').eq('user_id', user.id).gte('logged_at', start),
@@ -24,14 +24,15 @@ export async function GET(request: NextRequest) {
       .eq('is_read', false).order('priority', { ascending: false }).limit(5),
     supabase.from('broker_connections').select('*').eq('user_id', user.id).eq('is_active', true),
     supabase.from('ai_reports').select('*').eq('user_id', user.id)
-      .order('generated_at', { ascending: false }).limit(1).single(),
+      .order('generated_at', { ascending: false }).limit(1).maybeSingle(),
+    supabase.from('user_settings').select('max_risk_per_trade_pct, max_daily_loss_pct').eq('user_id', user.id).maybeSingle(),
   ])
 
   const trades = (tradesRes.data ?? []) as Trade[]
   const logs = (logsRes.data ?? []) as BehavioralLog[]
 
-  // Compute analytics deterministically
-  const analytics = computePerformanceAnalytics(trades, logs, start, end)
+  // Compute analytics deterministically — pass real user risk settings
+  const analytics = computePerformanceAnalytics(trades, logs, start, end, settingsRes.data ?? undefined)
 
   // Recent trades for table
   const recentTrades = trades.slice(-10).reverse()

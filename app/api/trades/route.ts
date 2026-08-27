@@ -100,7 +100,7 @@ async function runBehavioralDetection(
       .from('user_settings')
       .select('*')
       .eq('user_id', userId)
-      .single()
+      .maybeSingle()
 
     const { data: recentLogs } = await supabase
       .from('behavioral_logs')

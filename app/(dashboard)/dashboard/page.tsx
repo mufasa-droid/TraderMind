@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   LineChart, Line, AreaChart, Area, BarChart, Bar,
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine
@@ -10,9 +10,10 @@ import {
   Zap, Clock, Target, ArrowUpRight, ArrowDownRight,
   ChevronRight, Sparkles, Activity
 } from 'lucide-react'
+import type { PerformanceAnalytics, Trade, BehavioralFlag } from '@/types'
 
-// ── DEMO DATA ────────────────────────────────────────────────
-const equityData = [
+// ── DEMO FALLBACK (used when API unavailable or in demo mode without DB) ──
+const DEMO_EQUITY = [
   { date: 'May 1', equity: 10200, discipline: 72 },
   { date: 'May 3', equity: 10380, discipline: 74 },
   { date: 'May 5', equity: 10290, discipline: 70 },
@@ -29,14 +30,14 @@ const equityData = [
   { date: 'May 26', equity: 11450, discipline: 83 },
 ]
 
-const sessionData = [
+const DEMO_SESSION = [
   { session: 'Asian', wr: 55, trades: 8 },
   { session: 'London', wr: 67, trades: 19 },
   { session: 'NY', wr: 48, trades: 15 },
   { session: 'Overlap', wr: 71, trades: 5 },
 ]
 
-const recentTrades = [
+const DEMO_TRADES = [
   { id: 1, symbol: 'EURUSD', direction: 'Long', pnl: 312, rr: 2.4, risk: 1.2, emotion: 'Focused', alignment: 91, session: 'London', time: '08:32' },
   { id: 2, symbol: 'GBPJPY', direction: 'Short', pnl: -180, rr: -1.0, risk: 2.8, emotion: 'Revenge', alignment: 31, session: 'London', time: '09:15' },
   { id: 3, symbol: 'XAUUSD', direction: 'Long', pnl: 540, rr: 3.1, risk: 1.5, emotion: 'Calm', alignment: 88, session: 'Overlap', time: '12:44' },
@@ -44,14 +45,23 @@ const recentTrades = [
   { id: 5, symbol: 'USDJPY', direction: 'Short', pnl: 228, rr: 1.9, risk: 1.1, emotion: 'Focused', alignment: 82, session: 'London', time: '10:05' },
 ]
 
-const behaviorFlags = [
+const DEMO_FLAGS = [
   { type: 'Revenge Trading', count: 3, severity: 'high' },
   { type: 'Post-Win Risk Creep', count: 6, severity: 'medium' },
   { type: 'FOMO Entry', count: 2, severity: 'medium' },
   { type: 'Rule Violations', count: 1, severity: 'low' },
 ]
 
-const RANGE_OPTIONS = ['1W', '1M', '3M', 'YTD']
+const RANGE_OPTIONS = ['1W', '1M', '3M', 'YTD'] as const
+type RangeLabel = typeof RANGE_OPTIONS[number]
+
+type AnalyticsResponse = {
+  analytics: PerformanceAnalytics
+  recent_trades: Trade[]
+  behavioral_flags: BehavioralFlag[]
+  equity_curve: { date: string; daily_pnl: number; cumulative: number }[]
+  range: { start: string; end: string; label: string }
+}
 
 // ── STYLES ────────────────────────────────────────────────────
 const c = {
@@ -120,7 +130,74 @@ const tooltipStyle = {
 }
 
 export default function DashboardPage() {
-  const [range, setRange] = useState('1M')
+  const [range, setRange] = useState<RangeLabel>('1M')
+  const [data, setData] = useState<AnalyticsResponse | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    setError(null)
+    fetch(`/api/behavioral/analytics?range=${range}`, { cache: 'no-store' })
+      .then(async r => {
+        if (!r.ok) throw new Error(`${r.status} ${await r.text()}`)
+        return r.json()
+      })
+      .then((json: AnalyticsResponse) => { if (!cancelled) setData(json) })
+      .catch(e => {
+        if (!cancelled) {
+          // Fall back to demo data silently; surface in console for debugging
+          console.warn('Dashboard analytics fetch failed, using demo fallback:', e)
+          setError(e instanceof Error ? e.message : 'Failed to load analytics')
+        }
+      })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [range])
+
+  const analytics = data?.analytics ?? null
+  // Derived display values — fallback to demo when no live data
+  const discipline = analytics?.discipline_score ?? 78
+  const consistency = analytics?.behavioral_consistency_score ?? 84
+  const riskQuality = analytics?.risk_quality_score ?? 61
+  const emotional = analytics?.emotional_stability_score ?? 72
+
+  const sessionDataLive = analytics
+    ? Object.values(analytics.session_performance).map(s => ({
+        session: s.session === 'new_york' ? 'NY' : s.session.charAt(0).toUpperCase() + s.session.slice(1),
+        wr: Math.round(s.win_rate * 10) / 10,
+        trades: s.total_trades,
+      }))
+    : DEMO_SESSION
+
+  const equityChartData = data?.equity_curve?.length
+    ? data.equity_curve.map(p => ({
+        date: p.date.slice(5), // MM-DD
+        equity: 10000 + p.cumulative, // synthetic equity base for demo-less DBs
+        discipline: discipline, // flat discipline line when no history; could be time-series later
+      }))
+    : DEMO_EQUITY
+
+  const tradesLive = data?.recent_trades?.length ? data.recent_trades : null
+  const flagsLive = analytics?.behavioral_flags ?? null
+
+  // Emotion breakdown from live distribution
+  const emotionRows = analytics?.emotion_distribution
+    ? [
+        { label: 'Calm / Focused', pct: Math.round(((analytics.emotion_distribution.calm ?? 0) + (analytics.emotion_distribution.focused ?? 0)) * 10) / 10, color: c.green },
+        { label: 'Overconfident', pct: analytics.emotion_distribution.overconfident ?? 0, color: c.amber },
+        { label: 'FOMO', pct: analytics.emotion_distribution.fomo ?? 0, color: c.purple },
+        { label: 'Revenge / Fear', pct: Math.round(((analytics.emotion_distribution.revenge_trading ?? 0) + (analytics.emotion_distribution.fearful ?? 0) + (analytics.emotion_distribution.stressed ?? 0)) * 10) / 10, color: c.red },
+      ]
+    : [
+        { label: 'Calm / Focused', pct: 58, color: c.green },
+        { label: 'Overconfident', pct: 19, color: c.amber },
+        { label: 'FOMO', pct: 12, color: c.purple },
+        { label: 'Revenge / Fear', pct: 11, color: c.red },
+      ]
+
+  const avgRiskLive = analytics?.avg_risk_per_trade ?? 1.64
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '1400px' }}>
@@ -129,7 +206,7 @@ export default function DashboardPage() {
         <div>
           <h1 style={{ fontSize: '24px', fontWeight: 800, letterSpacing: '-0.6px' }}>Performance Overview</h1>
           <p style={{ fontSize: '12px', color: c.text3, marginTop: '3px', fontFamily: c.mono }}>
-            May 2026 · 47 trades · MT5 synced
+            {loading ? 'Loading…' : error ? `Demo fallback · ${error.slice(0, 60)}` : `${analytics?.total_trades ?? 47} trades · ${range} · ${data ? 'live' : 'MT5 synced'}`}
           </p>
         </div>
         <div style={{ display: 'flex', gap: '4px', background: c.surface2, padding: '3px', borderRadius: '8px' }}>
@@ -144,12 +221,12 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Score Cards */}
+      {/* Score Cards — now live */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
-        <ScoreCard label="Discipline Score" value={78} delta="↑3 vs last month" color={c.accent} barColor={c.accent} />
-        <ScoreCard label="Behavioral Consistency" value={84} delta="↑7 vs last month" color={c.green} barColor={c.green} />
-        <ScoreCard label="Risk Quality" value={61} delta="↓4 vs last month" color={c.amber} barColor={c.amber} />
-        <ScoreCard label="Emotional Stability" value={72} delta="↑11 vs last month" color={c.purple} barColor={c.purple} />
+        <ScoreCard label="Discipline Score" value={discipline} delta={analytics ? `${analytics.total_trades} trades` : '↑3 vs last month'} color={c.accent} barColor={c.accent} />
+        <ScoreCard label="Behavioral Consistency" value={consistency} delta={analytics ? `max streak ${analytics.max_win_streak}` : '↑7 vs last month'} color={c.green} barColor={c.green} />
+        <ScoreCard label="Risk Quality" value={riskQuality} delta={analytics ? `avg ${avgRiskLive}% risk` : '↓4 vs last month'} color={c.amber} barColor={c.amber} />
+        <ScoreCard label="Emotional Stability" value={emotional} delta={analytics ? `${analytics.worst_day_of_week} is worst day` : '↑11 vs last month'} color={c.purple} barColor={c.purple} />
       </div>
 
       {/* Main Grid */}
@@ -212,7 +289,7 @@ export default function DashboardPage() {
             </div>
             <div style={{ padding: '12px 8px 4px' }}>
               <ResponsiveContainer width="100%" height={200}>
-                <AreaChart data={equityData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                <AreaChart data={equityChartData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="equityGrad" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor={c.green} stopOpacity={0.15} />
@@ -246,7 +323,20 @@ export default function DashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {recentTrades.map(trade => (
+                {(tradesLive
+                  ? tradesLive.map(t => ({
+                      id: t.id,
+                      symbol: t.symbol,
+                      direction: t.direction === 'long' ? 'Long' : 'Short',
+                      pnl: Math.round((t.net_pnl ?? 0)),
+                      rr: t.reward_risk_ratio ?? 0,
+                      risk: t.risk_pct ?? 0,
+                      emotion: '—' as string,
+                      session: t.session,
+                      alignment: t.alignment_score ?? 50,
+                    }))
+                  : DEMO_TRADES
+                ).map(trade => (
                   <tr key={trade.id} style={{ cursor: 'pointer' }}
                     onMouseEnter={e => (e.currentTarget.style.background = c.surface2)}
                     onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
@@ -258,9 +348,11 @@ export default function DashboardPage() {
                     <td style={{ padding: '10px 12px', borderTop: `1px solid ${c.border}40`, color: trade.pnl >= 0 ? c.green : c.red, fontFamily: c.mono, fontWeight: 600 }}>
                       {trade.pnl >= 0 ? '+' : ''}${trade.pnl}
                     </td>
-                    <td style={{ padding: '10px 12px', borderTop: `1px solid ${c.border}40`, color: c.text2, fontFamily: c.mono, fontSize: '12px' }}>{trade.rr}R</td>
+                    <td style={{ padding: '10px 12px', borderTop: `1px solid ${c.border}40`, color: c.text2, fontFamily: c.mono, fontSize: '12px' }}>{Number(trade.rr).toFixed(1)}R</td>
                     <td style={{ padding: '10px 12px', borderTop: `1px solid ${c.border}40`, color: trade.risk > 2 ? c.amber : c.text2, fontFamily: c.mono, fontSize: '12px' }}>{trade.risk}%</td>
-                    <td style={{ padding: '10px 12px', borderTop: `1px solid ${c.border}40` }}><EmotionBadge emotion={trade.emotion} /></td>
+                    <td style={{ padding: '10px 12px', borderTop: `1px solid ${c.border}40` }}>
+                      {trade.emotion === '—' ? <span style={{ fontSize: '11px', color: c.text3 }}>—</span> : <EmotionBadge emotion={trade.emotion} />}
+                    </td>
                     <td style={{ padding: '10px 12px', borderTop: `1px solid ${c.border}40`, color: c.text3, fontFamily: c.mono, fontSize: '11px' }}>{trade.session}</td>
                     <td style={{ padding: '10px 12px', borderTop: `1px solid ${c.border}40` }}><AlignmentBadge score={trade.alignment} /></td>
                   </tr>
@@ -303,14 +395,25 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Behavior Flags */}
+          {/* Behavior Flags — live when available */}
           <div style={panel}>
             <div style={ph}>
               <span style={{ fontSize: '13px', fontWeight: 600 }}>Behavioral Flags</span>
               <span style={{ fontSize: '11px', color: c.accent, cursor: 'pointer', fontFamily: c.mono }}>details</span>
             </div>
             <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {behaviorFlags.map(flag => (
+              {(flagsLive
+                ? Object.entries(flagsLive)
+                    .filter(([, count]) => (count as number) > 0)
+                    .sort((a, b) => (b[1] as number) - (a[1] as number))
+                    .slice(0, 4)
+                    .map(([type, count]) => ({
+                      type: type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+                      count: count as number,
+                      severity: (count as number) > 3 ? 'high' as const : (count as number) > 1 ? 'medium' as const : 'low' as const,
+                    }))
+                : DEMO_FLAGS
+              ).map(flag => (
                 <div key={flag.type} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 12px', background: c.surface2, borderRadius: '8px' }}>
                   <div style={{
                     width: '7px', height: '7px', borderRadius: '50%', flexShrink: 0,
@@ -320,15 +423,18 @@ export default function DashboardPage() {
                   <div style={{ fontSize: '11px', color: c.text3, fontFamily: c.mono }}>×{flag.count}</div>
                 </div>
               ))}
+              {flagsLive && Object.values(flagsLive).every(v => (v as number) === 0) && (
+                <div style={{ fontSize: '11px', color: c.text3, textAlign: 'center', padding: '8px' }}>No flags — clean trading 🎉</div>
+              )}
             </div>
           </div>
 
-          {/* Session Performance */}
+          {/* Session Performance — live */}
           <div style={panel}>
             <div style={ph}><span style={{ fontSize: '13px', fontWeight: 600 }}>Session Performance</span></div>
             <div style={{ padding: '12px' }}>
               <ResponsiveContainer width="100%" height={130}>
-                <BarChart data={sessionData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                <BarChart data={sessionDataLive} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
                   <XAxis dataKey="session" tick={{ fontSize: 10, fill: c.text3, fontFamily: c.mono }} axisLine={false} tickLine={false} />
                   <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: c.text3, fontFamily: c.mono }} axisLine={false} tickLine={false} />
@@ -337,7 +443,7 @@ export default function DashboardPage() {
                 </BarChart>
               </ResponsiveContainer>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginTop: '8px' }}>
-                {sessionData.map(s => (
+                {sessionDataLive.map(s => (
                   <div key={s.session} style={{ background: c.surface2, borderRadius: '7px', padding: '8px 10px' }}>
                     <div style={{ fontSize: '10px', color: c.text3, fontFamily: c.mono }}>{s.session}</div>
                     <div style={{ fontSize: '17px', fontWeight: 700, color: s.wr >= 65 ? c.green : s.wr >= 55 ? c.text : c.amber, letterSpacing: '-0.5px' }}>{s.wr}%</div>
@@ -348,39 +454,34 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Emotional State */}
+          {/* Emotional State — live */}
           <div style={panel}>
             <div style={ph}><span style={{ fontSize: '13px', fontWeight: 600 }}>Emotional State</span></div>
             <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {[
-                { label: 'Calm / Focused', pct: 58, color: c.green },
-                { label: 'Overconfident', pct: 19, color: c.amber },
-                { label: 'FOMO', pct: 12, color: c.purple },
-                { label: 'Revenge / Fear', pct: 11, color: c.red },
-              ].map(e => (
+              {emotionRows.map(e => (
                 <div key={e.label}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
                     <span style={{ fontSize: '11px', color: c.text2 }}>{e.label}</span>
                     <span style={{ fontSize: '12px', fontWeight: 700, color: e.color, fontFamily: c.mono }}>{e.pct}%</span>
                   </div>
                   <div style={{ height: '3px', background: c.surface3, borderRadius: '2px' }}>
-                    <div style={{ height: '3px', borderRadius: '2px', background: e.color, width: `${e.pct}%`, transition: 'width 0.5s ease' }} />
+                    <div style={{ height: '3px', borderRadius: '2px', background: e.color, width: `${Math.min(100, e.pct)}%`, transition: 'width 0.5s ease' }} />
                   </div>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Risk Meter */}
+          {/* Risk Meter — live */}
           <div style={panel}>
             <div style={ph}><span style={{ fontSize: '13px', fontWeight: 600 }}>Avg Risk Per Trade</span></div>
             <div style={{ padding: '14px 16px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '10px' }}>
                 <span style={{ fontSize: '11px', color: c.text3, fontFamily: c.mono }}>Monthly average</span>
-                <span style={{ fontSize: '24px', fontWeight: 800, color: c.amber, letterSpacing: '-0.5px' }}>1.64%</span>
+                <span style={{ fontSize: '24px', fontWeight: 800, color: avgRiskLive > 2 ? c.red : avgRiskLive > 1.5 ? c.amber : c.green, letterSpacing: '-0.5px' }}>{avgRiskLive.toFixed(2)}%</span>
               </div>
               <div style={{ height: '6px', background: c.surface3, borderRadius: '3px', overflow: 'hidden' }}>
-                <div style={{ height: '6px', borderRadius: '3px', background: `linear-gradient(90deg, ${c.green}, ${c.amber}, ${c.red})`, width: '64%' }} />
+                <div style={{ height: '6px', borderRadius: '3px', background: `linear-gradient(90deg, ${c.green}, ${c.amber}, ${c.red})`, width: `${Math.min(100, (avgRiskLive / 3) * 100)}%` }} />
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '5px', fontSize: '10px', color: c.text3, fontFamily: c.mono }}>
                 <span>0%</span>
@@ -392,15 +493,15 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Bottom Stats Strip */}
+      {/* Bottom Stats Strip — live */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '10px' }}>
         {[
-          { label: 'Win Rate', value: '59.6%', color: c.green },
-          { label: 'Avg R:R Won', value: '2.3R', color: c.green },
-          { label: 'Max Drawdown', value: '−4.2%', color: c.red },
-          { label: 'Profit Factor', value: '1.87', color: c.amber },
-          { label: 'Net P&L', value: '+$1,247', color: c.green },
-          { label: 'Best Streak', value: '6 wins', color: c.green },
+          { label: 'Win Rate', value: analytics ? `${analytics.win_rate}%` : '59.6%', color: analytics && analytics.win_rate >= 55 ? c.green : c.amber },
+          { label: 'Avg R:R', value: analytics ? `${analytics.avg_reward_risk}R` : '2.3R', color: c.green },
+          { label: 'Max Drawdown', value: analytics ? `${analytics.max_drawdown_pct}%` : '−4.2%', color: c.red },
+          { label: 'Profit Factor', value: analytics ? `${analytics.profit_factor}` : '1.87', color: c.amber },
+          { label: 'Net P&L', value: analytics ? `${analytics.net_pnl >= 0 ? '+' : ''}$${Math.round(analytics.net_pnl).toLocaleString()}` : '+$1,247', color: analytics ? (analytics.net_pnl >= 0 ? c.green : c.red) : c.green },
+          { label: 'Best Streak', value: analytics ? `${analytics.max_win_streak} wins` : '6 wins', color: c.green },
         ].map(stat => (
           <div key={stat.label} style={{ ...panel, padding: '12px 14px' }}>
             <div style={{ fontSize: '10px', color: c.text3, fontFamily: c.mono, textTransform: 'uppercase', letterSpacing: '0.8px' }}>{stat.label}</div>

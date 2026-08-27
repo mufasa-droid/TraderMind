@@ -1,11 +1,13 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis,
   ResponsiveContainer, ScatterChart, Scatter, XAxis, YAxis,
   ZAxis, Tooltip, CartesianGrid, BarChart, Bar, Cell
 } from 'recharts'
 import { AlertTriangle, TrendingDown, Brain, Zap } from 'lucide-react'
+import type { PerformanceAnalytics, Trade, BehavioralFlag } from '@/types'
 
 const c = {
   green: '#3ecf8e', red: '#ff5f5f', amber: '#f5a623',
@@ -16,7 +18,7 @@ const c = {
 }
 const panel = { background: c.surface, border: `1px solid ${c.border}`, borderRadius: '10px', overflow: 'hidden' }
 
-const radarData = [
+const DEMO_RADAR = [
   { subject: 'Discipline', score: 78 },
   { subject: 'Risk Mgmt', score: 61 },
   { subject: 'Consistency', score: 84 },
@@ -25,7 +27,7 @@ const radarData = [
   { subject: 'Exit Quality', score: 58 },
 ]
 
-const scatterData = [
+const DEMO_SCATTER = [
   { emotion: 1, rr: 2.4, pnl: 312, size: 100 },
   { emotion: 1, rr: 3.1, pnl: 540, size: 120 },
   { emotion: 1, rr: 1.9, pnl: 228, size: 90 },
@@ -37,11 +39,18 @@ const scatterData = [
   { emotion: 5, rr: -1.0, pnl: -220, size: 100 },
 ]
 
-const hourlyData = Array.from({ length: 24 }, (_, h) => ({
+const DEMO_HOURLY = Array.from({ length: 24 }, (_, h) => ({
   hour: `${h.toString().padStart(2, '0')}:00`,
   wr: h >= 8 && h <= 12 ? 62 + Math.random() * 15 : h >= 13 && h <= 17 ? 42 + Math.random() * 12 : 45 + Math.random() * 10,
   trades: h >= 8 && h <= 17 ? Math.floor(3 + Math.random() * 5) : Math.floor(Math.random() * 2),
 }))
+
+type AnalyticsResponse = {
+  analytics: PerformanceAnalytics
+  recent_trades: Trade[]
+  behavioral_flags: BehavioralFlag[]
+  equity_curve: { date: string; daily_pnl: number; cumulative: number }[]
+}
 
 const emotionColors: Record<number, string> = {
   1: c.green,   // Calm/Focused
@@ -55,20 +64,96 @@ const emotionLabels: Record<number, string> = {
 }
 
 export default function BehaviorPage() {
+  const [data, setData] = useState<AnalyticsResponse | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/behavioral/analytics?range=1M', { cache: 'no-store' })
+      .then(async r => { if (!r.ok) throw new Error(await r.text()); return r.json() })
+      .then(j => { if (!cancelled) setData(j) })
+      .catch(e => console.warn('Behavior analytics fetch failed, demo fallback:', e))
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [])
+
+  const analytics = data?.analytics ?? null
+  const recentTrades = data?.recent_trades ?? []
+  const flags = data?.behavioral_flags ?? []
+
+  // Radar: live scores + derived entry/exit
+  const radarData = analytics ? [
+    { subject: 'Discipline', score: analytics.discipline_score },
+    { subject: 'Risk Mgmt', score: analytics.risk_quality_score },
+    { subject: 'Consistency', score: analytics.behavioral_consistency_score },
+    { subject: 'Emotional', score: analytics.emotional_stability_score },
+    { subject: 'Entry Quality', score: Math.min(100, Math.round(50 + analytics.win_rate * 0.5)) },
+    { subject: 'Exit Quality', score: Math.min(100, Math.round(40 + analytics.avg_reward_risk * 15)) },
+  ] : DEMO_RADAR
+
+  // Scatter: map recent trades to emotion buckets (pnl>0 -> calm, pnl<0 -> revenge/fomo)
+  const scatterData = analytics && recentTrades.length
+    ? recentTrades.slice(0, 9).map(t => {
+        const rr = t.reward_risk_ratio ?? (t.net_pnl && t.net_pnl > 0 ? 1.5 : -1)
+        const pnl = t.net_pnl ?? 0
+        // 1 calm/focused, 3 fomo, 4 revenge — heuristic based on RR/pnl
+        let emotion = 1
+        if (pnl < 0 && (t.risk_pct ?? 0) > 2) emotion = 4
+        else if (pnl < 0) emotion = 3
+        else if ((t.risk_pct ?? 0) > 1.8) emotion = 2
+        return { emotion, rr, pnl, size: 70 + Math.min(60, Math.abs(pnl) / 10) }
+      })
+    : DEMO_SCATTER
+
+  // Hourly: derive from recentTrades grouped by UTC hour, fallback to demo
+  const hourlyData = (() => {
+    if (!recentTrades.length) return DEMO_HOURLY
+    const byHour: Record<number, { wins: number; total: number }> = {}
+    for (const t of recentTrades) {
+      const h = new Date(t.opened_at).getUTCHours()
+      if (!byHour[h]) byHour[h] = { wins: 0, total: 0 }
+      byHour[h].total++
+      if ((t.net_pnl ?? 0) > 0) byHour[h].wins++
+    }
+    return Array.from({ length: 24 }, (_, h) => {
+      const entry = byHour[h]
+      const wr = entry ? Math.round((entry.wins / entry.total) * 100) : DEMO_HOURLY[h].wr
+      return { hour: `${h.toString().padStart(2, '0')}:00`, wr, trades: entry?.total ?? DEMO_HOURLY[h].trades }
+    })
+  })()
+
+  // Pattern alerts — top 3 behavioral flag types
+  const flagEntries = analytics ? Object.entries(analytics.behavioral_flags).filter(([, c]) => (c as number) > 0).sort((a, b) => (b[1] as number) - (a[1] as number)).slice(0, 3) : []
+  const alerts = analytics && flagEntries.length
+    ? flagEntries.map(([type, count], idx) => {
+        const labelMap: Record<string, string> = { revenge_trading: 'Revenge Trading', post_win_risk_creep: 'Post-Win Risk Creep', overtrading: 'Overtrading' }
+        const pretty = labelMap[type] ?? type.replace(/_/g, ' ').replace(/\b\w/g, s => s.toUpperCase())
+        const colors = [c.red, c.amber, c.accent]
+        const icons = [AlertTriangle, TrendingDown, Brain]
+        return {
+          icon: icons[idx] ?? Brain,
+          color: colors[idx] ?? c.accent,
+          label: idx === 0 ? 'Critical Pattern' : idx === 1 ? 'Warning Pattern' : 'Behavioral Insight',
+          title: `${pretty} — ${count} detected`,
+          desc: analytics ? `${type.replace(/_/g, ' ')} flagged ${count} times in this period. Avg risk ${analytics.avg_risk_per_trade.toFixed(2)}%, win rate ${analytics.win_rate}%.` : '',
+        }
+      })
+    : [
+        { icon: AlertTriangle, color: c.red, label: 'Critical Pattern', title: 'Revenge Trading After London Losses', desc: '3 revenge trades this month, all within 5 min of a loss. Average loss: $160.' },
+        { icon: TrendingDown, color: c.amber, label: 'Warning Pattern', title: 'Post-Win Risk Creep', desc: 'After 3+ consecutive wins, average risk increases from 1.1% to 1.9%. Detected 6 times.' },
+        { icon: Brain, color: c.accent, label: 'Behavioral Insight', title: 'Best State: Calm & Focused', desc: '58% of trades taken in calm/focused state. Win rate in this state: 71% vs 38% otherwise.' },
+      ]
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '1200px' }}>
       <div>
         <h1 style={{ fontSize: '24px', fontWeight: 800, letterSpacing: '-0.6px' }}>Behavioral Intelligence</h1>
-        <p style={{ fontSize: '12px', color: c.text3, marginTop: '3px', fontFamily: c.mono }}>Deep analysis of your trading psychology and behavioral patterns</p>
+        <p style={{ fontSize: '12px', color: c.text3, marginTop: '3px', fontFamily: c.mono }}>{loading ? 'Loading…' : `${analytics?.total_trades ?? 47} trades · Deep analysis of your trading psychology`}</p>
       </div>
 
-      {/* Pattern Alerts */}
+      {/* Pattern Alerts — live */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
-        {[
-          { icon: AlertTriangle, color: c.red, label: 'Critical Pattern', title: 'Revenge Trading After London Losses', desc: '3 revenge trades this month, all within 5 min of a loss. Average loss: $160.' },
-          { icon: TrendingDown, color: c.amber, label: 'Warning Pattern', title: 'Post-Win Risk Creep', desc: 'After 3+ consecutive wins, average risk increases from 1.1% to 1.9%. Detected 6 times.' },
-          { icon: Brain, color: c.accent, label: 'Behavioral Insight', title: 'Best State: Calm & Focused', desc: '58% of trades taken in calm/focused state. Win rate in this state: 71% vs 38% otherwise.' },
-        ].map(alert => (
+        {alerts.map(alert => (
           <div key={alert.title} style={{ ...panel, padding: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
               <alert.icon size={13} color={alert.color} />
@@ -151,17 +236,25 @@ export default function BehaviorPage() {
           </div>
         </div>
 
-        {/* Behavioral Timeline */}
+        {/* Behavioral Timeline — live */}
         <div style={panel}>
           <div style={{ padding: '12px 16px', borderBottom: `1px solid ${c.border}`, fontSize: '13px', fontWeight: 600 }}>Behavioral Patterns This Month</div>
           <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {[
-              { date: 'May 26', event: 'Revenge trading detected after EURUSD stop-out', type: 'danger', score: '−8 pts' },
-              { date: 'May 25', event: 'Calm & focused across all 3 trades. London session discipline', type: 'positive', score: '+5 pts' },
-              { date: 'May 24', event: 'Post-win risk creep detected. Risk jumped from 1.1% to 2.1%', type: 'warning', score: '−4 pts' },
-              { date: 'May 23', event: 'Perfect session: 2 trades, journaled both, respected all rules', type: 'positive', score: '+8 pts' },
-              { date: 'May 22', event: 'FOMO entry on BTCUSD during news spike', type: 'warning', score: '−3 pts' },
-            ].map((item, i) => (
+            {(flags.length
+              ? flags.slice(0, 5).map(f => ({
+                  date: new Date(f.detected_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                  event: f.description,
+                  type: f.severity === 'high' ? 'danger' as const : f.severity === 'medium' ? 'warning' as const : 'positive' as const,
+                  score: f.severity === 'high' ? '−8 pts' : f.severity === 'medium' ? '−4 pts' : '+2 pts',
+                }))
+              : [
+                  { date: 'May 26', event: 'Revenge trading detected after EURUSD stop-out', type: 'danger' as const, score: '−8 pts' },
+                  { date: 'May 25', event: 'Calm & focused across all 3 trades. London session discipline', type: 'positive' as const, score: '+5 pts' },
+                  { date: 'May 24', event: 'Post-win risk creep detected. Risk jumped from 1.1% to 2.1%', type: 'warning' as const, score: '−4 pts' },
+                  { date: 'May 23', event: 'Perfect session: 2 trades, journaled both, respected all rules', type: 'positive' as const, score: '+8 pts' },
+                  { date: 'May 22', event: 'FOMO entry on BTCUSD during news spike', type: 'warning' as const, score: '−3 pts' },
+                ]
+            ).map((item, i) => (
               <div key={i} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
                 <div style={{ width: '6px', height: '6px', borderRadius: '50%', marginTop: '6px', flexShrink: 0, background: item.type === 'danger' ? c.red : item.type === 'warning' ? c.amber : c.green }} />
                 <div style={{ flex: 1 }}>

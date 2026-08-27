@@ -12,7 +12,7 @@ const c = {
 }
 const panel = { background: c.surface, border: `1px solid ${c.border}`, borderRadius: '10px', overflow: 'hidden' }
 
-const SAMPLE_REPORT = {
+const DEMO_REPORT = {
   behavioral_analysis: `Your trading behavior this month shows a clear bifurcation between disciplined and reactive sessions. During London hours, you demonstrate strong pre-trade discipline — risk sizing is consistent, entries are methodical, and emotional state logs indicate high focus levels. However, your New York session behavior degrades significantly, particularly following any loss in the preceding London session.\n\nThe post-loss behavioral pattern is your most critical issue: you are entering positions within 3–5 minutes of a loss in 6 of your 9 NY-session losses this month. This is a textbook revenge trading pattern. Across these 6 trades, your average risk was 2.4% — double your stated maximum of 1.2%.`,
   psychological_patterns: `Your confidence calibration is off in one specific scenario: the post-win streak. After 3+ consecutive wins, your position sizing increases by an average of 0.8% and your pre-trade reflection notes become shorter and less detailed. This suggests overconfidence is silently degrading your process quality before losses occur — not after. The losses feel "random" to you, but the data shows they are predictable.`,
   discipline_feedback: `Rule compliance is 87% this month — strong, but not elite. Your most violated rule is max risk per trade (4 violations). Three of those violations occurred on NY session trades after London losses. One additional improvement area: you skipped your post-trade journal on 11 occasions. Every un-journaled trade was a loser. This is likely survivorship bias in your reflection habits — you journal wins more consistently than losses.`,
@@ -29,12 +29,16 @@ const SAMPLE_REPORT = {
     'Add ATR condition check to your pre-trade checklist for all breakout setups.',
     'Journal every trade, not just winners. Set a calendar reminder 5 minutes after each trade close.',
     'Review your exit strategy — consider a trailing stop or partial exit rule to reduce average loss hold time.',
-  ]
+  ],
+  overall_discipline_score: 78,
+  behavioral_consistency_score: 84,
+  risk_quality_score: 61,
+  emotional_stability_score: 72,
 }
 
 const INITIAL_MESSAGES = [
   {
-    role: 'assistant',
+    role: 'assistant' as const,
     content: "I've analyzed your trading data for May 2026. Your discipline score is 78/100 — improving, but there are 3 behavioral patterns holding back your performance. Where would you like to start: your session-specific performance, emotional trading patterns, or risk management consistency?"
   }
 ]
@@ -48,34 +52,79 @@ const QUICK_PROMPTS = [
 
 export default function AICoachPage() {
   const [activeTab, setActiveTab] = useState<'chat' | 'report'>('report')
-  const [messages, setMessages] = useState(INITIAL_MESSAGES)
+  const [messages, setMessages] = useState<{role:'user'|'assistant',content:string}[]>([...INITIAL_MESSAGES])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [generating, setGenerating] = useState(false)
+  const [report, setReport] = useState<null | typeof DEMO_REPORT & { generated_at?:string, period?:string, analytics?:any }>(null)
+  const [reportLoading, setReportLoading] = useState(true)
+  const [reportError, setReportError] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
+  useEffect(() => {
+    let cancelled=false
+    async function loadReport(){
+      setReportLoading(true)
+      try{
+        const r = await fetch('/api/ai/report?period=monthly', {cache:'no-store'})
+        if(r.ok){
+          const j = await r.json()
+          if(!cancelled && j.data) setReport(j.data as any)
+          else if(!cancelled) setReport(DEMO_REPORT as any)
+        } else if(r.status===404){
+          if(!cancelled) setReport(DEMO_REPORT as any)
+        } else {
+          const txt = await r.text()
+          if(!cancelled){ setReportError(txt.slice(0,120)); setReport(DEMO_REPORT as any)}
+        }
+      } catch(e){ if(!cancelled){ setReport(DEMO_REPORT as any); setReportError(String(e).slice(0,120)) } }
+      finally{ if(!cancelled) setReportLoading(false) }
+    }
+    loadReport()
+    return ()=>{cancelled=true}
+  }, [])
+
+  const handleGenerate = async ()=>{
+    setGenerating(true)
+    setReportError(null)
+    try{
+      const r = await fetch('/api/ai/report', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({period:'monthly'})})
+      const j = await r.json()
+      if(r.ok && j.data) setReport(j.data as any)
+      else setReportError(j.error || 'Failed to generate')
+    } catch(e){ setReportError(String(e)) }
+    finally{ setGenerating(false) }
+  }
+
   const sendMessage = async (text?: string) => {
     const msg = text ?? input.trim()
     if (!msg) return
     setInput('')
-    setMessages(prev => [...prev, { role: 'user', content: msg }])
+    const history = [...messages, { role: 'user' as const, content: msg }]
+    setMessages(history)
     setIsLoading(true)
-
-    // Simulate AI response (in production: POST /api/ai/chat)
-    await new Promise(r => setTimeout(r, 1400))
-    const replies: Record<string, string> = {
-      "Why do I perform worse in NY sessions?": "Your NY session underperformance (48% WR vs 67% London) is driven by two factors. First, you're often already emotionally fatigued by the London session — stress levels in your logs average 6.2/10 entering NY, vs 3.8/10 at London open. Second, NY session volatility increases stop-hunting risk, and your stop placement is based on London market structure. Consider wider stops or smaller size in NY until your ATR-adjusted entry framework improves.",
-      "Analyze my revenge trading pattern": "Your revenge trading follows a predictable 3-step trigger: (1) a London loss of >$150, (2) a gap in journaling that loss, (3) entry within 5 minutes of the loss close. All 3 revenge trades this month matched this pattern exactly. The solution isn't willpower — it's friction. I'd suggest a mandatory 30-minute delay rule encoded into your broker's pending order workflow. Make impulsive entries structurally harder.",
-      "What's my best trading setup?": "Your highest-performing setup is London breakout with ATR confirmation: 71% WR across 14 trades, avg 2.8R. The critical filter is ATR > 14-period average at entry — when you skip this filter, WR drops to 38%. Your second-best is Asian range breakout at London open (65% WR, but only 5 trades — sample size is too small to conclude). Focus on mastering the breakout + ATR setup before adding complexity.",
-    }
-    const reply = replies[msg] ?? "Based on your trading data, this is a strong behavioral question. Your current discipline score of 78/100 and behavioral consistency of 84/100 suggest you have a solid foundation. The key area to focus on is the specific pattern you're asking about — would you like me to pull the specific trades that illustrate this?"
-
-    setMessages(prev => [...prev, { role: 'assistant', content: reply }])
-    setIsLoading(false)
+    try{
+      const r = await fetch('/api/ai/chat', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ message: msg, history: messages })})
+      const j = await r.json()
+      if(r.ok && j.reply){
+        setMessages(prev => [...prev, { role: 'assistant', content: j.reply }])
+      } else {
+        // fallback to demo canned replies when API fails (e.g. demo mode, no key)
+        const replies: Record<string, string> = {
+          "Why do I perform worse in NY sessions?": "Your NY session underperformance (48% WR vs 67% London) is driven by two factors. First, you're often already emotionally fatigued by the London session — stress levels in your logs average 6.2/10 entering NY, vs 3.8/10 at London open. Second, NY session volatility increases stop-hunting risk, and your stop placement is based on London market structure. Consider wider stops or smaller size in NY until your ATR-adjusted entry framework improves.",
+          "Analyze my revenge trading pattern": "Your revenge trading follows a predictable 3-step trigger: (1) a London loss of >$150, (2) a gap in journaling that loss, (3) entry within 5 minutes of the loss close. All 3 revenge trades this month matched this pattern exactly. The solution isn't willpower — it's friction. I'd suggest a mandatory 30-minute delay rule encoded into your broker's pending order workflow. Make impulsive entries structurally harder.",
+          "What's my best trading setup?": "Your highest-performing setup is London breakout with ATR confirmation: 71% WR across 14 trades, avg 2.8R. The critical filter is ATR > 14-period average at entry — when you skip this filter, WR drops to 38%. Your second-best is Asian range breakout at London open (65% WR, but only 5 trades — sample size is too small to conclude). Focus on mastering the breakout + ATR setup before adding complexity.",
+        }
+        const reply = (j.error && String(j.error).includes('No closed trades')) ? 'No live trades found — showing demo insight. Once you log trades, the coach will use your real history.' : (replies[msg] ?? j.reply ?? j.error ?? "Based on your trading data, this is a strong behavioral question. Your current discipline score of 78/100 and behavioral consistency of 84/100 suggest you have a solid foundation. The key area to focus on is the specific pattern you're asking about — would you like me to pull the specific trades that illustrate this?")
+        setMessages(prev => [...prev, { role: 'assistant', content: reply }])
+      }
+    } catch(e){
+      setMessages(prev => [...prev, { role: 'assistant', content: `Demo fallback: ${String(e).slice(0,120)}` }])
+    } finally{ setIsLoading(false) }
   }
 
   return (
@@ -117,20 +166,20 @@ export default function AICoachPage() {
                     background: 'rgba(108,142,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center'
                   }}><Sparkles size={16} color={c.accent} /></div>
                   <div>
-                    <div style={{ fontSize: '14px', fontWeight: 700 }}>May 2026 Monthly Report</div>
-                    <div style={{ fontSize: '11px', color: c.text3, fontFamily: c.mono }}>Generated today · 47 trades analyzed</div>
+                    <div style={{ fontSize: '14px', fontWeight: 700 }}>{reportLoading ? 'Loading report…' : report?.period ? `${report.period} Report` : 'May 2026 Monthly Report'} {report && !reportLoading && <span style={{fontSize:'11px',color:c.text3,fontFamily:c.mono}}>· live</span>}</div>
+                    <div style={{ fontSize: '11px', color: c.text3, fontFamily: c.mono }}>{reportError ? `Demo fallback · ${reportError.slice(0,60)}` : report?.generated_at ? `Generated ${new Date(report.generated_at).toLocaleDateString()} · ${report?.analytics?.total_trades ?? 47} trades analyzed` : 'Generated today · 47 trades analyzed'}</div>
                   </div>
-                  <button style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '7px', background: 'rgba(108,142,255,0.15)', border: `1px solid rgba(108,142,255,0.3)`, color: c.accent, fontSize: '11px', fontWeight: 600, cursor: 'pointer', fontFamily: c.mono }}
-                    onClick={() => setGenerating(true)}>
-                    <RefreshCw size={11} /> Regenerate
+                  <button disabled={generating} style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '7px', background: 'rgba(108,142,255,0.15)', border: `1px solid rgba(108,142,255,0.3)`, color: c.accent, fontSize: '11px', fontWeight: 600, cursor: generating?'not-allowed':'pointer', fontFamily: c.mono, opacity: generating?0.6:1 }}
+                    onClick={handleGenerate}>
+                    <RefreshCw size={11} style={{ animation: generating ? 'spin 1s linear infinite' : undefined }} /> {generating ? 'Generating…' : 'Regenerate'}
                   </button>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
                   {[
-                    { label: 'Discipline', value: 78, color: c.accent },
-                    { label: 'Consistency', value: 84, color: c.green },
-                    { label: 'Risk Quality', value: 61, color: c.amber },
-                    { label: 'Emotional', value: 72, color: c.purple },
+                    { label: 'Discipline', value: (report as any)?.overall_discipline_score ?? (report as any)?.discipline_score ?? DEMO_REPORT.overall_discipline_score, color: c.accent },
+                    { label: 'Consistency', value: (report as any)?.behavioral_consistency_score ?? DEMO_REPORT.behavioral_consistency_score, color: c.green },
+                    { label: 'Risk Quality', value: (report as any)?.risk_quality_score ?? DEMO_REPORT.risk_quality_score, color: c.amber },
+                    { label: 'Emotional', value: (report as any)?.emotional_stability_score ?? DEMO_REPORT.emotional_stability_score, color: c.purple },
                   ].map(s => (
                     <div key={s.label} style={{ textAlign: 'center', padding: '12px', background: 'rgba(0,0,0,0.2)', borderRadius: '8px' }}>
                       <div style={{ fontSize: '28px', fontWeight: 800, color: s.color, letterSpacing: '-1px' }}>{s.value}</div>
@@ -141,11 +190,11 @@ export default function AICoachPage() {
               </div>
             </div>
 
-            {/* Behavioral Analysis */}
+            {/* Behavioral Analysis — live */}
             {[
-              { title: 'Behavioral Analysis', icon: Brain, content: SAMPLE_REPORT.behavioral_analysis },
-              { title: 'Psychological Patterns', icon: TrendingUp, content: SAMPLE_REPORT.psychological_patterns },
-              { title: 'Discipline Feedback', icon: AlertCircle, content: SAMPLE_REPORT.discipline_feedback },
+              { title: 'Behavioral Analysis', icon: Brain, content: (report as any)?.behavioral_analysis ?? DEMO_REPORT.behavioral_analysis },
+              { title: 'Psychological Patterns', icon: TrendingUp, content: (report as any)?.psychological_patterns ?? DEMO_REPORT.psychological_patterns },
+              { title: 'Discipline Feedback', icon: AlertCircle, content: (report as any)?.discipline_feedback ?? DEMO_REPORT.discipline_feedback },
             ].map(section => (
               <div key={section.title} style={panel}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 16px', borderBottom: `1px solid ${c.border}` }}>
@@ -153,15 +202,15 @@ export default function AICoachPage() {
                   <span style={{ fontSize: '13px', fontWeight: 600 }}>{section.title}</span>
                 </div>
                 <div style={{ padding: '16px', fontSize: '13px', lineHeight: 1.8, color: c.text2 }}>
-                  {section.content.split('\n\n').map((para, i) => (
-                    <p key={i} style={{ marginBottom: i < section.content.split('\n\n').length - 1 ? '12px' : 0 }}>{para}</p>
+                  {String(section.content).split('\n\n').map((para, i, arr) => (
+                    <p key={i} style={{ marginBottom: i < arr.length - 1 ? '12px' : 0 }}>{para}</p>
                   ))}
                 </div>
               </div>
             ))}
           </div>
 
-          {/* Right Column - Insights & Suggestions */}
+          {/* Right Column - Insights & Suggestions — live */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             {/* Key Insights */}
             <div style={panel}>
@@ -170,7 +219,7 @@ export default function AICoachPage() {
                 <span style={{ fontSize: '13px', fontWeight: 600 }}>Key Insights</span>
               </div>
               <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {SAMPLE_REPORT.key_insights.map((insight, i) => (
+                {((report as any)?.key_insights ?? DEMO_REPORT.key_insights).map((insight: string, i: number) => (
                   <div key={i} style={{ display: 'flex', gap: '10px', padding: '10px 12px', background: c.surface2, borderRadius: '8px' }}>
                     <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'rgba(108,142,255,0.15)', color: c.accent, fontSize: '10px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontFamily: c.mono }}>{i + 1}</div>
                     <p style={{ fontSize: '12px', lineHeight: 1.6, color: c.text2 }}>{insight}</p>
@@ -179,14 +228,14 @@ export default function AICoachPage() {
               </div>
             </div>
 
-            {/* Action Items */}
+            {/* Action Items — live */}
             <div style={panel}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 16px', borderBottom: `1px solid ${c.border}` }}>
                 <ChevronRight size={14} color={c.green} />
                 <span style={{ fontSize: '13px', fontWeight: 600 }}>Action Items</span>
               </div>
               <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {SAMPLE_REPORT.improvement_suggestions.map((sug, i) => (
+                {((report as any)?.improvement_suggestions ?? DEMO_REPORT.improvement_suggestions).map((sug: string, i: number) => (
                   <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', padding: '8px 10px', borderRadius: '7px' }}>
                     <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: c.green, marginTop: '6px', flexShrink: 0 }} />
                     <p style={{ fontSize: '12px', lineHeight: 1.6, color: c.text2 }}>{sug}</p>
