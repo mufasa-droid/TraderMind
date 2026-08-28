@@ -27,18 +27,20 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    // Demo/portfolio bypass — instant, no Supabase needed. Guarantees Sign In works even with placeholder keys or missing user.
+    if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+      console.log('Demo mode bypass → /dashboard')
+      router.push('/dashboard')
+      // fallback if router push is blocked by middleware race
+      setTimeout(() => { if (window.location.pathname.includes('/auth/login')) window.location.href = '/dashboard' }, 300)
+      return
+    }
     setLoading(true)
     setError(null)
     try {
       const supabase = createClient()
       const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
       if (signInError) {
-        if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
-          console.warn('Demo mode: Supabase sign-in failed, navigating to dashboard anyway:', signInError.message)
-          router.push('/dashboard')
-          router.refresh()
-          return
-        }
         setError(signInError.message)
         return
       }
@@ -47,12 +49,6 @@ export default function LoginPage() {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       console.error('Sign-in exception:', msg)
-      if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
-        console.warn('Demo mode: exception bypass → /dashboard')
-        router.push('/dashboard')
-        router.refresh()
-        return
-      }
       setError(msg)
     } finally {
       setLoading(false)
@@ -94,7 +90,7 @@ export default function LoginPage() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <form onSubmit={handleSubmit} noValidate style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div>
               <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: c.text2, marginBottom: '6px', fontFamily: c.mono }}>Email</label>
               <input

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Search, Filter, Plus, ArrowUpRight, ArrowDownRight, TrendingUp } from 'lucide-react'
+import { Search, Filter, Plus, ArrowUpRight, ArrowDownRight, TrendingUp, X } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 import type { Trade, PerformanceAnalytics } from '@/types'
 
@@ -62,6 +62,23 @@ export default function TradesPage() {
   const [evalLoading, setEvalLoading] = useState(false)
   const [showLog, setShowLog] = useState(false)
   const [logSaving, setLogSaving] = useState(false)
+  const [logError, setLogError] = useState<string | null>(null)
+  const [logForm, setLogForm] = useState({
+    symbol: 'EURUSD',
+    direction: 'long' as 'long'|'short',
+    instrument_type: 'forex' as 'forex'|'crypto'|'commodities'|'indices'|'stocks',
+    entry_price: '1.0850',
+    exit_price: '1.0900',
+    lot_size: '0.10',
+    risk_pct: '1.0',
+    stop_loss: '',
+    take_profit: '',
+    session: 'london' as 'london'|'overlap'|'new_york'|'asian',
+    strategy_name: 'Breakout',
+    opened_at: new Date().toISOString().slice(0,16),
+    closed_at: new Date().toISOString().slice(0,16),
+    status: 'closed' as 'open'|'closed'|'pending',
+  })
 
   useEffect(() => {
     let cancelled=false
@@ -113,32 +130,66 @@ export default function TradesPage() {
   }
 
   const doLogTrade = async ()=>{
+    setLogError(null)
+    // validation
+    if(!logForm.symbol.trim()) { setLogError('Symbol required'); return }
+    const entry = parseFloat(logForm.entry_price)
+    const lot = parseFloat(logForm.lot_size)
+    const risk = parseFloat(logForm.risk_pct)
+    if(Number.isNaN(entry) || entry<=0) { setLogError('Entry price must be > 0'); return }
+    if(Number.isNaN(lot) || lot<=0) { setLogError('Lot size must be > 0'); return }
+    if(Number.isNaN(risk) || risk<=0 || risk>10) { setLogError('Risk % must be 0.1–10'); return }
+    if(logForm.status==='closed'){
+      const exit = logForm.exit_price ? parseFloat(logForm.exit_price) : NaN
+      if(logForm.exit_price && (Number.isNaN(exit) || exit<=0)) { setLogError('Exit price invalid'); return }
+    }
     setLogSaving(true)
     try{
-      const body = {
-        symbol: evalForm.symbol || 'EURUSD',
-        direction: evalForm.direction,
-        risk_pct: parseFloat(evalForm.risk_pct)||1,
-        session: evalForm.session,
-        strategy_name: evalForm.strategy_name,
-        instrument_type: 'forex',
-        status: 'closed',
-        entry_price: 1.08,
-        exit_price: 1.09,
-        lot_size: 0.1,
-        position_size_usd: 1000,
-        net_pnl: Math.round((Math.random()*400-100)),
-        gross_pnl: 0,
-        opened_at: new Date().toISOString(),
-        closed_at: new Date().toISOString(),
+      const opened = new Date(logForm.opened_at)
+      const closed = logForm.closed_at ? new Date(logForm.closed_at) : null
+      const exitVal = logForm.exit_price ? parseFloat(logForm.exit_price) : undefined
+      const sl = logForm.stop_loss ? parseFloat(logForm.stop_loss) : undefined
+      const tp = logForm.take_profit ? parseFloat(logForm.take_profit) : undefined
+      // auto pnl if closed and prices present
+      let netPnl: number | undefined = undefined
+      if(logForm.status==='closed' && exitVal){
+        const dir = logForm.direction==='long'?1:-1
+        const pipMult = logForm.symbol.includes('JPY') ? 100 : 10000
+        const pips = (exitVal - entry) * pipMult * dir
+        // synthetic pnl: pips * lot * 10 (approx) — real broker would compute
+        netPnl = Math.round(pips * lot * 0.8 * 10) / 10
+      }
+      const body: any = {
+        symbol: logForm.symbol.toUpperCase().trim(),
+        direction: logForm.direction,
+        instrument_type: logForm.instrument_type,
+        status: logForm.status,
+        entry_price: entry,
+        exit_price: exitVal,
+        stop_loss: Number.isFinite(sl as number) ? sl : undefined,
+        take_profit: Number.isFinite(tp as number) ? tp : undefined,
+        lot_size: lot,
+        position_size_usd: Math.round(lot * 100000 * entry * 0.01),
+        risk_pct: risk,
+        session: logForm.session,
+        strategy_name: logForm.strategy_name || undefined,
+        opened_at: opened.toISOString(),
+        closed_at: closed && logForm.status==='closed' ? closed.toISOString() : undefined,
+        net_pnl: netPnl,
+        gross_pnl: netPnl,
       }
       const r = await fetch('/api/trades',{method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)})
       const j = await r.json()
       if(r.ok && j.data){
         const mapped = mapTrade(j.data as Trade)
         setTrades(prev=>[mapped, ...prev].slice(0,50))
-      } else alert(j.error || 'Failed to log')
-    } finally{ setLogSaving(false); setShowLog(false) }
+        setShowLog(false)
+      } else {
+        setLogError(j.error || 'Failed to log trade')
+      }
+    } catch(e){
+      setLogError(e instanceof Error ? e.message : String(e))
+    } finally{ setLogSaving(false) }
   }
 
   const filtered = trades.filter(t => {
@@ -198,12 +249,112 @@ export default function TradesPage() {
         ))}
       </div>
 
-      {/* Log Trade quick form */}
+      {/* Log Trade — full modal (5a) */}
       {showLog && (
-        <div style={{ background: c.surface, border:`1px solid ${c.border}`, borderRadius:'10px', padding:'16px' }}>
-          <div style={{fontSize:'13px',fontWeight:600,marginBottom:'10px'}}>Log Trade — demo will create a synthetic closed trade</div>
-          <div style={{fontSize:'11px',color:c.text2,marginBottom:'10px',fontFamily:c.mono}}>Uses current Evaluate form values + random P&L. Writes to Supabase via POST /api/trades.</div>
-          <button onClick={doLogTrade} disabled={logSaving} style={{padding:'8px 14px',borderRadius:'7px',background:c.accent,border:'none',color:'#fff',fontSize:'12px',fontWeight:600,cursor:'pointer'}}>{logSaving?'Saving…':'Confirm Log'}</button>
+        <div onClick={()=> !logSaving && setShowLog(false)} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', backdropFilter:'blur(4px)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:50, padding:'20px' }}>
+          <div onClick={e=> e.stopPropagation()} style={{ width:'100%', maxWidth:'560px', maxHeight:'90vh', overflowY:'auto', background:c.surface, border:`1px solid ${c.border}`, borderRadius:'12px', boxShadow:'0 20px 60px rgba(0,0,0,0.5)' }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'16px 18px', borderBottom:`1px solid ${c.border}`, position:'sticky', top:0, background:c.surface, zIndex:1 }}>
+              <div>
+                <div style={{ fontSize:'14px', fontWeight:700 }}>Log Trade</div>
+                <div style={{ fontSize:'11px', color:c.text3, fontFamily:c.mono, marginTop:'2px' }}>Manual entry · validated via POST /api/trades</div>
+              </div>
+              <button onClick={()=> !logSaving && setShowLog(false)} style={{ background:'transparent', border:`1px solid ${c.border}`, borderRadius:'6px', padding:'6px', cursor:'pointer', color:c.text3, display:'flex' }}><X size={14}/></button>
+            </div>
+
+            <div style={{ padding:'16px 18px', display:'flex', flexDirection:'column', gap:'14px' }}>
+              {/* Row 1: Symbol + Direction + Instrument */}
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'10px' }}>
+                <div>
+                  <div style={{ fontSize:'10px', color:c.text3, fontFamily:c.mono, marginBottom:'5px', textTransform:'uppercase' as const, letterSpacing:'0.5px' }}>Symbol *</div>
+                  <input value={logForm.symbol} onChange={e=> setLogForm({...logForm, symbol:e.target.value})} placeholder='EURUSD' style={{ width:'100%', background:c.surface2, border:`1px solid ${c.border}`, borderRadius:'7px', padding:'8px 10px', fontSize:'13px', color:c.text, fontFamily:c.mono, outline:'none', boxSizing:'border-box' }} />
+                </div>
+                <div>
+                  <div style={{ fontSize:'10px', color:c.text3, fontFamily:c.mono, marginBottom:'5px', textTransform:'uppercase' as const, letterSpacing:'0.5px' }}>Direction *</div>
+                  <select value={logForm.direction} onChange={e=> setLogForm({...logForm, direction:e.target.value as any})} style={{ width:'100%', background:c.surface2, border:`1px solid ${c.border}`, borderRadius:'7px', padding:'8px 10px', fontSize:'13px', color:c.text, fontFamily:'inherit', outline:'none' }}>
+                    <option value='long'>Long</option><option value='short'>Short</option>
+                  </select>
+                </div>
+                <div>
+                  <div style={{ fontSize:'10px', color:c.text3, fontFamily:c.mono, marginBottom:'5px', textTransform:'uppercase' as const, letterSpacing:'0.5px' }}>Instrument</div>
+                  <select value={logForm.instrument_type} onChange={e=> setLogForm({...logForm, instrument_type:e.target.value as any})} style={{ width:'100%', background:c.surface2, border:`1px solid ${c.border}`, borderRadius:'7px', padding:'8px 10px', fontSize:'13px', color:c.text, outline:'none' }}>
+                    <option value='forex'>Forex</option><option value='crypto'>Crypto</option><option value='commodities'>Commodities</option><option value='indices'>Indices</option><option value='stocks'>Stocks</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Row 2: Entry + Exit + Lot */}
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'10px' }}>
+                <div>
+                  <div style={{ fontSize:'10px', color:c.text3, fontFamily:c.mono, marginBottom:'5px' }}>Entry Price *</div>
+                  <input type='number' step='0.00001' value={logForm.entry_price} onChange={e=> setLogForm({...logForm, entry_price:e.target.value})} style={{ width:'100%', background:c.surface2, border:`1px solid ${c.border}`, borderRadius:'7px', padding:'8px 10px', fontSize:'13px', color:c.text, fontFamily:c.mono, outline:'none', boxSizing:'border-box' }} />
+                </div>
+                <div>
+                  <div style={{ fontSize:'10px', color:c.text3, fontFamily:c.mono, marginBottom:'5px' }}>Exit Price {logForm.status==='closed' ? '' : '(optional)'}</div>
+                  <input type='number' step='0.00001' value={logForm.exit_price} onChange={e=> setLogForm({...logForm, exit_price:e.target.value})} placeholder={logForm.status==='open'?'—':''} style={{ width:'100%', background:c.surface2, border:`1px solid ${c.border}`, borderRadius:'7px', padding:'8px 10px', fontSize:'13px', color:c.text, fontFamily:c.mono, outline:'none', boxSizing:'border-box' }} />
+                </div>
+                <div>
+                  <div style={{ fontSize:'10px', color:c.text3, fontFamily:c.mono, marginBottom:'5px' }}>Lot Size *</div>
+                  <input type='number' step='0.01' value={logForm.lot_size} onChange={e=> setLogForm({...logForm, lot_size:e.target.value})} style={{ width:'100%', background:c.surface2, border:`1px solid ${c.border}`, borderRadius:'7px', padding:'8px 10px', fontSize:'13px', color:c.text, fontFamily:c.mono, outline:'none', boxSizing:'border-box' }} />
+                </div>
+              </div>
+
+              {/* Row 3: SL / TP / Risk */}
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'10px' }}>
+                <div>
+                  <div style={{ fontSize:'10px', color:c.text3, fontFamily:c.mono, marginBottom:'5px' }}>Stop Loss</div>
+                  <input type='number' step='0.00001' value={logForm.stop_loss} onChange={e=> setLogForm({...logForm, stop_loss:e.target.value})} placeholder='optional' style={{ width:'100%', background:c.surface2, border:`1px solid ${c.border}`, borderRadius:'7px', padding:'8px 10px', fontSize:'13px', color:c.text, fontFamily:c.mono, outline:'none', boxSizing:'border-box' }} />
+                </div>
+                <div>
+                  <div style={{ fontSize:'10px', color:c.text3, fontFamily:c.mono, marginBottom:'5px' }}>Take Profit</div>
+                  <input type='number' step='0.00001' value={logForm.take_profit} onChange={e=> setLogForm({...logForm, take_profit:e.target.value})} placeholder='optional' style={{ width:'100%', background:c.surface2, border:`1px solid ${c.border}`, borderRadius:'7px', padding:'8px 10px', fontSize:'13px', color:c.text, fontFamily:c.mono, outline:'none', boxSizing:'border-box' }} />
+                </div>
+                <div>
+                  <div style={{ fontSize:'10px', color:c.text3, fontFamily:c.mono, marginBottom:'5px' }}>Risk % *</div>
+                  <input type='number' step='0.1' min={0.1} max={10} value={logForm.risk_pct} onChange={e=> setLogForm({...logForm, risk_pct:e.target.value})} style={{ width:'100%', background:c.surface2, border:`1px solid ${c.border}`, borderRadius:'7px', padding:'8px 10px', fontSize:'13px', color:c.text, fontFamily:c.mono, outline:'none', boxSizing:'border-box' }} />
+                </div>
+              </div>
+
+              {/* Row 4: Session + Strategy + Status */}
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'10px' }}>
+                <div>
+                  <div style={{ fontSize:'10px', color:c.text3, fontFamily:c.mono, marginBottom:'5px' }}>Session</div>
+                  <select value={logForm.session} onChange={e=> setLogForm({...logForm, session:e.target.value as any})} style={{ width:'100%', background:c.surface2, border:`1px solid ${c.border}`, borderRadius:'7px', padding:'8px 10px', fontSize:'13px', color:c.text }}>
+                    <option value='london'>London</option><option value='overlap'>Overlap</option><option value='new_york'>New York</option><option value='asian'>Asian</option>
+                  </select>
+                </div>
+                <div>
+                  <div style={{ fontSize:'10px', color:c.text3, fontFamily:c.mono, marginBottom:'5px' }}>Strategy</div>
+                  <input value={logForm.strategy_name} onChange={e=> setLogForm({...logForm, strategy_name:e.target.value})} placeholder='Breakout' style={{ width:'100%', background:c.surface2, border:`1px solid ${c.border}`, borderRadius:'7px', padding:'8px 10px', fontSize:'13px', color:c.text, outline:'none', boxSizing:'border-box' }} />
+                </div>
+                <div>
+                  <div style={{ fontSize:'10px', color:c.text3, fontFamily:c.mono, marginBottom:'5px' }}>Status</div>
+                  <select value={logForm.status} onChange={e=> setLogForm({...logForm, status:e.target.value as any})} style={{ width:'100%', background:c.surface2, border:`1px solid ${c.border}`, borderRadius:'7px', padding:'8px 10px', fontSize:'13px', color:c.text }}>
+                    <option value='closed'>Closed</option><option value='open'>Open</option><option value='pending'>Pending</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Row 5: Dates */}
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px' }}>
+                <div>
+                  <div style={{ fontSize:'10px', color:c.text3, fontFamily:c.mono, marginBottom:'5px' }}>Opened At *</div>
+                  <input type='datetime-local' value={logForm.opened_at} onChange={e=> setLogForm({...logForm, opened_at:e.target.value})} style={{ width:'100%', background:c.surface2, border:`1px solid ${c.border}`, borderRadius:'7px', padding:'8px 10px', fontSize:'13px', color:c.text, outline:'none', boxSizing:'border-box' }} />
+                </div>
+                <div>
+                  <div style={{ fontSize:'10px', color:c.text3, fontFamily:c.mono, marginBottom:'5px' }}>Closed At {logForm.status!=='closed' && '(— for open)'}</div>
+                  <input type='datetime-local' value={logForm.closed_at} onChange={e=> setLogForm({...logForm, closed_at:e.target.value})} disabled={logForm.status!=='closed'} style={{ width:'100%', background:c.surface2, border:`1px solid ${c.border}`, borderRadius:'7px', padding:'8px 10px', fontSize:'13px', color: logForm.status!=='closed'? c.text3 : c.text, outline:'none', opacity: logForm.status!=='closed'?0.6:1, boxSizing:'border-box' }} />
+                </div>
+              </div>
+
+              {logError && <div style={{ padding:'8px 10px', borderRadius:'7px', background:'rgba(255,95,95,0.08)', border:'1px solid rgba(255,95,95,0.2)', fontSize:'12px', color:c.red }}>{logError}</div>}
+
+              <div style={{ display:'flex', gap:'10px', justifyContent:'flex-end', paddingTop:'6px' }}>
+                <button onClick={()=> setShowLog(false)} disabled={logSaving} style={{ padding:'9px 14px', borderRadius:'7px', background:'transparent', border:`1px solid ${c.border}`, color:c.text2, fontSize:'13px', fontWeight:600, cursor:'pointer' }}>Cancel</button>
+                <button onClick={doLogTrade} disabled={logSaving} style={{ padding:'9px 16px', borderRadius:'7px', background:c.accent, border:'none', color:'#fff', fontSize:'13px', fontWeight:700, cursor: logSaving?'not-allowed':'pointer', opacity: logSaving?0.6:1 }}>{logSaving ? 'Saving…' : 'Save Trade'}</button>
+              </div>
+              <div style={{ fontSize:'10px', color:c.text3, fontFamily:c.mono, textAlign:'center' }}>Pips &amp; PnL auto-derived from entry/exit · RLS: user_id scoped</div>
+            </div>
+          </div>
         </div>
       )}
 
