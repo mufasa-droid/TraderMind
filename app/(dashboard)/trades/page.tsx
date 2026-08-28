@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Search, Filter, Plus, ArrowUpRight, ArrowDownRight, TrendingUp, X } from 'lucide-react'
+import { Search, Filter, Plus, ArrowUpRight, ArrowDownRight, TrendingUp, X, Edit3, Trash2 } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 import type { Trade, PerformanceAnalytics } from '@/types'
+import { createClient } from '@/lib/supabase/client'
 
 const c = {
   green: '#3ecf8e', red: '#ff5f5f', amber: '#f5a623',
@@ -79,6 +80,14 @@ export default function TradesPage() {
     closed_at: new Date().toISOString().slice(0,16),
     status: 'closed' as 'open'|'closed'|'pending',
   })
+  const [rawTrades, setRawTrades] = useState<Trade[]>([])
+  const [selected, setSelected] = useState<Trade | null>(null)
+  const [drawerFlags, setDrawerFlags] = useState<any[]>([])
+  const [drawerLogs, setDrawerLogs] = useState<any[]>([])
+  const [editing, setEditing] = useState(false)
+  const [editForm, setEditForm] = useState<Record<string,string>>({})
+  const [deleting, setDeleting] = useState(false)
+  const [drawerSaving, setDrawerSaving] = useState(false)
 
   useEffect(() => {
     let cancelled=false
@@ -90,7 +99,9 @@ export default function TradesPage() {
         ])
         if(cancelled) return
         if(tradesRes?.data?.length){
-          const mapped = (tradesRes.data as Trade[]).map(mapTrade)
+          const raws = tradesRes.data as Trade[]
+          setRawTrades(raws)
+          const mapped = raws.map(mapTrade)
           setTrades(mapped)
           // build pnlByDay from equity_curve if available
           if(analyticsRes?.equity_curve?.length){
@@ -109,6 +120,95 @@ export default function TradesPage() {
     load()
     return ()=>{cancelled=true}
   }, [])
+
+  // Drawer: fetch flags & logs for selected trade
+  useEffect(()=>{
+    if(!selected){ setDrawerFlags([]); setDrawerLogs([]); setEditing(false); return }
+    let cancelled=false
+    const supabase = createClient()
+    // only fetch if looks like uuid (live), else keep empty for demo
+    const isLive = selected.id.includes('-') && selected.id.length>10
+    if(!isLive) return
+    Promise.all([
+      supabase.from('behavioral_flags').select('*').eq('trade_id', selected.id).order('detected_at',{ascending:false}).limit(5).then(r=> r.data ?? []),
+      supabase.from('behavioral_logs').select('*').eq('trade_id', selected.id).order('logged_at',{ascending:false}).limit(5).then(r=> r.data ?? []),
+    ]).then(([flags, logs])=>{
+      if(!cancelled){ setDrawerFlags(flags as any[]); setDrawerLogs(logs as any[]) }
+    }).catch(()=>{})
+    // prep edit form
+    setEditForm({
+      symbol: selected.symbol,
+      entry_price: String(selected.entry_price ?? ''),
+      exit_price: selected.exit_price ? String(selected.exit_price) : '',
+      lot_size: String(selected.lot_size ?? ''),
+      risk_pct: String(selected.risk_pct ?? ''),
+      stop_loss: selected.stop_loss ? String(selected.stop_loss) : '',
+      take_profit: selected.take_profit ? String(selected.take_profit) : '',
+      strategy_name: selected.strategy_name ?? '',
+      session: selected.session,
+    })
+    return ()=>{cancelled=true}
+  }, [selected])
+
+  const handleDelete = async ()=>{
+    if(!selected) return
+    if(!deleting){ setDeleting(true); return } // first click arms, second confirms? We'll use confirm dialog
+    const isDemo = !selected.id.includes('-')
+    if(isDemo){
+      setTrades(prev=> prev.filter(t=> t.id!==selected.id))
+      setSelected(null); setDeleting(false)
+      return
+    }
+    setDrawerSaving(true)
+    try{
+      const r = await fetch(`/api/trades?id=${selected.id}`, { method:'DELETE' })
+      const j = await r.json().catch(()=> ({}))
+      if(!r.ok) throw new Error(j.error || 'Delete failed')
+      setTrades(prev=> prev.filter(t=> String(t.id)!==String(selected.id)))
+      setRawTrades(prev=> prev.filter(t=> t.id!==selected.id))
+      setSelected(null)
+    } catch(e){ alert(e instanceof Error ? e.message : String(e)) }
+    finally{ setDrawerSaving(false); setDeleting(false) }
+  }
+
+  const handleSaveEdit = async ()=>{
+    if(!selected) return
+    setDrawerSaving(true)
+    try{
+      const payload: any = {
+        id: selected.id,
+        symbol: editForm.symbol?.toUpperCase().trim(),
+        entry_price: editForm.entry_price ? parseFloat(editForm.entry_price) : undefined,
+        exit_price: editForm.exit_price ? parseFloat(editForm.exit_price) : undefined,
+        lot_size: editForm.lot_size ? parseFloat(editForm.lot_size) : undefined,
+        risk_pct: editForm.risk_pct ? parseFloat(editForm.risk_pct) : undefined,
+        stop_loss: editForm.stop_loss ? parseFloat(editForm.stop_loss) : null,
+        take_profit: editForm.take_profit ? parseFloat(editForm.take_profit) : null,
+        strategy_name: editForm.strategy_name || null,
+        session: editForm.session,
+      }
+      // remove undefined
+      Object.keys(payload).forEach(k=> payload[k]===undefined && delete payload[k])
+      if(!payload.symbol) throw new Error('Symbol required')
+      const isDemo = !selected.id.includes('-')
+      if(isDemo){
+        // local update only
+        setTrades(prev=> prev.map(t=> String(t.id)===String(selected.id) ? { ...t, symbol: payload.symbol, rr: t.rr, risk: payload.risk_pct ?? t.risk, session: payload.session ?? t.session, strategy: payload.strategy_name ?? t.strategy, alignment: t.alignment } : t))
+        setSelected(null); setEditing(false)
+        return
+      }
+      const r = await fetch('/api/trades', { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) })
+      const j = await r.json()
+      if(!r.ok) throw new Error(j.error || 'Update failed')
+      const updated = j.data as Trade
+      const mapped = mapTrade(updated)
+      setTrades(prev=> prev.map(t=> String(t.id)===String(updated.id) ? mapped : t))
+      setRawTrades(prev=> prev.map(t=> t.id===updated.id ? updated : t))
+      setSelected(updated)
+      setEditing(false)
+    } catch(e){ alert(e instanceof Error ? e.message : String(e)) }
+    finally{ setDrawerSaving(false) }
+  }
 
   const doEvaluate = async ()=>{
     setEvalLoading(true)
@@ -445,8 +545,22 @@ export default function TradesPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map(trade => (
-                <tr key={trade.id} style={{ cursor: 'pointer' }}
+              {filtered.length===0 ? (
+                <tr><td colSpan={9} style={{ padding:'24px', textAlign:'center', color:c.text3, fontFamily:c.mono, fontSize:'12px' }}>{loading? 'Loading…':'No trades match filter'}</td></tr>
+              ) : filtered.map(trade => (
+                <tr key={trade.id} onClick={()=>{
+                  const raw = rawTrades.find(r=> String(r.id)===String(trade.id))
+                  if(raw) setSelected(raw)
+                  else {
+                    const synth: Trade = {
+                      id: String(trade.id), user_id:'demo', broker_connection_id:'', symbol: trade.symbol, instrument_type:'forex' as const,
+                      direction: trade.direction==='Long'?'long':'short' as const, status:'closed' as const, entry_price:1.085, exit_price:1.09, lot_size:0.1, position_size_usd:1000,
+                      risk_pct: trade.risk, reward_risk_ratio: trade.rr, session: trade.session.toLowerCase().replace(' ','_') as any, opened_at: new Date().toISOString(), closed_at: new Date().toISOString(),
+                      net_pnl: trade.pnl, gross_pnl: trade.pnl, strategy_name: trade.strategy, alignment_score: trade.alignment, created_at:new Date().toISOString(), updated_at:new Date().toISOString(),
+                    }
+                    setSelected(synth)
+                  }
+                }} style={{ cursor: 'pointer' }}
                   onMouseEnter={e => (e.currentTarget.style.background = c.surface2)}
                   onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                 >
@@ -526,6 +640,113 @@ export default function TradesPage() {
           </div>
         </div>
       </div>
+
+      {/* Detail Drawer — 5b */}
+      {selected && (
+        <div onClick={()=> !drawerSaving && !editing && setSelected(null)} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.55)', backdropFilter:'blur(2px)', display:'flex', justifyContent:'flex-end', zIndex:40 }}>
+          <div onClick={e=> e.stopPropagation()} style={{ width:'440px', maxWidth:'92vw', background:c.surface, borderLeft:`1px solid ${c.border}`, display:'flex', flexDirection:'column', height:'100vh', overflow:'hidden' }}>
+            {/* Header */}
+            <div style={{ padding:'16px 18px', borderBottom:`1px solid ${c.border}`, display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0 }}>
+              <div>
+                <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
+                  <span style={{ fontSize:'16px', fontWeight:800, fontFamily:c.mono }}>{selected.symbol}</span>
+                  <span style={{ fontSize:'11px', fontWeight:600, padding:'2px 7px', borderRadius:'4px', background: selected.direction==='long' ? 'rgba(62,207,142,0.12)' : 'rgba(255,95,95,0.12)', color: selected.direction==='long' ? c.green : c.red, fontFamily:c.mono }}>{selected.direction.toUpperCase()}</span>
+                  <span style={{ fontSize:'10px', color:c.text3, fontFamily:c.mono }}>{selected.status}</span>
+                </div>
+                <div style={{ fontSize:'11px', color:c.text3, fontFamily:c.mono, marginTop:'3px' }}>{new Date(selected.opened_at).toLocaleString()} · {selected.session}</div>
+              </div>
+              <button onClick={()=> setSelected(null)} style={{ background:'transparent', border:`1px solid ${c.border}`, borderRadius:'6px', padding:'6px', cursor:'pointer', color:c.text3, display:'flex' }}><X size={14}/></button>
+            </div>
+
+            <div style={{ flex:1, overflowY:'auto', padding:'16px 18px', display:'flex', flexDirection:'column', gap:'14px' }}>
+              {/* Actions */}
+              <div style={{ display:'flex', gap:'8px' }}>
+                <button onClick={()=> setEditing(!editing)} disabled={drawerSaving} style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:'6px', padding:'8px', borderRadius:'7px', background: editing ? c.surface2 : c.accent, border:`1px solid ${editing ? c.border : c.accent}`, color: editing ? c.text2 : '#fff', fontSize:'12px', fontWeight:600, cursor:'pointer' }}><Edit3 size={13}/>{editing ? 'Cancel Edit' : 'Edit'}</button>
+                <button onClick={handleDelete} disabled={drawerSaving} style={{ display:'flex', alignItems:'center', gap:'6px', padding:'8px 12px', borderRadius:'7px', background: deleting ? 'rgba(255,95,95,0.15)' : 'transparent', border:`1px solid ${deleting ? 'rgba(255,95,95,0.4)' : c.border}`, color: deleting ? c.red : c.text3, fontSize:'12px', fontWeight:600, cursor:'pointer', opacity: drawerSaving?0.6:1 }}>
+                  <Trash2 size={13}/>{ deleting ? 'Confirm?' : 'Delete'}
+                </button>
+              </div>
+
+              {/* Edit form */}
+              {editing ? (
+                <div style={{ display:'flex', flexDirection:'column', gap:'10px', background:c.surface2, border:`1px solid ${c.border}`, borderRadius:'8px', padding:'12px' }}>
+                  {[
+                    {k:'symbol', label:'Symbol', ph:'EURUSD'},
+                    {k:'entry_price', label:'Entry', ph:'1.0850'},
+                    {k:'exit_price', label:'Exit', ph:'1.0900'},
+                    {k:'lot_size', label:'Lot', ph:'0.10'},
+                    {k:'risk_pct', label:'Risk %', ph:'1.0'},
+                    {k:'stop_loss', label:'SL', ph:'optional'},
+                    {k:'take_profit', label:'TP', ph:'optional'},
+                    {k:'strategy_name', label:'Strategy', ph:'Breakout'},
+                    {k:'session', label:'Session', ph:'london'},
+                  ].map(f=>(
+                    <div key={f.k}>
+                      <div style={{ fontSize:'10px', color:c.text3, fontFamily:c.mono, marginBottom:'4px' }}>{f.label}</div>
+                      <input value={(editForm as any)[f.k] ?? ''} onChange={e=> setEditForm(prev=> ({...prev, [f.k]: e.target.value}))} placeholder={f.ph} style={{ width:'100%', background:c.surface, border:`1px solid ${c.border}`, borderRadius:'6px', padding:'7px 10px', fontSize:'12px', color:c.text, fontFamily:c.mono, outline:'none', boxSizing:'border-box' }} />
+                    </div>
+                  ))}
+                  <button onClick={handleSaveEdit} disabled={drawerSaving} style={{ marginTop:'6px', padding:'9px', borderRadius:'7px', background:c.accent, border:'none', color:'#fff', fontSize:'13px', fontWeight:700, cursor:'pointer', opacity:drawerSaving?0.6:1 }}>{drawerSaving ? 'Saving…' : 'Save Changes'}</button>
+                </div>
+              ) : (
+                <>
+                  {/* Stats */}
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'8px' }}>
+                    {[
+                      {label:'P&L', value:`${(selected.net_pnl ?? 0) >=0 ? '+' : ''}$${Math.round(selected.net_pnl ?? 0)}`, color: (selected.net_pnl ?? 0)>=0 ? c.green : c.red},
+                      {label:'R:R', value: `${(selected.reward_risk_ratio ?? 0).toFixed(1)}R`, color:c.text},
+                      {label:'Risk', value: `${selected.risk_pct ?? 0}%`, color: (selected.risk_pct ?? 0)>2 ? c.amber : c.text2},
+                      {label:'Alignment', value: `${selected.alignment_score ?? 50}`, color: (selected.alignment_score ?? 50)>=75 ? c.green : (selected.alignment_score ?? 50)>=50 ? c.amber : c.red},
+                      {label:'Entry', value: `${selected.entry_price}`, color:c.text2},
+                      {label:'Exit', value: `${selected.exit_price ?? '—'}`, color:c.text2},
+                      {label:'Lot', value: `${selected.lot_size}`, color:c.text2},
+                      {label:'Pips', value: `${selected.pips ?? '—'}`, color:c.text2},
+                    ].map(s=>(
+                      <div key={s.label} style={{ background:c.surface2, borderRadius:'7px', padding:'10px 12px' }}>
+                        <div style={{ fontSize:'10px', color:c.text3, fontFamily:c.mono }}>{s.label}</div>
+                        <div style={{ fontSize:'13px', fontWeight:700, color:s.color, marginTop:'2px', fontFamily:c.mono }}>{s.value}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Flags */}
+                  <div style={{ background:c.surface2, border:`1px solid ${c.border}`, borderRadius:'8px', padding:'12px' }}>
+                    <div style={{ fontSize:'11px', fontWeight:600, marginBottom:'8px' }}>Behavioral Flags</div>
+                    {drawerFlags.length ? drawerFlags.map((f:any)=>(
+                      <div key={f.id} style={{ display:'flex', gap:'8px', padding:'6px 0', borderTop:`1px solid ${c.border}20` }}>
+                        <span style={{ width:'6px', height:'6px', borderRadius:'50%', background: f.severity==='high'?c.red : f.severity==='medium'?c.amber:c.green, marginTop:'6px', flexShrink:0 }} />
+                        <div>
+                          <div style={{ fontSize:'12px', fontWeight:600, color: f.severity==='high'?c.red : c.text }}>{f.flag_type?.replace(/_/g,' ')}</div>
+                          <div style={{ fontSize:'11px', color:c.text2, marginTop:'2px' }}>{f.description}</div>
+                        </div>
+                      </div>
+                    )) : <div style={{ fontSize:'11px', color:c.text3, fontFamily:c.mono }}>No flags for this trade</div>}
+                  </div>
+
+                  {/* Journal logs */}
+                  <div style={{ background:c.surface2, border:`1px solid ${c.border}`, borderRadius:'8px', padding:'12px' }}>
+                    <div style={{ fontSize:'11px', fontWeight:600, marginBottom:'8px', display:'flex', justifyContent:'space-between' }}>
+                      <span>Journal Entries</span>
+                      <a href='/journal' style={{ fontSize:'11px', color:c.accent, textDecoration:'none', fontFamily:c.mono }}>view journal →</a>
+                    </div>
+                    {drawerLogs.length ? drawerLogs.map((l:any)=>(
+                      <div key={l.id} style={{ padding:'8px 0', borderTop:`1px solid ${c.border}20` }}>
+                        <div style={{ fontSize:'11px', fontWeight:600, color: ['fearful','revenge_trading','stressed'].includes(l.emotion) ? c.red : c.green }}>{l.emotion.replace(/_/g,' ')} <span style={{color:c.text3, fontWeight:400}}>· {new Date(l.logged_at).toLocaleDateString()}</span></div>
+                        <div style={{ fontSize:'12px', color:c.text2, marginTop:'4px', lineHeight:1.5 }}>{l.setup_notes ?? l.pre_trade_reasoning ?? l.post_trade_reflection ?? '—'}</div>
+                      </div>
+                    )) : <div style={{ fontSize:'11px', color:c.text3, fontFamily:c.mono }}>No journal for this trade <a href='/journal' style={{color:c.accent}}>Add one</a></div>}
+                  </div>
+
+                  {/* Meta */}
+                  <div style={{ fontSize:'10px', color:c.text3, fontFamily:c.mono, textAlign:'center', paddingTop:'8px', borderTop:`1px solid ${c.border}20` }}>
+                    ID: {String(selected.id).slice(0,8)} · {selected.instrument_type} · {selected.timeframe ?? '—'} · {selected.duration_minutes ?? '—'}m
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

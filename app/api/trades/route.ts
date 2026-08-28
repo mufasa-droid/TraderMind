@@ -81,6 +81,61 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({ data: trade }, { status: 201 })
 }
 
+export async function DELETE(request: NextRequest) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { searchParams } = new URL(request.url)
+  const id = searchParams.get('id') ?? (await request.json().catch(()=> ({} as any))).id
+  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
+  const { error } = await supabase.from('trades').delete().eq('id', id).eq('user_id', user.id)
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  // also clean orphan flags/logs? keep for history
+  return NextResponse.json({ ok: true })
+}
+
+export async function PATCH(request: NextRequest) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const body = await request.json()
+  if (!body.id) return NextResponse.json({ error: 'id required' }, { status: 400 })
+  const id = body.id
+  const updates: Record<string, any> = { ...body }
+  delete updates.id
+  delete updates.user_id
+  // recalc session/duration/pips if relevant fields changed
+  if (updates.opened_at && !updates.session) {
+    updates.session = detectTradingSession(updates.opened_at)
+  }
+  if (updates.opened_at || updates.closed_at) {
+    const cur = await supabase.from('trades').select('opened_at,closed_at').eq('id', id).eq('user_id', user.id).maybeSingle()
+    const opened = updates.opened_at ?? cur.data?.opened_at
+    const closed = updates.closed_at ?? cur.data?.closed_at
+    if (opened && closed) {
+      updates.duration_minutes = Math.round((new Date(closed).getTime() - new Date(opened).getTime()) / 1000 / 60)
+    }
+  }
+  if ((updates.entry_price || updates.exit_price || updates.symbol) && updates.instrument_type !== 'crypto') {
+    // fetch current to compute pips
+    const cur = await supabase.from('trades').select('entry_price,exit_price,symbol,direction,instrument_type').eq('id', id).eq('user_id', user.id).maybeSingle()
+    const entry = updates.entry_price ?? cur.data?.entry_price
+    const exit = updates.exit_price ?? cur.data?.exit_price
+    const sym = updates.symbol ?? cur.data?.symbol
+    const dir = updates.direction ?? cur.data?.direction
+    const inst = updates.instrument_type ?? cur.data?.instrument_type
+    if (entry && exit && inst === 'forex' && sym) {
+      const mult = sym.includes('JPY') ? 100 : 10000
+      const d = dir === 'long' ? 1 : -1
+      updates.pips = Math.round(((exit - entry) * mult * d) * 10) / 10
+    }
+  }
+  updates.updated_at = new Date().toISOString()
+  const { data, error } = await supabase.from('trades').update(updates).eq('id', id).eq('user_id', user.id).select().single()
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ data })
+}
+
 async function runBehavioralDetection(
   supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string,
