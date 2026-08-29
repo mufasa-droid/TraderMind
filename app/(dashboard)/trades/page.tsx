@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Search, Filter, Plus, ArrowUpRight, ArrowDownRight, TrendingUp, X, Edit3, Trash2 } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
-import type { Trade, PerformanceAnalytics } from '@/types'
+import type { Trade, PerformanceAnalytics, TradeEvaluationResult } from '@/types'
 import { createClient } from '@/lib/supabase/client'
 
 const c = {
@@ -59,7 +59,7 @@ export default function TradesPage() {
   ])
   const [loading, setLoading] = useState(true)
   const [evalForm, setEvalForm] = useState({ symbol: 'EURUSD', direction: 'long', risk_pct: '1.0', session: 'london', strategy_name: 'Breakout' })
-  const [evalResult, setEvalResult] = useState<null | { alignment_score:number; verdict:string; warnings:any[] }>(null)
+  const [evalResult, setEvalResult] = useState<TradeEvaluationResult | null>(null)
   const [evalLoading, setEvalLoading] = useState(false)
   const [showLog, setShowLog] = useState(false)
   const [logSaving, setLogSaving] = useState(false)
@@ -223,9 +223,9 @@ export default function TradesPage() {
         user_id: 'me',
       })})
       const j = await r.json()
-      if(j.data) setEvalResult(j.data)
-      else setEvalResult({alignment_score:0,verdict: j.error || 'Failed', warnings:[]})
-    } catch(e){ setEvalResult({alignment_score:0,verdict:String(e),warnings:[]}) }
+      if(j.data) setEvalResult(j.data as TradeEvaluationResult)
+      else setEvalResult({ alignment_score:0, discipline_score:0, risk_warning_level:'high', behavioral_consistency_score:0, session_fit:'poor', warnings:[{type:'error', severity:'critical', message: j.error || 'Failed'}], strengths:[], verdict: j.error || 'Failed' } as unknown as TradeEvaluationResult)
+    } catch(e){ setEvalResult({ alignment_score:0, discipline_score:0, risk_warning_level:'critical', behavioral_consistency_score:0, session_fit:'poor', warnings:[{type:'error', severity:'critical', message: String(e)}], strengths:[], verdict: String(e) } as unknown as TradeEvaluationResult) }
     finally{ setEvalLoading(false) }
   }
 
@@ -292,6 +292,9 @@ export default function TradesPage() {
     } finally{ setLogSaving(false) }
   }
 
+  const [page, setPage] = useState(1)
+  const pageSize = 10
+
   const filtered = trades.filter(t => {
     if (filter === 'Wins') return t.pnl > 0
     if (filter === 'Losses') return t.pnl < 0
@@ -300,6 +303,12 @@ export default function TradesPage() {
     if (filter === 'New York') return t.session === 'New York'
     return true
   }).filter(t => t.symbol.toLowerCase().includes(search.toLowerCase()))
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
+  const paginated = filtered.slice((page-1)*pageSize, page*pageSize)
+
+  // reset to page 1 when filters change
+  useEffect(()=>{ setPage(1) }, [filter, search])
 
   const totalPnl = filtered.reduce((s, t) => s + t.pnl, 0)
   const winRate = filtered.length > 0 ? Math.round((filtered.filter(t => t.pnl > 0).length / filtered.length) * 100) : 0
@@ -491,19 +500,68 @@ export default function TradesPage() {
               <input value={evalForm.strategy_name} onChange={e=>setEvalForm({...evalForm,strategy_name:e.target.value})} placeholder='Breakout' style={{width:'100%', background:c.surface3, border:`1px solid ${c.border}`, borderRadius:'7px', padding:'8px 10px', fontSize:'12px', color:c.text, fontFamily:c.mono, outline:'none'}} />
             </div>
           </div>
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-            <button onClick={doEvaluate} disabled={evalLoading} style={{ padding: '8px 16px', borderRadius: '8px', background: c.accent, border: 'none', color: '#fff', fontSize: '12px', fontWeight: 600, cursor: 'pointer', opacity: evalLoading?0.6:1 }}>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+            <button onClick={doEvaluate} disabled={evalLoading} style={{ padding: '8px 16px', borderRadius: '8px', background: c.accent, border: 'none', color: '#fff', fontSize: '12px', fontWeight: 600, cursor: 'pointer', opacity: evalLoading?0.6:1, height:'36px', flexShrink:0, marginTop:'2px' }}>
               {evalLoading ? 'Evaluating…' : 'Evaluate'}
             </button>
-            <div style={{
-              flex: 1, padding: '10px 14px', borderRadius: '8px',
-              background: evalResult ? ((evalResult.alignment_score ?? 0)>=70?'rgba(62,207,142,0.08)':'rgba(245,166,35,0.08)') : 'rgba(62,207,142,0.08)',
-              border: `1px solid ${((evalResult?.alignment_score ?? 0)>=70)?'rgba(62,207,142,0.2)':'rgba(245,166,35,0.2)'}`,
-              fontSize: '12px', color: c.text2, lineHeight: 1.5,
-            }}>
-              {evalResult ? (
-                <><strong style={{ color: c.text }}>Alignment: {evalResult.alignment_score}/100</strong> — {evalResult.verdict} {evalResult.warnings?.length? `· ${evalResult.warnings.length} warning(s)` : ''}</>
-              ) : 'Fill the form and click Evaluate — uses your real behavioral history.'}
+            <div style={{ flex:1 }}>
+              {!evalResult ? (
+                <div style={{ padding:'10px 14px', borderRadius:'8px', background:'rgba(62,207,142,0.08)', border:'1px solid rgba(62,207,142,0.2)', fontSize:'12px', color:c.text2, lineHeight:1.5 }}>
+                  Fill the form and click Evaluate — uses your real behavioral history via <span style={{fontFamily:c.mono, color:c.text}}>POST /api/behavioral/evaluate</span>.
+                </div>
+              ) : (
+                <div style={{ display:'flex', flexDirection:'column', gap:'10px' }}>
+                  {/* Scores */}
+                  <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'8px' }}>
+                    {[
+                      {label:'Alignment', v: evalResult.alignment_score, color: (evalResult.alignment_score ?? 0)>=70 ? c.green : (evalResult.alignment_score ?? 0)>=50 ? c.amber : c.red},
+                      {label:'Discipline', v: (evalResult as any).discipline_score ?? 0, color: ((evalResult as any).discipline_score ?? 0)>=70 ? c.green : c.amber},
+                      {label:'Consistency', v: (evalResult as any).behavioral_consistency_score ?? 0, color: c.accent},
+                      {label:'Session', v: (evalResult as any).session_fit ?? '—', color: (evalResult as any).session_fit==='excellent'||(evalResult as any).session_fit==='good' ? c.green : c.amber, isText:true},
+                    ].map(s=>(
+                      <div key={s.label} style={{ background:'rgba(255,255,255,0.03)', border:`1px solid ${c.border}`, borderRadius:'7px', padding:'8px 10px', textAlign:'center' }}>
+                        <div style={{ fontSize:'10px', color:c.text3, fontFamily:c.mono, textTransform:'uppercase' as const, letterSpacing:'0.5px' }}>{s.label}</div>
+                        <div style={{ fontSize: (s as any).isText ? '13px' : '18px', fontWeight:800, color:s.color, marginTop:'2px', textTransform: (s as any).isText ? 'capitalize' as const : undefined }}>{(s as any).isText ? String(s.v) : `${s.v}`}{(s as any).isText ? '' : '/100'}</div>
+                      </div>
+                    ))}
+                  </div>
+                  {/* Risk + Verdict */}
+                  <div style={{ display:'flex', gap:'8px', alignItems:'center', flexWrap:'wrap' }}>
+                    {(() => {
+                      const lvl = (evalResult as any).risk_warning_level as string
+                      const bg = lvl==='critical' ? 'rgba(255,95,95,0.12)' : lvl==='high' ? 'rgba(245,166,35,0.12)' : 'rgba(62,207,142,0.12)'
+                      const col = lvl==='critical' ? c.red : lvl==='high' ? c.amber : c.green
+                      const bd = lvl==='critical' ? 'rgba(255,95,95,0.25)' : lvl==='high' ? 'rgba(245,166,35,0.25)' : 'rgba(62,207,142,0.25)'
+                      return <span style={{ fontSize:'11px', fontFamily:c.mono, padding:'3px 8px', borderRadius:'4px', background: bg, color: col, border:`1px solid ${bd}`}}>Risk: {(lvl ?? 'low').toUpperCase()}</span>
+                    })()}
+                    <span style={{ fontSize:'11px', color:c.text3, fontFamily:c.mono }}>Session Fit: <span style={{color: (evalResult as any).session_fit==='excellent'?c.green : c.text2}}>{(evalResult as any).session_fit}</span></span>
+                  </div>
+                  <div style={{ padding:'10px 12px', borderRadius:'7px', background: (evalResult.alignment_score ?? 0)>=70 ? 'rgba(62,207,142,0.08)' : 'rgba(245,166,35,0.08)', border:`1px solid ${(evalResult.alignment_score ?? 0)>=70?'rgba(62,207,142,0.2)':'rgba(245,166,35,0.2)'}`, fontSize:'12px', color:c.text, lineHeight:1.6 }}>
+                    <strong>Verdict:</strong> {evalResult.verdict}
+                  </div>
+                  {/* Warnings */}
+                  {(evalResult.warnings?.length ?? 0)>0 && (
+                    <div style={{ background:'rgba(255,95,95,0.06)', border:'1px solid rgba(255,95,95,0.15)', borderRadius:'7px', padding:'10px 12px' }}>
+                      <div style={{ fontSize:'11px', fontWeight:700, color:c.red, fontFamily:c.mono, marginBottom:'6px' }}>⚠ Warnings ({evalResult.warnings.length})</div>
+                      {evalResult.warnings.map((w:any,i:number)=>(
+                        <div key={i} style={{ display:'flex', gap:'8px', padding:'4px 0', borderTop: i?`1px solid ${c.border}20`:'none' }}>
+                          <span style={{ fontSize:'10px', fontWeight:700, padding:'2px 6px', borderRadius:'4px', background: w.severity==='critical'?'rgba(255,95,95,0.12)': w.severity==='warning'?'rgba(245,166,35,0.12)':'rgba(62,207,142,0.12)', color: w.severity==='critical'?c.red : w.severity==='warning'?c.amber:c.green, fontFamily:c.mono, height:'fit-content' }}>{w.severity}</span>
+                          <span style={{ fontSize:'12px', color:c.text2, lineHeight:1.5 }}>{w.message}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {/* Strengths */}
+                  {((evalResult as any).strengths?.length ?? 0)>0 && (
+                    <div style={{ background:'rgba(62,207,142,0.06)', border:'1px solid rgba(62,207,142,0.15)', borderRadius:'7px', padding:'10px 12px' }}>
+                      <div style={{ fontSize:'11px', fontWeight:700, color:c.green, fontFamily:c.mono, marginBottom:'6px' }}>✓ Strengths</div>
+                      {(evalResult as any).strengths.map((s:string,i:number)=>(
+                        <div key={i} style={{ fontSize:'12px', color:c.text2, padding:'3px 0', display:'flex', gap:'6px' }}><span style={{color:c.green}}>•</span>{s}</div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -547,7 +605,7 @@ export default function TradesPage() {
             <tbody>
               {filtered.length===0 ? (
                 <tr><td colSpan={9} style={{ padding:'24px', textAlign:'center', color:c.text3, fontFamily:c.mono, fontSize:'12px' }}>{loading? 'Loading…':'No trades match filter'}</td></tr>
-              ) : filtered.map(trade => (
+              ) : paginated.map(trade => (
                 <tr key={trade.id} onClick={()=>{
                   const raw = rawTrades.find(r=> String(r.id)===String(trade.id))
                   if(raw) setSelected(raw)
@@ -592,7 +650,16 @@ export default function TradesPage() {
                 </tr>
               ))}
             </tbody>
-          </table>
+            </table>
+            {/* Pagination — 5c */}
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 12px', borderTop:`1px solid ${c.border}`, background:c.surface2 }}>
+              <span style={{ fontSize:'11px', color:c.text3, fontFamily:c.mono }}>{filtered.length} trades · page {page}/{totalPages} · {pageSize}/page</span>
+              <div style={{ display:'flex', gap:'6px', alignItems:'center' }}>
+                <button onClick={()=> setPage(p=> Math.max(1,p-1))} disabled={page===1} style={{ padding:'5px 10px', borderRadius:'6px', border:`1px solid ${c.border}`, background: page===1?'transparent':'rgba(108,142,255,0.08)', color: page===1?c.text3:c.accent, fontSize:'11px', cursor: page===1?'not-allowed':'pointer', fontFamily:c.mono }}>‹ Prev</button>
+                <span style={{ fontSize:'11px', color:c.text2, fontFamily:c.mono, minWidth:'60px', textAlign:'center' }}>{page} / {totalPages}</span>
+                <button onClick={()=> setPage(p=> Math.min(totalPages,p+1))} disabled={page===totalPages} style={{ padding:'5px 10px', borderRadius:'6px', border:`1px solid ${c.border}`, background: page===totalPages?'transparent':'rgba(108,142,255,0.08)', color: page===totalPages?c.text3:c.accent, fontSize:'11px', cursor: page===totalPages?'not-allowed':'pointer', fontFamily:c.mono }}>Next ›</button>
+              </div>
+            </div>
         </div>
 
         {/* Right: Daily PnL chart */}
