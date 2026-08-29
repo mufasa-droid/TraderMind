@@ -11,7 +11,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 const NAV_ITEMS = [
-  { href: '/dashboard', label: 'Overview', icon: LayoutDashboard },
+  { href: '/overview', label: 'Overview', icon: LayoutDashboard },
   { href: '/behavior', label: 'Behavior', icon: Brain },
   { href: '/ai-coach', label: 'AI Coach', icon: Zap },
   { href: '/trades', label: 'Trade History', icon: Clock },

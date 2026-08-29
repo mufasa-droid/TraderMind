@@ -47,9 +47,10 @@ export async function updateSession(request: NextRequest) {
 
   const isApi = pathname.startsWith('/api/')
 
-  // Protect dashboard + app routes
+  // Protect dashboard + app routes (overview is alias to dashboard)
   const isProtected =
     pathname.startsWith('/dashboard') ||
+    pathname.startsWith('/overview') ||
     pathname.startsWith('/behavior') ||
     pathname.startsWith('/ai-coach') ||
     pathname.startsWith('/trades') ||
