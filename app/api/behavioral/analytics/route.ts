@@ -10,8 +10,21 @@ export async function GET(request: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { searchParams } = new URL(request.url)
-  const rangeLabel = (searchParams.get('range') ?? '1M') as '1W' | '1M' | '3M' | 'YTD' | 'ALL'
-  const { start, end } = getDateRange(rangeLabel)
+  const startParam = searchParams.get('start')
+  const endParam = searchParams.get('end')
+  let start: string
+  let end: string
+  let rangeLabel: string
+  if (startParam && endParam) {
+    start = startParam
+    end = endParam
+    rangeLabel = (searchParams.get('range') ?? 'custom') as string
+  } else {
+    rangeLabel = (searchParams.get('range') ?? '1M') as '1W' | '1M' | '3M' | 'YTD' | 'ALL'
+    const r = getDateRange(rangeLabel as any)
+    start = r.start
+    end = r.end
+  }
 
   // Parallel fetch for speed — use maybeSingle for latest report to avoid 406 when empty
   const [tradesRes, logsRes, flagsRes, insightsRes, brokerRes, latestReportRes, settingsRes] = await Promise.all([

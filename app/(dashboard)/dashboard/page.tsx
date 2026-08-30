@@ -221,13 +221,13 @@ export default function DashboardPage() {
           </div>
           <div style={{ display: 'flex', gap: '2px', background: '#161920', padding: '3px', borderRadius: '8px', border:`1px solid ${c.border}`, flexShrink:0 }}>
             {RANGE_OPTIONS.map(r => (
-              <button key={r} onClick={() => setRange(r)} style={{
+              <button key={r} type="button" onClick={() => { console.log('dashboard range', r); setRange(r as any) }} style={{
                 padding: '5px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 600,
-                fontFamily: c.mono, border: 'none', cursor: 'pointer', minWidth:'36px',
+                fontFamily: c.mono, border: `1px solid ${range === r ? c.accent : 'transparent'}`, cursor: 'pointer', minWidth:'36px',
                 background: range === r ? c.accent : 'transparent',
                 color: range === r ? '#fff' : c.text3,
-                boxShadow: range===r ? '0 1px 4px rgba(0,0,0,0.3)' : 'none',
-              }}>{r}</button>
+                boxShadow: range===r ? '0 1px 6px rgba(108,142,255,0.4)' : 'none',
+              }} aria-pressed={range === r}>{r}</button>
             ))}
           </div>
         </div>

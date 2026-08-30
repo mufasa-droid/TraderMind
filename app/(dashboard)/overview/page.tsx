@@ -85,7 +85,8 @@ const ph = {
 
 function ScoreCard({ label, value, delta, barColor }: { label: string; value: number; delta: string; barColor: string }) {
   const isDown = delta.includes('↘') || delta.includes('↓')
-  const deltaColor = isDown ? c.red : c.green
+  const isUp = delta.includes('↗') || delta.includes('↑')
+  const deltaColor = delta === '—' ? c.text3 : isDown ? c.red : isUp ? c.green : c.text3
   return (
     <div style={{ ...panel, position: 'relative', padding: '16px 16px 14px', overflow: 'hidden' as const }}>
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: barColor, borderRadius: '2px 2px 0 0' }} />
@@ -107,24 +108,50 @@ function ScoreCard({ label, value, delta, barColor }: { label: string; value: nu
 export default function OverviewPage() {
   const [range, setRange] = useState<RangeLabel>('1M')
   const [data, setData] = useState<AnalyticsResponse | null>(null)
+  const [prevData, setPrevData] = useState<AnalyticsResponse | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let cancelled = false
     setLoading(true)
+    setPrevData(null)
     fetch(`/api/behavioral/analytics?range=${range}`, { cache: 'no-store' })
       .then(async r => { if (!r.ok) throw new Error(await r.text()); return r.json() })
-      .then((j: AnalyticsResponse) => { if (!cancelled) setData(j) })
+      .then((j: AnalyticsResponse) => {
+        if (cancelled) return
+        setData(j)
+        // fetch previous period for delta
+        const start = new Date(j.range.start).getTime()
+        const end = new Date(j.range.end).getTime()
+        const dur = end - start
+        if (dur > 0) {
+          const prevStart = new Date(start - dur).toISOString()
+          const prevEnd = new Date(start).toISOString()
+          fetch(`/api/behavioral/analytics?start=${encodeURIComponent(prevStart)}&end=${encodeURIComponent(prevEnd)}`, { cache: 'no-store' })
+            .then(async r2 => { if (!r2.ok) return null; return r2.json() })
+            .then(j2 => { if (!cancelled && j2?.analytics) setPrevData(j2 as AnalyticsResponse) })
+            .catch(() => {})
+        }
+      })
       .catch(() => {})
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
   }, [range])
 
   const a = data?.analytics
+  const pa = prevData?.analytics
   const discipline = a?.discipline_score ?? 78
   const consistency = a?.behavioral_consistency_score ?? 84
   const risk = a?.risk_quality_score ?? 61
   const emotional = a?.emotional_stability_score ?? 72
+
+  const fmtDelta = (cur: number, prev: number | undefined) => {
+    if (prev === undefined || prev === null) return '—'
+    const d = cur - prev
+    if (d === 0) return '→ 0%'
+    return `${d > 0 ? '↗' : '↘'} ${Math.abs(d)}%`
+  }
+  const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 
   const sessionData = a
     ? Object.values(a.session_performance).map(s => ({
@@ -170,6 +197,28 @@ export default function OverviewPage() {
 
   const avgRisk = a?.avg_risk_per_trade ?? 1.64
 
+  // AI Coach live derived
+  const topFlagEntry = (flags as any[])[0] as any
+  const bestSessLive = a ? (Object.values(a.session_performance) as any[]).sort((x:any,y:any)=> y.win_rate - x.win_rate)[0] : null
+  const worstSessLive = a ? (Object.values(a.session_performance) as any[]).sort((x:any,y:any)=> x.win_rate - y.win_rate)[0] : null
+  const bestStratLive = a?.strategy_performance?.[0] as any
+  const aiInsight = a && bestSessLive && worstSessLive
+    ? `Your ${bestSessLive.session} session win rate is ${Math.round(bestSessLive.win_rate)}% vs ${Math.round(worstSessLive.win_rate)}% worst. ${topFlagEntry ? `${topFlagEntry.type} ×${topFlagEntry.count} is your top flag.` : ''} ${bestStratLive ? `${bestStratLive.strategy_name} hits ${Math.round(bestStratLive.win_rate)}% WR — lean into it.` : 'Protect the edge by slowing down after wins.'}`
+    : `Your London session performance is up 63% this month. Protect the edge by slowing down after wins — your best results come when you validate every setup before sizing up.`
+  const aiTags = a
+    ? [
+        bestSessLive ? { label: `${bestSessLive.session.toUpperCase()} ${Math.round(bestSessLive.win_rate)}%`, bg:'rgba(62,207,142,0.12)', color:c.green, border:'rgba(62,207,142,0.25)' } : null,
+        flags[0] ? { label: `${String(flags[0].type).toUpperCase()} ×${flags[0].count}`, bg: flags[0].severity==='high' ? 'rgba(255,95,95,0.10)' : 'rgba(245,166,35,0.10)', color: flags[0].severity==='high' ? c.red : c.amber, border: flags[0].severity==='high' ? 'rgba(255,95,95,0.22)' : 'rgba(245,166,35,0.22)' } : null,
+        bestStratLive ? { label: `${String(bestStratLive.strategy_name).toUpperCase()} WR ${Math.round(bestStratLive.win_rate)}%`, bg:'rgba(62,207,142,0.12)', color:c.green, border:'rgba(62,207,142,0.25)' } : { label:'BREAKOUT WR 71%', bg:'rgba(62,207,142,0.12)', color:c.green, border:'rgba(62,207,142,0.25)' },
+        flags[1] ? { label: `${String(flags[1].type).toUpperCase()} ×${flags[1].count}`, bg:'rgba(255,95,95,0.10)', color:c.red, border:'rgba(255,95,95,0.22)' } : { label:'REVENGE TRADING ×3', bg:'rgba(255,95,95,0.10)', color:c.red, border:'rgba(255,95,95,0.22)' },
+      ].filter(Boolean) as any[]
+    : [
+        { label: 'LONDON SESSION +63%', bg:'rgba(62,207,142,0.12)', color:c.green, border:'rgba(62,207,142,0.25)' },
+        { label: 'POST-WIN RISK CREEP', bg:'rgba(255,95,95,0.10)', color:c.red, border:'rgba(255,95,95,0.22)' },
+        { label: 'BREAKOUT WR 71%', bg:'rgba(62,207,142,0.12)', color:c.green, border:'rgba(62,207,142,0.25)' },
+        { label: 'REVENGE TRADING ×3', bg:'rgba(255,95,95,0.10)', color:c.red, border:'rgba(255,95,95,0.22)' },
+      ]
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', maxWidth: '1100px', fontFamily: c.sans }}>
       {/* Header */}
@@ -181,19 +230,22 @@ export default function OverviewPage() {
           <div>
             <h1 style={{ fontSize: '30px', fontWeight: 800, letterSpacing: '-0.8px', lineHeight: 1, color: c.text }}>Performance Overview</h1>
             <p style={{ fontSize: '11px', color: c.text3, marginTop: '6px', fontFamily: c.mono }}>
-              {loading ? 'Loading…' : `May 2026 · ${a?.total_trades ?? 47} trades · ${data ? 'live' : 'MTS synced'}`}
+              {loading ? 'Loading…' : a ? `${fmtDate(a.period_start)} – ${fmtDate(a.period_end)} · ${a.total_trades} trades · live` : `May 2026 · 47 trades · MTS synced`}
             </p>
           </div>
           <div style={{ display: 'flex', gap: '2px', background: c.surface2, padding: '3px', borderRadius: '8px', border: `1px solid ${c.border}` }}>
             {RANGE_OPTIONS.map(r => (
               <button
                 key={r}
-                onClick={() => setRange(r)}
+                type="button"
+                onClick={() => { console.log('range click', r, 'prev', range); setRange(r) }}
                 style={{
-                  padding: '5px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 600, fontFamily: c.mono, border: 'none', cursor: 'pointer', minWidth: '36px',
+                  padding: '5px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 600, fontFamily: c.mono, border: `1px solid ${range === r ? c.accent : 'transparent'}`, cursor: 'pointer', minWidth: '36px',
                   background: range === r ? c.accent : 'transparent',
                   color: range === r ? '#fff' : c.text3,
+                  boxShadow: range === r ? '0 1px 6px rgba(108,142,255,0.4)' : 'none',
                 }}
+                aria-pressed={range === r}
               >
                 {r}
               </button>
@@ -202,12 +254,12 @@ export default function OverviewPage() {
         </div>
       </div>
 
-      {/* Score Grid */}
+      {/* Score Grid — live deltas */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
-        <ScoreCard label="Discipline Score" value={discipline} delta="↗ 3%" barColor={c.accent} />
-        <ScoreCard label="Behavioral Consistency" value={consistency} delta="↗ 7%" barColor={c.green} />
-        <ScoreCard label="Risk Quality" value={risk} delta="↘ 4%" barColor={c.amber} />
-        <ScoreCard label="Emotional Stability" value={emotional} delta="↗ 11%" barColor={c.purple} />
+        <ScoreCard label="Discipline Score" value={discipline} delta={pa && pa.total_trades>0 ? fmtDelta(discipline, pa.discipline_score) : pa ? '—' : '↗ 3%'} barColor={c.accent} />
+        <ScoreCard label="Behavioral Consistency" value={consistency} delta={pa && pa.total_trades>0 ? fmtDelta(consistency, pa.behavioral_consistency_score) : pa ? '—' : '↗ 7%'} barColor={c.green} />
+        <ScoreCard label="Risk Quality" value={risk} delta={pa && pa.total_trades>0 ? fmtDelta(risk, pa.risk_quality_score) : pa ? '—' : '↘ 4%'} barColor={c.amber} />
+        <ScoreCard label="Emotional Stability" value={emotional} delta={pa && pa.total_trades>0 ? fmtDelta(emotional, pa.emotional_stability_score) : pa ? '—' : '↗ 11%'} barColor={c.purple} />
       </div>
 
       {/* AI Coach */}
@@ -219,13 +271,12 @@ export default function OverviewPage() {
           <a href="/ai-coach" style={{ fontSize: '11px', color: c.accent, textDecoration: 'none', fontFamily: c.mono }}>Full report →</a>
         </div>
         <p style={{ fontSize: '13px', lineHeight: 1.65, color: c.text2 }}>
-          Your London session performance is up <span style={{ color: c.green, fontWeight: 700 }}>63%</span> this month. Protect the edge by slowing down after wins — your best results come when you validate every setup before sizing up.
+          {a ? aiInsight : <>Your London session performance is up <span style={{ color: c.green, fontWeight: 700 }}>63%</span> this month. Protect the edge by slowing down after wins — your best results come when you validate every setup before sizing up.</>}
         </p>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '12px' }}>
-          <span style={{ padding: '4px 10px', borderRadius: '6px', fontSize: '10px', fontFamily: c.mono, fontWeight: 700, letterSpacing: '0.3px', background: 'rgba(62,207,142,0.12)', color: c.green, border: '1px solid rgba(62,207,142,0.25)' }}>LONDON SESSION +63%</span>
-          <span style={{ padding: '4px 10px', borderRadius: '6px', fontSize: '10px', fontFamily: c.mono, fontWeight: 700, letterSpacing: '0.3px', background: 'rgba(255,95,95,0.10)', color: c.red, border: '1px solid rgba(255,95,95,0.22)' }}>POST-WIN RISK CREEP</span>
-          <span style={{ padding: '4px 10px', borderRadius: '6px', fontSize: '10px', fontFamily: c.mono, fontWeight: 700, letterSpacing: '0.3px', background: 'rgba(62,207,142,0.12)', color: c.green, border: '1px solid rgba(62,207,142,0.25)' }}>BREAKOUT WR 71%</span>
-          <span style={{ padding: '4px 10px', borderRadius: '6px', fontSize: '10px', fontFamily: c.mono, fontWeight: 700, letterSpacing: '0.3px', background: 'rgba(255,95,95,0.10)', color: c.red, border: '1px solid rgba(255,95,95,0.22)' }}>REVENGE TRADING ×3</span>
+          {(aiTags as any[]).map((tag:any)=>(
+            <span key={tag.label} style={{ padding: '4px 10px', borderRadius: '6px', fontSize: '10px', fontFamily: c.mono, fontWeight: 700, letterSpacing: '0.3px', background: tag.bg, color: tag.color, border: `1px solid ${tag.border}` }}>{tag.label}</span>
+          ))}
         </div>
       </div>
 
