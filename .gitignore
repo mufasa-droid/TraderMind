@@ -41,5 +41,10 @@ yarn-error.log*
 next-env.d.ts
 
 AGENTS.md
+agents.md
 CLAUDE.md
 README.md
+prompts/
+skills/
+"AI Skills/"
+

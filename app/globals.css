@@ -1,5 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Syne:wght@400;500;600;700;800&display=swap');
-
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -7,24 +6,49 @@
 
 @layer base {
   :root {
+    --bg: #0A0B0E;
     --background: 222 20% 5%;
     --foreground: 220 15% 92%;
-    --surface: 224 18% 8%;
-    --surface-2: 224 16% 11%;
-    --surface-3: 224 14% 14%;
-    --border: 220 12% 14%;
-    --accent: 226 100% 71%;
-    --accent-foreground: 220 15% 92%;
-    --muted: 220 12% 35%;
-    --muted-foreground: 220 10% 55%;
+    --surface: #111318;
+    --surface-2: #161920;
+    --surface-3: #1C2028;
+    --border: rgba(255, 255, 255, 0.07);
+    --border-2: rgba(255, 255, 255, 0.12);
+
+    --text: #E8EAF0;
+    --text-2: #8B90A0;
+    --text-3: #555C6E;
+
+    --accent: #6C8EFF;
+    --green: #3ECF8E;
+    --red: #FF5F5F;
+    --amber: #F5A623;
+    --purple: #B48EFF;
+    --teal: #1DE9C2;
+
+    --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
   }
 }
 
 @layer base {
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  html { background: hsl(var(--background)); color: hsl(var(--foreground)); }
-  body { background: hsl(var(--background)); color: hsl(var(--foreground)); -webkit-font-smoothing: antialiased; }
+  html {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+  }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  .font-mono-data {
+    font-family: var(--font-mono);
+    font-feature-settings: "tnum" 1, "zero" 1;
+  }
   ::-webkit-scrollbar { width: 4px; height: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 2px; }
+  ::-webkit-scrollbar-thumb { background: var(--surface-3); border-radius: 2px; }
 }

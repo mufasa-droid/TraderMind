@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import {
-  LineChart, Line, AreaChart, Area, BarChart, Bar,
-  XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine
+  AreaChart, Area, BarChart, Bar, ComposedChart, Line,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell
 } from 'recharts'
 import {
   Brain, TrendingUp, AlertTriangle, Shield,
@@ -12,7 +13,7 @@ import {
 } from 'lucide-react'
 import type { PerformanceAnalytics, Trade, BehavioralFlag } from '@/types'
 
-// ── DEMO FALLBACK (used when API unavailable or in demo mode without DB) ──
+// ── DEMO DATA (AGENTS.md Section 11) ──────────────────────────
 const DEMO_EQUITY = [
   { date: 'May 1', equity: 10200, discipline: 72 },
   { date: 'May 3', equity: 10380, discipline: 74 },
@@ -33,7 +34,7 @@ const DEMO_EQUITY = [
 const DEMO_SESSION = [
   { session: 'Asian', wr: 55, trades: 8 },
   { session: 'London', wr: 67, trades: 19 },
-  { session: 'NY', wr: 48, trades: 15 },
+  { session: 'New York', wr: 48, trades: 15 },
   { session: 'Overlap', wr: 71, trades: 5 },
 ]
 
@@ -46,10 +47,17 @@ const DEMO_TRADES = [
 ]
 
 const DEMO_FLAGS = [
-  { type: 'Revenge Trading', count: 3, severity: 'high' },
-  { type: 'Post-Win Risk Creep', count: 6, severity: 'medium' },
-  { type: 'FOMO Entry', count: 2, severity: 'medium' },
-  { type: 'Rule Violations', count: 1, severity: 'low' },
+  { type: 'Revenge Trading', count: 3, severity: 'high' as const },
+  { type: 'Post-Win Risk Creep', count: 6, severity: 'medium' as const },
+  { type: 'FOMO Entry', count: 2, severity: 'medium' as const },
+  { type: 'Rule Violations', count: 1, severity: 'low' as const },
+]
+
+const DEMO_EMOTIONS = [
+  { label: 'Calm / Focused', pct: 58, color: 'var(--green)' },
+  { label: 'Overconfident', pct: 19, color: 'var(--amber)' },
+  { label: 'FOMO', pct: 12, color: 'var(--purple)' },
+  { label: 'Revenge / Fear', pct: 11, color: 'var(--red)' },
 ]
 
 const RANGE_OPTIONS = ['1W', '1M', '3M', 'YTD'] as const
@@ -63,63 +71,128 @@ type AnalyticsResponse = {
   range: { start: string; end: string; label: string }
 }
 
-// ── STYLES ────────────────────────────────────────────────────
-const c = {
-  green: '#3ecf8e',
-  red: '#ff5f5f',
-  amber: '#f5a623',
-  accent: 'hsl(226,100%,71%)',
-  purple: '#b48eff',
-  bg: 'hsl(222,20%,5%)',
-  surface: 'hsl(224,18%,8%)',
-  surface2: 'hsl(224,16%,11%)',
-  surface3: 'hsl(224,14%,14%)',
-  border: 'hsl(220,12%,14%)',
-  text: 'hsl(220,15%,92%)',
-  text2: 'hsl(220,10%,55%)',
-  text3: 'hsl(220,10%,35%)',
-  mono: "'DM Mono', monospace",
-}
-
-const panel = {
-  background: c.surface,
-  border: `1px solid ${c.border}`,
+// ── DESIGN SYSTEM STYLES ──────────────────────────────────────
+const panelStyle = {
+  background: 'var(--surface)',
+  border: '1px solid var(--border)',
   borderRadius: '10px',
-  overflow: 'hidden',
+  overflow: 'hidden' as const,
 }
 
-const ph = {
-  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-  padding: '12px 16px', borderBottom: `1px solid ${c.border}`,
+const panelHeaderStyle = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  padding: '12px 16px',
+  borderBottom: '1px solid var(--border)',
 }
 
-function ScoreCard({ label, value, delta, color, barColor }: { label: string; value: number; delta: string; color: string; barColor: string }) {
-  // Pixel-match: label + delta top row, large value with /100, top 2px accent bar
-  const isUp = delta.trim().startsWith('↗') || delta.trim().startsWith('↑')
-  const deltaColor = delta.includes('↘') || delta.includes('↓') ? c.red : isUp ? c.green : c.text3
+const tooltipStyle = {
+  contentStyle: {
+    background: 'var(--surface-2)',
+    border: '1px solid var(--border)',
+    borderRadius: '8px',
+    fontSize: '11px',
+    fontFamily: 'var(--font-mono)',
+    color: 'var(--text)',
+  },
+  labelStyle: { color: 'var(--text-2)', fontSize: '10px', marginBottom: '4px' },
+  itemStyle: { color: 'var(--text)' },
+}
+
+// ── SCORE CARD COMPONENT (prompts/build-dashboard.md) ─────────
+function ScoreCard({
+  label, value, delta, deltaPositive, color, barColor
+}: {
+  label: string
+  value: number
+  delta: string
+  deltaPositive: boolean
+  color: string
+  barColor: string
+}) {
   return (
-    <div style={{ ...panel, position: 'relative', padding: '16px 16px 14px', overflow:'hidden' }}>
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: barColor, borderRadius:'2px 2px 0 0' }} />
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-        <span style={{ fontSize: '10px', fontWeight: 600, color: c.text3, textTransform: 'uppercase', letterSpacing: '0.8px', fontFamily: c.mono }}>{label}</span>
-        <span style={{ fontSize: '11px', fontWeight: 600, color: deltaColor, fontFamily: c.mono }}>{delta}</span>
+    <div style={{
+      ...panelStyle,
+      padding: '16px 18px 14px',
+      position: 'relative',
+    }}>
+      {/* 2px Colored Top Accent Bar */}
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: barColor }} />
+      
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span style={{
+          fontSize: '10px',
+          fontWeight: 700,
+          color: 'var(--text-3)',
+          textTransform: 'uppercase',
+          letterSpacing: '0.8px',
+          fontFamily: 'var(--font-mono)',
+        }}>
+          {label}
+        </span>
+        <span style={{
+          fontSize: '11px',
+          fontWeight: 700,
+          fontFamily: 'var(--font-mono)',
+          color: deltaPositive ? 'var(--green)' : 'var(--red)',
+        }}>
+          {deltaPositive ? '↑ ' : '↓ '}{delta}
+        </span>
       </div>
-      <div style={{ display:'flex', alignItems:'baseline', gap:'6px', marginTop:'8px' }}>
-        <span style={{ fontSize: '30px', fontWeight: 800, color: '#E8EAF0', letterSpacing: '-1.2px', lineHeight: 1 }}>{value}</span>
-        <span style={{ fontSize: '14px', fontWeight: 600, color: c.text3 }}>/100</span>
+
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginTop: '8px' }}>
+        <span style={{
+          fontSize: '32px',
+          fontWeight: 800,
+          color,
+          letterSpacing: '-1.2px',
+          lineHeight: 1,
+          fontFamily: 'var(--font-mono)',
+          fontFeatureSettings: '"tnum" 1, "zero" 1',
+        }}>
+          {value}
+        </span>
+        <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
+          /100
+        </span>
       </div>
-      <div style={{ marginTop: '12px', height: '3px', background: 'hsl(224,14%,14%)', borderRadius: '2px' }}>
-        <div style={{ height: '3px', borderRadius: '2px', background: barColor, width: `${Math.min(100,value)}%` }} />
+
+      <div style={{ fontSize: '11px', color: 'var(--text-3)', marginTop: '4px', fontFamily: 'var(--font-mono)' }}>
+        vs last month
+      </div>
+
+      {/* Progress Bar */}
+      <div style={{ marginTop: '12px', height: '3px', background: 'var(--surface-3)', borderRadius: '2px' }}>
+        <div style={{
+          height: '3px',
+          borderRadius: '2px',
+          background: barColor,
+          width: `${Math.min(100, Math.max(0, value))}%`,
+          transition: 'width 0.6s ease-out'
+        }} />
       </div>
     </div>
   )
 }
 
 function AlignmentBadge({ score }: { score: number }) {
-  const color = score >= 75 ? c.green : score >= 50 ? c.amber : c.red
-  const bg = score >= 75 ? 'rgba(62,207,142,0.1)' : score >= 50 ? 'rgba(245,166,35,0.1)' : 'rgba(255,95,95,0.1)'
+  const color = score >= 75 ? 'var(--green)' : score >= 50 ? 'var(--amber)' : 'var(--red)'
+  const bg = score >= 75 ? 'rgba(62,207,142,0.12)' : score >= 50 ? 'rgba(245,166,35,0.12)' : 'rgba(255,95,95,0.12)'
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '2px 8px', borderRadius: '4px', background: bg, color, fontSize: '11px', fontFamily: c.mono, fontWeight: 500 }}>
+    <span style={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: '4px',
+      padding: '2px 8px',
+      borderRadius: '4px',
+      background: bg,
+      color,
+      fontSize: '11px',
+      fontFamily: 'var(--font-mono)',
+      fontWeight: 600,
+      fontFeatureSettings: '"tnum" 1, "zero" 1',
+    }}>
       ● {score}
     </span>
   )
@@ -127,45 +200,50 @@ function AlignmentBadge({ score }: { score: number }) {
 
 function EmotionBadge({ emotion }: { emotion: string }) {
   const colors: Record<string, string> = {
-    Focused: c.green, Calm: c.green, Revenge: c.red, FOMO: c.amber, Hesitant: c.text2
+    Focused: 'var(--green)',
+    Calm: 'var(--green)',
+    Revenge: 'var(--red)',
+    FOMO: 'var(--amber)',
+    Hesitant: 'var(--text-2)',
   }
-  return <span style={{ fontSize: '11px', color: colors[emotion] ?? c.text2 }}>{emotion}</span>
-}
-
-const tooltipStyle = {
-  contentStyle: { background: c.surface2, border: `1px solid ${c.border}`, borderRadius: '8px', fontSize: '11px', fontFamily: c.mono },
-  labelStyle: { color: c.text2, fontSize: '10px' },
+  return (
+    <span style={{
+      fontSize: '11px',
+      fontWeight: 500,
+      color: colors[emotion] ?? 'var(--text-2)',
+      fontFamily: 'var(--font-sans)',
+    }}>
+      {emotion}
+    </span>
+  )
 }
 
 export default function DashboardPage() {
   const [range, setRange] = useState<RangeLabel>('1M')
   const [data, setData] = useState<AnalyticsResponse | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     let cancelled = false
     setLoading(true)
-    setError(null)
     fetch(`/api/behavioral/analytics?range=${range}`, { cache: 'no-store' })
       .then(async r => {
-        if (!r.ok) throw new Error(`${r.status} ${await r.text()}`)
+        if (!r.ok) throw new Error(`${r.status}`)
         return r.json()
       })
-      .then((json: AnalyticsResponse) => { if (!cancelled) setData(json) })
-      .catch(e => {
-        if (!cancelled) {
-          // Fall back to demo data silently; surface in console for debugging
-          console.warn('Dashboard analytics fetch failed, using demo fallback:', e)
-          setError(e instanceof Error ? e.message : 'Failed to load analytics')
-        }
+      .then((json: AnalyticsResponse) => {
+        if (!cancelled && json?.analytics) setData(json)
       })
-      .finally(() => { if (!cancelled) setLoading(false) })
+      .catch(() => {
+        // Safe fallback to demo data
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
     return () => { cancelled = true }
   }, [range])
 
   const analytics = data?.analytics ?? null
-  // Derived display values — fallback to demo when no live data
   const discipline = analytics?.discipline_score ?? 78
   const consistency = analytics?.behavioral_consistency_score ?? 84
   const riskQuality = analytics?.risk_quality_score ?? 61
@@ -173,7 +251,7 @@ export default function DashboardPage() {
 
   const sessionDataLive = analytics
     ? Object.values(analytics.session_performance).map(s => ({
-        session: s.session === 'new_york' ? 'NY' : s.session.charAt(0).toUpperCase() + s.session.slice(1),
+        session: s.session === 'new_york' ? 'New York' : s.session.charAt(0).toUpperCase() + s.session.slice(1),
         wr: Math.round(s.win_rate * 10) / 10,
         trades: s.total_trades,
       }))
@@ -181,234 +259,473 @@ export default function DashboardPage() {
 
   const equityChartData = data?.equity_curve?.length
     ? data.equity_curve.map(p => ({
-        date: p.date.slice(5), // MM-DD
-        equity: 10000 + p.cumulative, // synthetic equity base for demo-less DBs
-        discipline: discipline, // flat discipline line when no history; could be time-series later
+        date: p.date.slice(5),
+        equity: 10000 + p.cumulative,
+        discipline: discipline,
       }))
     : DEMO_EQUITY
 
   const tradesLive = data?.recent_trades?.length ? data.recent_trades : null
   const flagsLive = analytics?.behavioral_flags ?? null
 
-  // Emotion breakdown from live distribution
   const emotionRows = analytics?.emotion_distribution
     ? [
-        { label: 'Calm / Focused', pct: Math.round(((analytics.emotion_distribution.calm ?? 0) + (analytics.emotion_distribution.focused ?? 0)) * 10) / 10, color: c.green },
-        { label: 'Overconfident', pct: analytics.emotion_distribution.overconfident ?? 0, color: c.amber },
-        { label: 'FOMO', pct: analytics.emotion_distribution.fomo ?? 0, color: c.purple },
-        { label: 'Revenge / Fear', pct: Math.round(((analytics.emotion_distribution.revenge_trading ?? 0) + (analytics.emotion_distribution.fearful ?? 0) + (analytics.emotion_distribution.stressed ?? 0)) * 10) / 10, color: c.red },
+        { label: 'Calm / Focused', pct: Math.round(((analytics.emotion_distribution.calm ?? 0) + (analytics.emotion_distribution.focused ?? 0)) * 10) / 10, color: 'var(--green)' },
+        { label: 'Overconfident', pct: analytics.emotion_distribution.overconfident ?? 0, color: 'var(--amber)' },
+        { label: 'FOMO', pct: analytics.emotion_distribution.fomo ?? 0, color: 'var(--purple)' },
+        { label: 'Revenge / Fear', pct: Math.round(((analytics.emotion_distribution.revenge_trading ?? 0) + (analytics.emotion_distribution.fearful ?? 0) + (analytics.emotion_distribution.stressed ?? 0)) * 10) / 10, color: 'var(--red)' },
       ]
-    : [
-        { label: 'Calm / Focused', pct: 58, color: c.green },
-        { label: 'Overconfident', pct: 19, color: c.amber },
-        { label: 'FOMO', pct: 12, color: c.purple },
-        { label: 'Revenge / Fear', pct: 11, color: c.red },
-      ]
+    : DEMO_EMOTIONS
 
   const avgRiskLive = analytics?.avg_risk_per_trade ?? 1.64
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', maxWidth: '1100px' }}>
-      {/* Header — pixel-match: TRADERMIND / OVERVIEW + title + subtitle + 1W/1M toggle */}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', maxWidth: '1140px', margin: '0 auto' }}>
+      
+      {/* ── 1. PAGE HEADER ROW (Title + Date Range Picker) ── */}
       <div>
-        <div style={{ fontSize: '10px', fontWeight:600, color:c.accent, letterSpacing:'1px', fontFamily:c.mono, marginBottom:'6px' }}>TRADERMIND <span style={{color:c.text3}}>/</span> OVERVIEW</div>
-        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap:'12px' }}>
+        <div style={{
+          fontSize: '10px',
+          fontWeight: 700,
+          color: 'var(--accent)',
+          letterSpacing: '1px',
+          fontFamily: 'var(--font-mono)',
+          marginBottom: '6px'
+        }}>
+          TRADERMIND <span style={{ color: 'var(--text-3)' }}>/</span> OVERVIEW
+        </div>
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
           <div>
-            <h1 style={{ fontSize: '30px', fontWeight: 800, letterSpacing: '-0.8px', lineHeight:1, color:'#E8EAF0' }}>Performance Overview</h1>
-            <p style={{ fontSize: '11px', color: c.text3, marginTop: '6px', fontFamily: c.mono }}>
-              {loading ? 'Loading…' : `${analytics ? 'May 2026 · ' : 'May 2026 · '}${analytics?.total_trades ?? 47} trades · ${data ? 'live' : 'MTS synced'}`}
+            <h1 style={{ fontSize: '28px', fontWeight: 800, letterSpacing: '-0.8px', lineHeight: 1, color: 'var(--text)' }}>
+              Performance Overview
+            </h1>
+            <p style={{ fontSize: '11px', color: 'var(--text-3)', marginTop: '6px', fontFamily: 'var(--font-mono)' }}>
+              {loading ? 'Updating…' : `May 2026 · ${analytics?.total_trades ?? 47} trades · MetaTrader 5 synced`}
             </p>
           </div>
-          <div style={{ display: 'flex', gap: '2px', background: '#161920', padding: '3px', borderRadius: '8px', border:`1px solid ${c.border}`, flexShrink:0 }}>
+          <div style={{
+            display: 'flex',
+            gap: '3px',
+            background: 'var(--surface-2)',
+            padding: '3px',
+            borderRadius: '8px',
+            border: '1px solid var(--border)',
+            flexShrink: 0
+          }}>
             {RANGE_OPTIONS.map(r => (
-              <button key={r} type="button" onClick={() => { console.log('dashboard range', r); setRange(r as any) }} style={{
-                padding: '5px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 600,
-                fontFamily: c.mono, border: `1px solid ${range === r ? c.accent : 'transparent'}`, cursor: 'pointer', minWidth:'36px',
-                background: range === r ? c.accent : 'transparent',
-                color: range === r ? '#fff' : c.text3,
-                boxShadow: range===r ? '0 1px 6px rgba(108,142,255,0.4)' : 'none',
-              }} aria-pressed={range === r}>{r}</button>
+              <button
+                key={r}
+                type="button"
+                onClick={() => setRange(r)}
+                style={{
+                  padding: '5px 12px',
+                  borderRadius: '6px',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  fontFamily: 'var(--font-mono)',
+                  border: `1px solid ${range === r ? 'var(--accent)' : 'transparent'}`,
+                  cursor: 'pointer',
+                  minWidth: '38px',
+                  background: range === r ? 'var(--accent)' : 'transparent',
+                  color: range === r ? '#FFFFFF' : 'var(--text-3)',
+                  boxShadow: range === r ? '0 1px 6px rgba(108,142,255,0.35)' : 'none',
+                  transition: 'all 0.15s ease',
+                }}
+                aria-pressed={range === r}
+              >
+                {r}
+              </button>
             ))}
           </div>
         </div>
       </div>
 
-      {/* Score Cards — pixel-match 2x2 grid as in design */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
-        <ScoreCard label="Discipline Score" value={discipline} delta={analytics ? `↗ 3%` : '↗ 3%'} color={c.accent} barColor={c.accent} />
-        <ScoreCard label="Behavioral Consistency" value={consistency} delta={analytics ? `↗ 7%` : '↗ 7%'} color={c.green} barColor={c.green} />
-        <ScoreCard label="Risk Quality" value={riskQuality} delta={'↘ 4%'} color={c.amber} barColor={c.amber} />
-        <ScoreCard label="Emotional Stability" value={emotional} delta={'↗ 11%'} color={c.purple} barColor={c.purple} />
+      {/* ── 2. SCORE CARDS (4 Grid Cards) ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
+        <ScoreCard
+          label="Discipline Score"
+          value={discipline}
+          delta="+3"
+          deltaPositive={true}
+          color="var(--accent)"
+          barColor="var(--accent)"
+        />
+        <ScoreCard
+          label="Behavioral Consistency"
+          value={consistency}
+          delta="+7"
+          deltaPositive={true}
+          color="var(--green)"
+          barColor="var(--green)"
+        />
+        <ScoreCard
+          label="Risk Quality"
+          value={riskQuality}
+          delta="-4"
+          deltaPositive={false}
+          color="var(--amber)"
+          barColor="var(--amber)"
+        />
+        <ScoreCard
+          label="Emotional Stability"
+          value={emotional}
+          delta="+11"
+          deltaPositive={true}
+          color="var(--purple)"
+          barColor="var(--purple)"
+        />
       </div>
 
-      {/* AI Coach — pixel-match full-width as in design */}
+      {/* ── 3. AI COACH INSIGHT PANEL ── */}
       <div style={{
-        background: '#161920',
-        border: `1px solid hsl(220,12%,14%)`,
-        borderRadius: '10px', padding: '16px 18px',
+        background: 'var(--surface)',
+        border: '1px solid var(--border)',
+        borderRadius: '10px',
+        padding: '16px 20px',
+        position: 'relative',
+        overflow: 'hidden',
       }}>
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          bottom: 0,
+          width: '3px',
+          background: 'linear-gradient(180deg, var(--accent), var(--teal))',
+        }} />
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
           <div style={{
-            display: 'inline-flex', alignItems: 'center', gap: '6px',
-            color: c.accent,
-            fontSize: '10px', fontWeight: 700, letterSpacing: '0.8px', fontFamily: c.mono,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            color: 'var(--accent)',
+            fontSize: '11px',
+            fontWeight: 700,
+            letterSpacing: '0.8px',
+            fontFamily: 'var(--font-mono)',
           }}>
-            <span style={{fontSize:'12px'}}>✦</span> AI COACH · WEEKLY INSIGHT
+            <span>✦</span> AI COACH · WEEKLY BEHAVIORAL INSIGHT
           </div>
-          <a href="/ai-coach" style={{ fontSize: '11px', color: c.accent, textDecoration:'none', fontFamily: c.mono }}>Full report →</a>
+          <Link
+            href="/ai-coach"
+            style={{
+              fontSize: '11px',
+              color: 'var(--accent)',
+              textDecoration: 'none',
+              fontFamily: 'var(--font-mono)',
+              fontWeight: 600,
+            }}
+          >
+            Full AI Report →
+          </Link>
         </div>
-        <p style={{ fontSize: '13px', lineHeight: 1.65, color: 'hsl(220,10%,75%)' }}>
-          Your London session performance is up <span style={{ color: '#3ecf8e', fontWeight:700 }}>63%</span> this month. Protect the edge by slowing down after wins — your best results come when you validate every setup before sizing up.
+        <p style={{ fontSize: '13px', lineHeight: 1.65, color: 'var(--text-2)' }}>
+          Your London session win rate is <span style={{ color: 'var(--green)', fontWeight: 700 }}>67%</span> (19 points above average). Protect your edge by maintaining risk sizing after winning streaks — your best results occur when stress levels remain ≤ 3/10.
         </p>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '12px' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '14px' }}>
           {[
-            { label: 'LONDON SESSION +63%', bg:'rgba(62,207,142,0.12)', color:'#3ecf8e', border:'rgba(62,207,142,0.25)' },
-            { label: 'POST-WIN RISK CREEP', bg:'rgba(255,95,95,0.10)', color:'#ff6467', border:'rgba(255,95,95,0.22)' },
-            { label: 'BREAKOUT WR 71%', bg:'rgba(62,207,142,0.12)', color:'#3ecf8e', border:'rgba(62,207,142,0.25)' },
-            { label: 'REVENGE TRADING ×3', bg:'rgba(255,95,95,0.10)', color:'#ff6467', border:'rgba(255,95,95,0.22)' },
+            { label: 'LONDON SESSION 67% WR', bg: 'rgba(62,207,142,0.12)', color: 'var(--green)', border: 'rgba(62,207,142,0.25)' },
+            { label: 'POST-WIN RISK CREEP ×6', bg: 'rgba(245,166,35,0.12)', color: 'var(--amber)', border: 'rgba(245,166,35,0.25)' },
+            { label: 'BREAKOUT WR 71%', bg: 'rgba(62,207,142,0.12)', color: 'var(--green)', border: 'rgba(62,207,142,0.25)' },
+            { label: 'REVENGE TRADING ×3', bg: 'rgba(255,95,95,0.12)', color: 'var(--red)', border: 'rgba(255,95,95,0.25)' },
           ].map(tag => (
-            <span key={tag.label} style={{
-              padding: '4px 10px', borderRadius: '6px', fontSize: '10px', fontFamily: c.mono, fontWeight: 700, letterSpacing:'0.3px',
-              background: tag.bg, color: tag.color, border:`1px solid ${tag.border}`,
-            }}>{tag.label}</span>
+            <span
+              key={tag.label}
+              style={{
+                padding: '4px 10px',
+                borderRadius: '6px',
+                fontSize: '10px',
+                fontFamily: 'var(--font-mono)',
+                fontWeight: 700,
+                letterSpacing: '0.4px',
+                background: tag.bg,
+                color: tag.color,
+                border: `1px solid ${tag.border}`,
+              }}
+            >
+              {tag.label}
+            </span>
           ))}
         </div>
       </div>
 
-      {/* Main Grid — below AI Coach */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '16px' }}>
+      {/* ── 4. MAIN 2-COLUMN GRID ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 330px', gap: '16px' }}>
 
-        {/* Left Column */}
+        {/* ── LEFT COLUMN: Equity Chart + Trade Table ── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
-          {/* Equity Chart */}
-          <div style={panel}>
-            <div style={ph}>
-              <span style={{ fontSize: '13px', fontWeight: 600 }}>Equity Curve</span>
+          {/* Dual-Axis Equity + Discipline Chart */}
+          <div style={panelStyle}>
+            <div style={panelHeaderStyle}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Activity size={15} style={{ color: 'var(--green)' }} />
+                <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>
+                  Equity Curve & Discipline Overlay
+                </span>
+              </div>
               <div style={{ display: 'flex', gap: '16px' }}>
-                {[{ color: c.green, label: 'Equity' }, { color: c.accent, label: 'Discipline' }].map(l => (
-                  <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', color: c.text3, fontFamily: c.mono }}>
-                    <div style={{ width: '12px', height: '2px', background: l.color }} />
-                    {l.label}
-                  </div>
-                ))}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
+                  <div style={{ width: '12px', height: '2px', background: 'var(--green)' }} />
+                  Equity
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
+                  <div style={{ width: '12px', height: '2px', background: 'var(--accent)', borderTop: '2px dashed var(--accent)' }} />
+                  Discipline
+                </div>
               </div>
             </div>
-            <div style={{ padding: '12px 8px 4px' }}>
-              <ResponsiveContainer width="100%" height={200}>
-                <AreaChart data={equityChartData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+            <div style={{ padding: '14px 12px 6px' }}>
+              <ResponsiveContainer width="100%" height={210}>
+                <ComposedChart data={equityChartData} margin={{ top: 6, right: 10, left: 0, bottom: 0 }}>
                   <defs>
-                    <linearGradient id="equityGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={c.green} stopOpacity={0.15} />
-                      <stop offset="95%" stopColor={c.green} stopOpacity={0} />
+                    <linearGradient id="equityGradMain" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="var(--green)" stopOpacity={0.18} />
+                      <stop offset="95%" stopColor="var(--green)" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
-                  <XAxis dataKey="date" tick={{ fontSize: 10, fill: c.text3, fontFamily: c.mono }} axisLine={false} tickLine={false} />
-                  <YAxis yAxisId="equity" domain={['auto', 'auto']} tick={{ fontSize: 10, fill: c.text3, fontFamily: c.mono }} axisLine={false} tickLine={false} tickFormatter={v => `$${(v / 1000).toFixed(1)}k`} />
-                  <YAxis yAxisId="disc" orientation="right" domain={[50, 100]} tick={{ fontSize: 10, fill: c.text3, fontFamily: c.mono }} axisLine={false} tickLine={false} />
-                  <Tooltip {...tooltipStyle} formatter={(v: any, name: any) => [name === 'Equity' ? `$${Number(v).toLocaleString()}` : `${v}/100`, name]} />
-                  <Area yAxisId="equity" type="monotone" dataKey="equity" stroke={c.green} strokeWidth={1.5} fill="url(#equityGrad)" name="Equity" dot={false} />
-                  <Line yAxisId="disc" type="monotone" dataKey="discipline" stroke={c.accent} strokeWidth={1.5} strokeDasharray="5 3" name="Discipline" dot={false} />
-                </AreaChart>
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fontSize: 10, fill: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    yAxisId="equity"
+                    domain={['auto', 'auto']}
+                    tick={{ fontSize: 10, fill: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}
+                    axisLine={false}
+                    tickLine={false}
+                    tickFormatter={v => `$${(Number(v) / 1000).toFixed(1)}k`}
+                  />
+                  <YAxis
+                    yAxisId="disc"
+                    orientation="right"
+                    domain={[50, 100]}
+                    tick={{ fontSize: 10, fill: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <Tooltip
+                    {...tooltipStyle}
+                    formatter={(v: any, name: any) => [name === 'Equity' ? `$${Number(v).toLocaleString()}` : `${v}/100`, name]}
+                  />
+                  <Area
+                    yAxisId="equity"
+                    type="monotone"
+                    dataKey="equity"
+                    stroke="var(--green)"
+                    strokeWidth={1.8}
+                    fill="url(#equityGradMain)"
+                    name="Equity"
+                    dot={false}
+                    activeDot={{ r: 4, fill: 'var(--green)' }}
+                  />
+                  <Line
+                    yAxisId="disc"
+                    type="monotone"
+                    dataKey="discipline"
+                    stroke="var(--accent)"
+                    strokeWidth={1.5}
+                    strokeDasharray="4 3"
+                    name="Discipline"
+                    dot={false}
+                  />
+                </ComposedChart>
               </ResponsiveContainer>
             </div>
           </div>
 
-          {/* Trade Table */}
-          <div style={panel}>
-            <div style={ph}>
-              <span style={{ fontSize: '13px', fontWeight: 600 }}>Recent Trades</span>
-              <button style={{ fontSize: '11px', color: c.accent, background: 'none', border: 'none', cursor: 'pointer', fontFamily: c.mono }}>view all →</button>
+          {/* Recent Trades Table */}
+          <div style={panelStyle}>
+            <div style={panelHeaderStyle}>
+              <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>
+                Recent Trades
+              </span>
+              <Link
+                href="/trades"
+                style={{
+                  fontSize: '11px',
+                  color: 'var(--accent)',
+                  textDecoration: 'none',
+                  fontFamily: 'var(--font-mono)',
+                  fontWeight: 600,
+                }}
+              >
+                View all trades →
+              </Link>
             </div>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr>
-                  {['Pair', 'P&L', 'R:R', 'Risk', 'Emotion', 'Session', 'Alignment'].map(h => (
-                    <th key={h} style={{ padding: '8px 12px', fontSize: '10px', fontWeight: 600, color: c.text3, textTransform: 'uppercase', letterSpacing: '0.8px', textAlign: 'left', fontFamily: c.mono, borderBottom: `1px solid ${c.border}` }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {(tradesLive
-                  ? tradesLive.map(t => ({
-                      id: t.id,
-                      symbol: t.symbol,
-                      direction: t.direction === 'long' ? 'Long' : 'Short',
-                      pnl: Math.round((t.net_pnl ?? 0)),
-                      rr: t.reward_risk_ratio ?? 0,
-                      risk: t.risk_pct ?? 0,
-                      emotion: '—' as string,
-                      session: t.session,
-                      alignment: t.alignment_score ?? 50,
-                    }))
-                  : DEMO_TRADES
-                ).map(trade => (
-                  <tr key={trade.id} style={{ cursor: 'pointer' }}
-                    onMouseEnter={e => (e.currentTarget.style.background = c.surface2)}
-                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                  >
-                    <td style={{ padding: '10px 12px', borderTop: `1px solid ${c.border}40` }}>
-                      <div style={{ fontWeight: 600, fontSize: '13px', fontFamily: c.mono }}>{trade.symbol}</div>
-                      <div style={{ fontSize: '10px', color: trade.direction === 'Long' ? c.green : c.red, fontFamily: c.mono }}>{trade.direction}</div>
-                    </td>
-                    <td style={{ padding: '10px 12px', borderTop: `1px solid ${c.border}40`, color: trade.pnl >= 0 ? c.green : c.red, fontFamily: c.mono, fontWeight: 600 }}>
-                      {trade.pnl >= 0 ? '+' : ''}${trade.pnl}
-                    </td>
-                    <td style={{ padding: '10px 12px', borderTop: `1px solid ${c.border}40`, color: c.text2, fontFamily: c.mono, fontSize: '12px' }}>{Number(trade.rr).toFixed(1)}R</td>
-                    <td style={{ padding: '10px 12px', borderTop: `1px solid ${c.border}40`, color: trade.risk > 2 ? c.amber : c.text2, fontFamily: c.mono, fontSize: '12px' }}>{trade.risk}%</td>
-                    <td style={{ padding: '10px 12px', borderTop: `1px solid ${c.border}40` }}>
-                      {trade.emotion === '—' ? <span style={{ fontSize: '11px', color: c.text3 }}>—</span> : <EmotionBadge emotion={trade.emotion} />}
-                    </td>
-                    <td style={{ padding: '10px 12px', borderTop: `1px solid ${c.border}40`, color: c.text3, fontFamily: c.mono, fontSize: '11px' }}>{trade.session}</td>
-                    <td style={{ padding: '10px 12px', borderTop: `1px solid ${c.border}40` }}><AlignmentBadge score={trade.alignment} /></td>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                <thead>
+                  <tr style={{ background: 'var(--surface-2)' }}>
+                    {['Pair', 'P&L', 'R:R', 'Risk %', 'Emotion', 'Session', 'Alignment'].map(h => (
+                      <th
+                        key={h}
+                        style={{
+                          padding: '10px 14px',
+                          fontSize: '10px',
+                          fontWeight: 700,
+                          color: 'var(--text-3)',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.8px',
+                          fontFamily: 'var(--font-mono)',
+                          borderBottom: '1px solid var(--border)',
+                        }}
+                      >
+                        {h}
+                      </th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {(tradesLive
+                    ? tradesLive.map(t => ({
+                        id: t.id,
+                        symbol: t.symbol,
+                        direction: t.direction === 'long' ? 'Long' : 'Short',
+                        pnl: Math.round(t.net_pnl ?? 0),
+                        rr: t.reward_risk_ratio ?? 0,
+                        risk: t.risk_pct ?? 0,
+                        emotion: '—',
+                        session: t.session === 'new_york' ? 'New York' : t.session.charAt(0).toUpperCase() + t.session.slice(1),
+                        alignment: t.alignment_score ?? 50,
+                      }))
+                    : DEMO_TRADES
+                  ).map(trade => (
+                    <tr
+                      key={trade.id}
+                      style={{
+                        borderBottom: '1px solid rgba(255,255,255,0.03)',
+                        transition: 'background 0.15s ease',
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-2)')}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                    >
+                      <td style={{ padding: '12px 14px' }}>
+                        <div style={{ fontWeight: 700, fontSize: '13px', fontFamily: 'var(--font-mono)', color: 'var(--text)' }}>
+                          {trade.symbol}
+                        </div>
+                        <div style={{
+                          fontSize: '10px',
+                          fontWeight: 600,
+                          color: trade.direction === 'Long' ? 'var(--green)' : 'var(--red)',
+                          fontFamily: 'var(--font-mono)',
+                          textTransform: 'uppercase',
+                        }}>
+                          {trade.direction}
+                        </div>
+                      </td>
+                      <td style={{
+                        padding: '12px 14px',
+                        color: trade.pnl >= 0 ? 'var(--green)' : 'var(--red)',
+                        fontFamily: 'var(--font-mono)',
+                        fontWeight: 700,
+                        fontSize: '13px',
+                        fontFeatureSettings: '"tnum" 1, "zero" 1',
+                      }}>
+                        {trade.pnl >= 0 ? '+' : ''}${trade.pnl}
+                      </td>
+                      <td style={{
+                        padding: '12px 14px',
+                        color: 'var(--text-2)',
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: '12px',
+                        fontFeatureSettings: '"tnum" 1, "zero" 1',
+                      }}>
+                        {Number(trade.rr).toFixed(1)}R
+                      </td>
+                      <td style={{
+                        padding: '12px 14px',
+                        color: trade.risk > 2 ? 'var(--amber)' : 'var(--text-2)',
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: '12px',
+                        fontFeatureSettings: '"tnum" 1, "zero" 1',
+                      }}>
+                        {trade.risk}%
+                      </td>
+                      <td style={{ padding: '12px 14px' }}>
+                        {trade.emotion === '—' ? (
+                          <span style={{ fontSize: '11px', color: 'var(--text-3)' }}>—</span>
+                        ) : (
+                          <EmotionBadge emotion={trade.emotion} />
+                        )}
+                      </td>
+                      <td style={{
+                        padding: '12px 14px',
+                        color: 'var(--text-3)',
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: '11px',
+                      }}>
+                        {trade.session}
+                      </td>
+                      <td style={{ padding: '12px 14px' }}>
+                        <AlignmentBadge score={trade.alignment} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
 
-        {/* Right Column */}
+        {/* ── RIGHT COLUMN: Live Eval, Flags, Sessions, Emotions, Risk ── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
 
-          {/* Live Trade Eval */}
+          {/* Live Trade Evaluation Widget */}
           <div style={{
-            background: c.surface2, border: `1px solid ${c.border}`, borderRadius: '10px', padding: '14px',
+            ...panelStyle,
+            background: 'var(--surface-2)',
+            padding: '14px 16px',
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-              <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: c.green, animation: 'pulse 1.5s infinite' }} />
-              <span style={{ fontSize: '12px', fontWeight: 600 }}>Live Trade Evaluation</span>
-              <span style={{ marginLeft: 'auto', fontSize: '11px', color: c.text3, fontFamily: c.mono }}>EURUSD · Long</span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+                <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: 'var(--green)', display: 'inline-block' }} />
+                <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text)' }}>Live Trade Evaluation</span>
+              </div>
+              <span style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>EURUSD · Long</span>
             </div>
+
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
               {[
-                { label: 'Alignment', value: '79', color: c.green },
-                { label: 'Discipline', value: '82', color: c.accent },
-                { label: 'Risk Level', value: 'MOD', color: c.amber },
-                { label: 'Session Fit', value: 'HIGH', color: c.green },
+                { label: 'Alignment', value: '79', color: 'var(--green)' },
+                { label: 'Discipline', value: '82', color: 'var(--accent)' },
+                { label: 'Risk Level', value: 'MOD', color: 'var(--amber)' },
+                { label: 'Session Fit', value: 'HIGH', color: 'var(--green)' },
               ].map(s => (
-                <div key={s.label} style={{ background: c.surface, borderRadius: '7px', padding: '10px 12px' }}>
-                  <div style={{ fontSize: '10px', color: c.text3, fontFamily: c.mono }}>{s.label}</div>
-                  <div style={{ fontSize: '22px', fontWeight: 800, color: s.color, letterSpacing: '-0.5px', marginTop: '2px' }}>{s.value}</div>
+                <div key={s.label} style={{ background: 'var(--surface)', borderRadius: '8px', padding: '9px 12px', border: '1px solid var(--border)' }}>
+                  <div style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>{s.label}</div>
+                  <div style={{ fontSize: '20px', fontWeight: 800, color: s.color, fontFamily: 'var(--font-mono)', marginTop: '2px' }}>
+                    {s.value}
+                  </div>
                 </div>
               ))}
             </div>
+
             <div style={{
-              background: 'rgba(245,166,35,0.08)', border: `1px solid rgba(245,166,35,0.2)`,
-              borderRadius: '7px', padding: '10px 12px', fontSize: '12px', lineHeight: 1.6, color: c.text2,
+              background: 'rgba(245,166,35,0.08)',
+              border: '1px solid rgba(245,166,35,0.22)',
+              borderRadius: '7px',
+              padding: '10px 12px',
+              fontSize: '12px',
+              lineHeight: 1.55,
+              color: 'var(--text-2)',
             }}>
-              ⚠ Matches your London breakout pattern, but risk at <strong style={{ color: c.text }}>1.8%</strong> is above your optimal <strong style={{ color: c.text }}>1.2%</strong> threshold.
+              ⚠️ Matches your London breakout pattern, but risk at <strong style={{ color: 'var(--text)' }}>1.8%</strong> exceeds optimal <strong style={{ color: 'var(--text)' }}>1.2%</strong> threshold.
             </div>
           </div>
 
-          {/* Behavior Flags — live when available */}
-          <div style={panel}>
-            <div style={ph}>
-              <span style={{ fontSize: '13px', fontWeight: 600 }}>Behavioral Flags</span>
-              <span style={{ fontSize: '11px', color: c.accent, cursor: 'pointer', fontFamily: c.mono }}>details</span>
+          {/* Behavioral Flags */}
+          <div style={panelStyle}>
+            <div style={panelHeaderStyle}>
+              <span style={{ fontSize: '13px', fontWeight: 700 }}>Behavioral Flags</span>
+              <Link href="/behavior" style={{ fontSize: '11px', color: 'var(--accent)', textDecoration: 'none', fontFamily: 'var(--font-mono)' }}>
+                Details →
+              </Link>
             </div>
-            <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {(flagsLive
                 ? Object.entries(flagsLive)
                     .filter(([, count]) => (count as number) > 0)
@@ -417,105 +734,191 @@ export default function DashboardPage() {
                     .map(([type, count]) => ({
                       type: type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
                       count: count as number,
-                      severity: (count as number) > 3 ? 'high' as const : (count as number) > 1 ? 'medium' as const : 'low' as const,
+                      severity: (count as number) > 3 ? ('high' as const) : (count as number) > 1 ? ('medium' as const) : ('low' as const),
                     }))
                 : DEMO_FLAGS
               ).map(flag => (
-                <div key={flag.type} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 12px', background: c.surface2, borderRadius: '8px' }}>
+                <div
+                  key={flag.type}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '8px 12px',
+                    background: 'var(--surface-2)',
+                    borderRadius: '8px',
+                    border: '1px solid var(--border)',
+                  }}
+                >
                   <div style={{
-                    width: '7px', height: '7px', borderRadius: '50%', flexShrink: 0,
-                    background: flag.severity === 'high' ? c.red : flag.severity === 'medium' ? c.amber : c.green
+                    width: '7px',
+                    height: '7px',
+                    borderRadius: '50%',
+                    flexShrink: 0,
+                    background: flag.severity === 'high' ? 'var(--red)' : flag.severity === 'medium' ? 'var(--amber)' : 'var(--green)'
                   }} />
-                  <div style={{ flex: 1, fontSize: '12px', fontWeight: 500 }}>{flag.type}</div>
-                  <div style={{ fontSize: '11px', color: c.text3, fontFamily: c.mono }}>×{flag.count}</div>
+                  <div style={{ flex: 1, fontSize: '12px', fontWeight: 500, color: 'var(--text)' }}>
+                    {flag.type}
+                  </div>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
+                    ×{flag.count}
+                  </div>
                 </div>
               ))}
-              {flagsLive && Object.values(flagsLive).every(v => (v as number) === 0) && (
-                <div style={{ fontSize: '11px', color: c.text3, textAlign: 'center', padding: '8px' }}>No flags — clean trading 🎉</div>
-              )}
             </div>
           </div>
 
-          {/* Session Performance — live */}
-          <div style={panel}>
-            <div style={ph}><span style={{ fontSize: '13px', fontWeight: 600 }}>Session Performance</span></div>
-            <div style={{ padding: '12px' }}>
-              <ResponsiveContainer width="100%" height={130}>
+          {/* Session Performance */}
+          <div style={panelStyle}>
+            <div style={panelHeaderStyle}>
+              <span style={{ fontSize: '13px', fontWeight: 700 }}>Session Performance</span>
+            </div>
+            <div style={{ padding: '14px' }}>
+              <ResponsiveContainer width="100%" height={125}>
                 <BarChart data={sessionDataLive} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
-                  <XAxis dataKey="session" tick={{ fontSize: 10, fill: c.text3, fontFamily: c.mono }} axisLine={false} tickLine={false} />
-                  <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: c.text3, fontFamily: c.mono }} axisLine={false} tickLine={false} />
+                  <XAxis dataKey="session" tick={{ fontSize: 9, fill: 'var(--text-3)', fontFamily: 'var(--font-mono)' }} axisLine={false} tickLine={false} />
+                  <YAxis domain={[0, 100]} tick={{ fontSize: 9, fill: 'var(--text-3)', fontFamily: 'var(--font-mono)' }} axisLine={false} tickLine={false} />
                   <Tooltip {...tooltipStyle} formatter={(v: any) => [`${v}%`, 'Win Rate']} />
-                  <Bar dataKey="wr" radius={[4, 4, 0, 0]} fill={c.accent} opacity={0.8} />
+                  <Bar dataKey="wr" radius={[4, 4, 0, 0]}>
+                    {sessionDataLive.map((entry, index) => (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={entry.wr >= 65 ? 'var(--green)' : entry.wr >= 55 ? 'var(--accent)' : 'var(--amber)'}
+                      />
+                    ))}
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginTop: '8px' }}>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginTop: '10px' }}>
                 {sessionDataLive.map(s => (
-                  <div key={s.session} style={{ background: c.surface2, borderRadius: '7px', padding: '8px 10px' }}>
-                    <div style={{ fontSize: '10px', color: c.text3, fontFamily: c.mono }}>{s.session}</div>
-                    <div style={{ fontSize: '17px', fontWeight: 700, color: s.wr >= 65 ? c.green : s.wr >= 55 ? c.text : c.amber, letterSpacing: '-0.5px' }}>{s.wr}%</div>
-                    <div style={{ fontSize: '10px', color: c.text3, fontFamily: c.mono }}>{s.trades} trades</div>
+                  <div key={s.session} style={{ background: 'var(--surface-2)', borderRadius: '7px', padding: '8px 10px', border: '1px solid var(--border)' }}>
+                    <div style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>{s.session}</div>
+                    <div style={{
+                      fontSize: '16px',
+                      fontWeight: 700,
+                      fontFamily: 'var(--font-mono)',
+                      color: s.wr >= 65 ? 'var(--green)' : s.wr >= 55 ? 'var(--accent)' : 'var(--amber)',
+                      fontFeatureSettings: '"tnum" 1, "zero" 1',
+                    }}>
+                      {s.wr}%
+                    </div>
+                    <div style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
+                      {s.trades} trades
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
           </div>
 
-          {/* Emotional State — live */}
-          <div style={panel}>
-            <div style={ph}><span style={{ fontSize: '13px', fontWeight: 600 }}>Emotional State</span></div>
-            <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          {/* Emotional State */}
+          <div style={panelStyle}>
+            <div style={panelHeaderStyle}>
+              <span style={{ fontSize: '13px', fontWeight: 700 }}>Emotional Breakdown</span>
+            </div>
+            <div style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {emotionRows.map(e => (
                 <div key={e.label}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-                    <span style={{ fontSize: '11px', color: c.text2 }}>{e.label}</span>
-                    <span style={{ fontSize: '12px', fontWeight: 700, color: e.color, fontFamily: c.mono }}>{e.pct}%</span>
+                    <span style={{ fontSize: '11px', color: 'var(--text-2)' }}>{e.label}</span>
+                    <span style={{
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      color: e.color,
+                      fontFamily: 'var(--font-mono)',
+                      fontFeatureSettings: '"tnum" 1, "zero" 1',
+                    }}>
+                      {e.pct}%
+                    </span>
                   </div>
-                  <div style={{ height: '3px', background: c.surface3, borderRadius: '2px' }}>
-                    <div style={{ height: '3px', borderRadius: '2px', background: e.color, width: `${Math.min(100, e.pct)}%`, transition: 'width 0.5s ease' }} />
+                  <div style={{ height: '3px', background: 'var(--surface-3)', borderRadius: '2px' }}>
+                    <div style={{
+                      height: '3px',
+                      borderRadius: '2px',
+                      background: e.color,
+                      width: `${Math.min(100, e.pct)}%`,
+                      transition: 'width 0.5s ease'
+                    }} />
                   </div>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Risk Meter — live */}
-          <div style={panel}>
-            <div style={ph}><span style={{ fontSize: '13px', fontWeight: 600 }}>Avg Risk Per Trade</span></div>
+          {/* Risk Meter */}
+          <div style={panelStyle}>
+            <div style={panelHeaderStyle}>
+              <span style={{ fontSize: '13px', fontWeight: 700 }}>Avg Risk Per Trade</span>
+            </div>
             <div style={{ padding: '14px 16px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '10px' }}>
-                <span style={{ fontSize: '11px', color: c.text3, fontFamily: c.mono }}>Monthly average</span>
-                <span style={{ fontSize: '24px', fontWeight: 800, color: avgRiskLive > 2 ? c.red : avgRiskLive > 1.5 ? c.amber : c.green, letterSpacing: '-0.5px' }}>{avgRiskLive.toFixed(2)}%</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '8px' }}>
+                <span style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>Monthly Average</span>
+                <span style={{
+                  fontSize: '22px',
+                  fontWeight: 800,
+                  color: avgRiskLive > 2 ? 'var(--red)' : avgRiskLive > 1.5 ? 'var(--amber)' : 'var(--green)',
+                  fontFamily: 'var(--font-mono)',
+                  fontFeatureSettings: '"tnum" 1, "zero" 1',
+                }}>
+                  {avgRiskLive.toFixed(2)}%
+                </span>
               </div>
-              <div style={{ height: '6px', background: c.surface3, borderRadius: '3px', overflow: 'hidden' }}>
-                <div style={{ height: '6px', borderRadius: '3px', background: `linear-gradient(90deg, ${c.green}, ${c.amber}, ${c.red})`, width: `${Math.min(100, (avgRiskLive / 3) * 100)}%` }} />
+              <div style={{ height: '6px', background: 'var(--surface-3)', borderRadius: '3px', overflow: 'hidden' }}>
+                <div style={{
+                  height: '6px',
+                  borderRadius: '3px',
+                  background: 'linear-gradient(90deg, var(--green), var(--amber), var(--red))',
+                  width: `${Math.min(100, (avgRiskLive / 3) * 100)}%`
+                }} />
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '5px', fontSize: '10px', color: c.text3, fontFamily: c.mono }}>
-                <span>0%</span>
-                <span style={{ color: c.green }}>optimal ≤1.2%</span>
-                <span>3%</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
+                <span>0.0%</span>
+                <span style={{ color: 'var(--green)', fontWeight: 600 }}>optimal ≤ 1.2%</span>
+                <span>3.0%</span>
               </div>
             </div>
           </div>
+
         </div>
       </div>
 
-      {/* Bottom Stats Strip — live */}
+      {/* ── 5. BOTTOM STATS STRIP (6 Metrics) ── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '10px' }}>
         {[
-          { label: 'Win Rate', value: analytics ? `${analytics.win_rate}%` : '59.6%', color: analytics && analytics.win_rate >= 55 ? c.green : c.amber },
-          { label: 'Avg R:R', value: analytics ? `${analytics.avg_reward_risk}R` : '2.3R', color: c.green },
-          { label: 'Max Drawdown', value: analytics ? `${analytics.max_drawdown_pct}%` : '−4.2%', color: c.red },
-          { label: 'Profit Factor', value: analytics ? `${analytics.profit_factor}` : '1.87', color: c.amber },
-          { label: 'Net P&L', value: analytics ? `${analytics.net_pnl >= 0 ? '+' : ''}$${Math.round(analytics.net_pnl).toLocaleString()}` : '+$1,247', color: analytics ? (analytics.net_pnl >= 0 ? c.green : c.red) : c.green },
-          { label: 'Best Streak', value: analytics ? `${analytics.max_win_streak} wins` : '6 wins', color: c.green },
+          { label: 'Win Rate', value: analytics ? `${analytics.win_rate}%` : '59.6%', color: 'var(--green)' },
+          { label: 'Avg R:R', value: analytics ? `${analytics.avg_reward_risk}R` : '2.3R', color: 'var(--green)' },
+          { label: 'Max Drawdown', value: analytics ? `${analytics.max_drawdown_pct}%` : '-4.2%', color: 'var(--red)' },
+          { label: 'Profit Factor', value: analytics ? `${analytics.profit_factor}` : '1.87', color: 'var(--amber)' },
+          { label: 'Net P&L', value: analytics ? `${analytics.net_pnl >= 0 ? '+' : ''}$${Math.round(analytics.net_pnl).toLocaleString()}` : '+$1,247', color: 'var(--green)' },
+          { label: 'Best Streak', value: analytics ? `${analytics.max_win_streak} wins` : '6 wins', color: 'var(--green)' },
         ].map(stat => (
-          <div key={stat.label} style={{ ...panel, padding: '12px 14px' }}>
-            <div style={{ fontSize: '10px', color: c.text3, fontFamily: c.mono, textTransform: 'uppercase', letterSpacing: '0.8px' }}>{stat.label}</div>
-            <div style={{ fontSize: '20px', fontWeight: 800, color: stat.color, letterSpacing: '-0.5px', marginTop: '4px' }}>{stat.value}</div>
+          <div key={stat.label} style={{ ...panelStyle, padding: '14px 16px' }}>
+            <div style={{
+              fontSize: '10px',
+              fontWeight: 700,
+              color: 'var(--text-3)',
+              fontFamily: 'var(--font-mono)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.8px',
+            }}>
+              {stat.label}
+            </div>
+            <div style={{
+              fontSize: '20px',
+              fontWeight: 800,
+              color: stat.color,
+              fontFamily: 'var(--font-mono)',
+              fontFeatureSettings: '"tnum" 1, "zero" 1',
+              marginTop: '5px',
+            }}>
+              {stat.value}
+            </div>
           </div>
         ))}
       </div>
+
     </div>
   )
 }
