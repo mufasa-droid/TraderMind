@@ -204,8 +204,8 @@ BEGIN
     '2026-05-24 14:10:00+00', false
   ),
   (
-    v_user_id, v_trade_4, 'fomo', 'medium',
-    'FOMO entry during news volatility without standard ATR breakout checklist confirmation.',
+    v_user_id, v_trade_4, 'impulse_trading', 'medium',
+    'FOMO / Impulse entry during news volatility without standard ATR breakout checklist confirmation.',
     '2026-05-25 14:20:00+00', false
   ),
   (
