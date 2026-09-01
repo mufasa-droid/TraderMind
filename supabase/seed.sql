@@ -41,7 +41,9 @@ BEGIN
     broker_connected = true,
     onboarding_completed = true;
 
-  -- 3. Upsert User Risk Settings
+  -- 3. Upsert User Risk Settings (Delete + Insert for total constraint compatibility)
+  DELETE FROM public.user_settings WHERE user_id = v_user_id;
+
   INSERT INTO public.user_settings (
     user_id,
     max_daily_loss_pct,
@@ -59,13 +61,11 @@ BEGIN
     5.0,
     'dark',
     'USD'
-  )
-  ON CONFLICT (user_id) DO UPDATE SET
-    max_risk_per_trade_pct = 1.2,
-    max_daily_loss_pct = 3.0,
-    preferred_sessions = ARRAY['london', 'overlap'];
+  );
 
   -- 4. Broker Connection (MT5)
+  DELETE FROM public.broker_connections WHERE user_id = v_user_id;
+
   INSERT INTO public.broker_connections (
     id,
     user_id,
@@ -91,17 +91,11 @@ BEGIN
     11380.20,
     'USD',
     NOW()
-  )
-  ON CONFLICT (user_id, account_id) DO UPDATE SET
-    balance = 11247.50,
-    equity = 11380.20,
-    last_sync_at = NOW();
+  );
 
-  -- Clean previous demo trades for idempotent seeding
+  -- 5. Clean & Insert Core Demo Trades (47 closed trades totaling +$1,247 net PnL, 59.6% WR)
   DELETE FROM public.trades WHERE user_id = v_user_id;
 
-  -- 5. Insert Core Demo Trades (47 closed trades totaling +$1,247 net PnL, 59.6% WR)
-  -- Top recent 5 trades:
   INSERT INTO public.trades (
     id, user_id, broker_connection_id, external_trade_id,
     symbol, instrument_type, direction, status,
