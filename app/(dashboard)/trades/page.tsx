@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react'
 import {
   Search, Filter, Plus, Zap, ArrowUpRight, ArrowDownRight,
-  TrendingUp, X, Sparkles, CheckCircle2, AlertTriangle, AlertCircle, RefreshCw, ChevronDown
+  TrendingUp, X, Sparkles, CheckCircle2, AlertTriangle, AlertCircle, RefreshCw, ChevronDown,
+  ArrowUpDown, ArrowUp, ArrowDown
 } from 'lucide-react'
 import type { Trade, TradeEvaluationResult, TradeEvaluationRequest } from '@/types'
 import { createClient } from '@/lib/supabase/client'
@@ -221,6 +222,23 @@ export default function TradesPage() {
     }
   }
 
+  const [sortField, setSortField] = useState<keyof DisplayTrade | null>(null)
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc' | null>(null)
+
+  const handleSort = (field: keyof DisplayTrade) => {
+    if (sortField !== field) {
+      setSortField(field)
+      setSortDirection(field === 'symbol' || field === 'emotion' || field === 'strategy' ? 'asc' : 'desc')
+    } else if (sortDirection === 'desc') {
+      setSortDirection('asc')
+    } else if (sortDirection === 'asc') {
+      setSortField(null)
+      setSortDirection(null)
+    } else {
+      setSortDirection('desc')
+    }
+  }
+
   const filteredTrades = tradesList.filter(t => {
     if (filter === 'Wins') return t.pnl > 0
     if (filter === 'Losses') return t.pnl < 0
@@ -229,6 +247,18 @@ export default function TradesPage() {
     if (filter === 'New York') return t.session === 'New York'
     return true
   }).filter(t => t.symbol.toLowerCase().includes(search.toLowerCase()))
+
+  const sortedTrades = [...filteredTrades].sort((a, b) => {
+    if (!sortField || !sortDirection) return 0
+    const aVal = a[sortField]
+    const bVal = b[sortField]
+    if (typeof aVal === 'string' && typeof bVal === 'string') {
+      return sortDirection === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal)
+    }
+    const aNum = Number(aVal) || 0
+    const bNum = Number(bVal) || 0
+    return sortDirection === 'asc' ? aNum - bNum : bNum - aNum
+  })
 
   const labelStyle = {
     fontSize: '10px',
@@ -554,27 +584,58 @@ export default function TradesPage() {
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
             <thead>
               <tr style={{ background: 'var(--surface)' }}>
-                {['Symbol', 'P&L', 'R:R Multiple', 'Risk %', 'Emotion', 'Alignment', 'Session', 'Strategy', 'Duration', 'Opened'].map(h => (
-                  <th
-                    key={h}
-                    style={{
-                      padding: '10px 16px',
-                      fontSize: '10px',
-                      fontWeight: 700,
-                      color: 'var(--text-3)',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.8px',
-                      fontFamily: 'var(--font-mono)',
-                      borderBottom: '1px solid var(--border)',
-                    }}
-                  >
-                    {h}
-                  </th>
-                ))}
+                {[
+                  { key: 'symbol' as const, label: 'Symbol', sortable: true },
+                  { key: 'pnl' as const, label: 'P&L', sortable: true },
+                  { key: 'rr' as const, label: 'R:R Multiple', sortable: true },
+                  { key: 'risk' as const, label: 'Risk %', sortable: true },
+                  { key: 'emotion' as const, label: 'Emotion', sortable: true },
+                  { key: 'alignment' as const, label: 'Alignment', sortable: true },
+                  { key: 'session' as const, label: 'Session', sortable: true },
+                  { key: 'strategy' as const, label: 'Strategy', sortable: true },
+                  { key: 'duration' as const, label: 'Duration', sortable: false },
+                  { key: 'opened' as const, label: 'Opened', sortable: true },
+                ].map(col => {
+                  const isActive = sortField === col.key
+                  return (
+                    <th
+                      key={col.key}
+                      onClick={() => col.sortable && handleSort(col.key)}
+                      style={{
+                        padding: '10px 16px',
+                        fontSize: '10px',
+                        fontWeight: 700,
+                        color: isActive ? 'var(--accent)' : 'var(--text-3)',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.8px',
+                        fontFamily: 'var(--font-mono)',
+                        borderBottom: '1px solid var(--border)',
+                        cursor: col.sortable ? 'pointer' : 'default',
+                        userSelect: 'none',
+                        transition: 'color 0.15s ease',
+                      }}
+                    >
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                        <span>{col.label}</span>
+                        {col.sortable && (
+                          <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+                            {isActive && sortDirection === 'desc' ? (
+                              <ArrowDown size={11} color="var(--accent)" />
+                            ) : isActive && sortDirection === 'asc' ? (
+                              <ArrowUp size={11} color="var(--accent)" />
+                            ) : (
+                              <ArrowUpDown size={10} color="var(--text-3)" style={{ opacity: 0.35 }} />
+                            )}
+                          </span>
+                        )}
+                      </div>
+                    </th>
+                  )
+                })}
               </tr>
             </thead>
             <tbody>
-              {filteredTrades.map(trade => (
+              {sortedTrades.map(trade => (
                 <tr
                   key={trade.id}
                   style={{
