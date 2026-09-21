@@ -47,16 +47,12 @@ export async function updateSession(request: NextRequest) {
 
   const isApi = pathname.startsWith('/api/')
 
-  // Protect dashboard + app routes (overview is alias to dashboard)
-  const isProtected =
-    pathname.startsWith('/dashboard') ||
-    pathname.startsWith('/overview') ||
-    pathname.startsWith('/behavior') ||
-    pathname.startsWith('/ai-coach') ||
-    pathname.startsWith('/trades') ||
-    pathname.startsWith('/journal') ||
-    pathname.startsWith('/goals') ||
-    pathname.startsWith('/screenshots')
+  // Protect dashboard + app routes (Rule 3.16 & Section 6.3)
+  const protectedPaths = [
+    '/dashboard', '/behavior', '/ai-coach', '/trades',
+    '/journal', '/goals', '/broker', '/screenshots', '/onboarding',
+  ]
+  const isProtected = protectedPaths.some(p => pathname.startsWith(p))
 
   if (!user && !isDemo && (isProtected || isApi)) {
     // For API, return 401 JSON instead of redirect
