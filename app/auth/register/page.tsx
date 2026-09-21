@@ -7,15 +7,15 @@ import { Eye, EyeOff, ArrowRight, CheckCircle2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
 const c = {
-  accent: 'hsl(226,100%,71%)',
-  surface: 'hsl(224,18%,8%)',
-  surface2: 'hsl(224,16%,11%)',
-  border: 'hsl(220,12%,14%)',
-  text: 'hsl(220,15%,92%)',
-  text2: 'hsl(220,10%,60%)',
-  text3: 'hsl(220,10%,35%)',
-  green: '#3ecf8e',
-  mono: "'JetBrains Mono', monospace",
+  accent: 'var(--accent)',
+  surface: 'var(--surface)',
+  surface2: 'var(--surface-2)',
+  border: 'var(--border)',
+  text: 'var(--text)',
+  text2: 'var(--text-2)',
+  text3: 'var(--text-3)',
+  green: 'var(--green)',
+  mono: 'var(--font-mono)',
 }
 
 export default function RegisterPage() {
@@ -23,18 +23,33 @@ export default function RegisterPage() {
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!email || !password) return
+    if (!email || !password) {
+      setError('Please enter your email and password')
+      return
+    }
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match')
+      return
+    }
+
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters')
+      return
+    }
 
     // Demo/portfolio bypass if demo mode
     if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true' && !process.env.NEXT_PUBLIC_SUPABASE_URL) {
-      router.push('/dashboard')
+      router.push('/auth/onboarding')
       return
     }
 
@@ -58,8 +73,30 @@ export default function RegisterPage() {
         return
       }
 
+      // Rule 3.21 — New User Initialization
+      const userId = data.user?.id
+      if (userId) {
+        await supabase.from('users').upsert({
+          id: userId,
+          email,
+          full_name: fullName || 'Trader',
+          timezone: 'UTC',
+          plan: 'free',
+          broker_connected: false,
+          onboarding_completed: false,
+        })
+
+        await supabase.from('user_settings').upsert({
+          user_id: userId,
+          max_risk_per_trade_pct: 2.0,
+          max_daily_loss_pct: 3.0,
+          preferred_sessions: ['london', 'new_york'],
+        }, { onConflict: 'user_id' })
+      }
+
       if (data?.session) {
-        router.push('/dashboard')
+        // Section 2.3: Redirect to /auth/onboarding, never /dashboard before onboarding is complete
+        router.push('/auth/onboarding')
         router.refresh()
       } else {
         setSuccess(true)
@@ -74,7 +111,7 @@ export default function RegisterPage() {
 
   return (
     <div style={{
-      background: 'hsl(222,20%,5%)',
+      background: 'var(--bg)',
       minHeight: '100vh',
       display: 'flex',
       alignItems: 'center',
@@ -130,7 +167,7 @@ export default function RegisterPage() {
                 Check your email confirmation link, or jump straight into the demo experience.
               </p>
               <Link
-                href="/dashboard"
+                href="/auth/onboarding"
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -144,7 +181,7 @@ export default function RegisterPage() {
                   textDecoration: 'none',
                 }}
               >
-                Go to Dashboard <ArrowRight size={15} />
+                Continue to Onboarding <ArrowRight size={15} />
               </Link>
             </div>
           ) : (
@@ -257,6 +294,48 @@ export default function RegisterPage() {
                       }}
                     >
                       {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: c.text2, marginBottom: '6px', fontFamily: c.mono, textTransform: 'uppercase' }}>
+                    Confirm Password
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      value={confirmPassword}
+                      onChange={e => setConfirmPassword(e.target.value)}
+                      required
+                      placeholder="Re-enter password"
+                      style={{
+                        width: '100%',
+                        background: c.surface2,
+                        border: `1px solid ${c.border}`,
+                        borderRadius: '8px',
+                        padding: '10px 40px 10px 12px',
+                        fontSize: '14px',
+                        color: c.text,
+                        outline: 'none',
+                        boxSizing: 'border-box',
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      style={{
+                        position: 'absolute',
+                        right: '12px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: c.text3,
+                      }}
+                    >
+                      {showConfirmPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                     </button>
                   </div>
                 </div>

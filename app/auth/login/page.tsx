@@ -8,9 +8,14 @@ import { createClient } from '@/lib/supabase/client'
 
 
 const c = {
-  accent: 'hsl(226,100%,71%)', surface: 'hsl(224,18%,8%)', surface2: 'hsl(224,16%,11%)',
-  border: 'hsl(220,12%,14%)', text: 'hsl(220,15%,92%)', text2: 'hsl(220,10%,60%)', text3: 'hsl(220,10%,35%)',
-  mono: "'DM Mono', monospace",
+  accent: 'var(--accent)',
+  surface: 'var(--surface)',
+  surface2: 'var(--surface-2)',
+  border: 'var(--border)',
+  text: 'var(--text)',
+  text2: 'var(--text-2)',
+  text3: 'var(--text-3)',
+  mono: 'var(--font-mono)',
 }
 
 export default function LoginPage() {
@@ -19,7 +24,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [email, setEmail] = useState(
-  process.env.NEXT_PUBLIC_DEMO_USER_EMAIL ?? ''
+    process.env.NEXT_PUBLIC_DEMO_USER_EMAIL ?? ''
   )
   const [password, setPassword] = useState(
     process.env.NEXT_PUBLIC_DEMO_USER_PASSWORD ?? ''
@@ -27,26 +32,45 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Demo/portfolio bypass — instant, no Supabase needed. Guarantees Sign In works even with placeholder keys or missing user.
-    if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
-      console.log('Demo mode bypass → /dashboard')
-      router.push('/dashboard')
-      // fallback if router push is blocked by middleware race
-      setTimeout(() => { if (window.location.pathname.includes('/auth/login')) window.location.href = '/dashboard' }, 300)
-      return
-    }
     setLoading(true)
     setError(null)
+
     try {
       const supabase = createClient()
       const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+
       if (signInError) {
+        // Demo mode bypass if using demo credentials or demo fallback
+        if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+          router.push('/dashboard')
+          return
+        }
         setError(signInError.message)
         return
       }
+
+      // Rule 3.20 — check if user has completed onboarding
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { data: profile } = await supabase
+          .from('users')
+          .select('onboarding_completed')
+          .eq('id', user.id)
+          .maybeSingle()
+
+        if (profile && !profile.onboarding_completed) {
+          router.push('/auth/onboarding')
+          return
+        }
+      }
+
       router.push('/dashboard')
       router.refresh()
     } catch (err) {
+      if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+        router.push('/dashboard')
+        return
+      }
       const msg = err instanceof Error ? err.message : String(err)
       console.error('Sign-in exception:', msg)
       setError(msg)
@@ -56,7 +80,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div style={{ background: 'hsl(222,20%,5%)', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+    <div style={{ background: 'var(--bg)', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
       <div style={{ width: '100%', maxWidth: '400px' }}>
         {/* Logo */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '40px', justifyContent: 'center' }}>

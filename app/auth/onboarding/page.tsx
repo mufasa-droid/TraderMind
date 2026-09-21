@@ -38,11 +38,14 @@ const SESSIONS_OPTIONS = [
   { id: 'new_york', label: 'New York', time: '13:00–17:00 UTC' },
 ]
 
-const BROKERS_MINI = [
-  { id: 'mt5', label: 'MetaTrader 5', color: 'var(--accent)' },
-  { id: 'mt4', label: 'MetaTrader 4', color: 'var(--accent)' },
-  { id: 'binance', label: 'Binance',  color: '#F0B90B'        },
-  { id: 'bybit',   label: 'Bybit',    color: '#F7A600'        },
+const BROKERS_ONBOARDING = [
+  { id: 'mt5', label: 'MetaTrader 5', short: 'MT5', color: 'var(--accent)' },
+  { id: 'mt4', label: 'MetaTrader 4', short: 'MT4', color: 'var(--accent)' },
+  { id: 'binance', label: 'Binance', short: 'BNB', color: '#F0B90B' },
+  { id: 'bybit', label: 'Bybit', short: 'BBT', color: '#F7A600' },
+  { id: 'ctrader', label: 'cTrader', short: 'CT', color: 'var(--teal)' },
+  { id: 'tradingview', label: 'TradingView', short: 'TV', color: '#2962FF' },
+  { id: 'dxtrade', label: 'DXTrade', short: 'DX', color: 'var(--purple)' },
 ]
 
 export default function OnboardingPage() {
@@ -562,34 +565,35 @@ function StepBroker({
         connect later from the Broker Connect page.
       </p>
 
-      {/* Broker mini-cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '20px' }}>
-        {BROKERS_MINI.map(broker => (
+      {/* Broker cards (7 brokers per Section 2.4) */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '8px', marginBottom: '20px' }}>
+        {BROKERS_ONBOARDING.map(broker => (
           <button
             key={broker.id}
             type="button"
             onClick={() => setSelectedBroker(broker.id)}
             style={{
-              padding: '12px', borderRadius: '8px', textAlign: 'left',
-              border: `1px solid ${selectedBroker === broker.id ? `${broker.color}60` : 'var(--border)'}`,
-              background: selectedBroker === broker.id ? `${broker.color}10` : 'var(--surface-2)',
+              padding: '10px 12px', borderRadius: '8px', textAlign: 'left',
+              border: `1px solid ${selectedBroker === broker.id ? `${broker.color}80` : 'var(--border)'}`,
+              background: selectedBroker === broker.id ? `${broker.color}15` : 'var(--surface-2)',
               cursor: 'pointer', fontFamily: 'var(--font-sans)',
-              display: 'flex', alignItems: 'center', gap: '10px',
+              display: 'flex', alignItems: 'center', gap: '8px',
               transition: 'all 0.15s',
             }}
           >
             <div style={{
-              width: '32px', height: '32px', borderRadius: '6px',
-              background: `${broker.color}18`,
+              width: '28px', height: '28px', borderRadius: '6px',
+              background: `${broker.color}20`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: '10px', fontWeight: 800,
               color: broker.color, fontFamily: 'var(--font-mono)', flexShrink: 0,
             }}>
-              {broker.id.toUpperCase().slice(0, 3)}
+              {broker.short}
             </div>
             <span style={{
-              fontSize: '13px', fontWeight: 600,
+              fontSize: '12px', fontWeight: 600,
               color: selectedBroker === broker.id ? broker.color : 'var(--text)',
+              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
             }}>
               {broker.label}
             </span>
@@ -604,7 +608,7 @@ function StepBroker({
           border: '1px solid rgba(62,207,142,0.2)',
           fontSize: '13px', color: 'var(--text-2)',
         }}>
-          ✓ <strong style={{ color: 'var(--green)' }}>{BROKERS_MINI.find(b => b.id === selectedBroker)?.label}</strong> selected.
+          ✓ <strong style={{ color: 'var(--green)' }}>{BROKERS_ONBOARDING.find(b => b.id === selectedBroker)?.label}</strong> selected.
           You&apos;ll complete the connection setup on the Broker Connect page after onboarding.
         </div>
       )}
