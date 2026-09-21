@@ -148,10 +148,31 @@ export default function LoginPage() {
           </form>
 
           <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: `1px solid ${c.border}`, textAlign: 'center' }}>
-            <p style={{ fontSize: '13px', color: c.text2 }}>
-              Don't have an account?{' '}
-              <Link href="/auth/register" style={{ color: c.accent, textDecoration: 'none', fontWeight: 600 }}>Create one free</Link>
+            <p style={{ fontSize: '13px', color: c.text2, marginBottom: '10px' }}>
+              Don't have an account?
             </p>
+            <Link
+              href="/auth/register"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                width: '100%',
+                padding: '10px',
+                borderRadius: '8px',
+                background: 'var(--surface-2)',
+                border: `1px solid ${c.border}`,
+                color: c.text,
+                fontSize: '13px',
+                fontWeight: 600,
+                textDecoration: 'none',
+                boxSizing: 'border-box',
+              }}
+            >
+              <span>Create Free Account (Sign Up)</span>
+              <ArrowRight size={14} style={{ color: c.accent }} />
+            </Link>
           </div>
         </div>
 

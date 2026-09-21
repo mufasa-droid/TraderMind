@@ -101,20 +101,28 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [initials, setInitials] = useState('AK')
 
   useEffect(() => {
-    const supabase = createClient()
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) {
-        setUserEmail(user.email ?? null)
-        const name = (user.user_metadata?.full_name as string) || user.email?.split('@')[0] || 'Trader'
-        setUserName(name)
-        setInitials(name.split(' ').map(s => s[0]).join('').slice(0, 2).toUpperCase())
-      }
-    })
+    try {
+      const supabase = createClient()
+      supabase.auth.getUser().then(({ data: { user } }) => {
+        if (user) {
+          setUserEmail(user.email ?? null)
+          const name = (user.user_metadata?.full_name as string) || user.email?.split('@')[0] || 'Trader'
+          setUserName(name)
+          setInitials(name.split(' ').map(s => s[0]).join('').slice(0, 2).toUpperCase())
+        }
+      }).catch(() => {
+        // Demo fallback: default user remains 'Alex Kim'
+      })
+    } catch {
+      // Demo fallback: default user remains 'Alex Kim'
+    }
   }, [])
 
   const handleSignOut = async () => {
-    const supabase = createClient()
-    await supabase.auth.signOut()
+    try {
+      const supabase = createClient()
+      await supabase.auth.signOut()
+    } catch {}
     router.push('/auth/login')
     router.refresh()
   }

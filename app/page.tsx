@@ -472,6 +472,7 @@ export default function LandingPage() {
           </div>
           <div style={styles.navCtas}>
             <Link href="/auth/login" style={styles.btnOutline}>Log in</Link>
+            <Link href="/auth/register" style={{ ...styles.btnOutline, borderColor: 'rgba(108,142,255,0.4)', color: '#fff' }}>Sign Up</Link>
             <Link href="/auth/login" className="cta-primary" style={styles.btnAccent}>Try Demo →</Link>
           </div>
         </div>
@@ -608,7 +609,7 @@ export default function LandingPage() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
           {[
             {
-              name: 'Free', price: '$0', period: 'forever', highlight: false, cta: 'Get Started Free', href: '/auth/login',
+              name: 'Free', price: '$0', period: 'forever', highlight: false, cta: 'Get Started Free', href: '/auth/register',
               features: ['Manual trade logging', 'Basic performance stats', 'Behavioral journal', 'Session breakdown', '1 broker connection'],
             },
             {
