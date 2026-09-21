@@ -25,36 +25,126 @@ Your communication style:
 
 Always ground every insight in the analytics data provided.`
 
+// ── GEMINI REST HELPER ─────────────────────────────────────────
+async function callGemini(
+  systemPrompt: string,
+  userPrompt: string,
+  jsonMode: boolean = false
+): Promise<string> {
+  const apiKey = process.env.GEMINI_API_KEY
+  if (!apiKey) throw new Error('GEMINI_API_KEY is not configured')
+
+  const models = ['gemini-3.5-flash-lite', 'gemini-3.6-flash', 'gemini-flash-latest']
+  let lastError: Error | null = null
+
+  for (const model of models) {
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`
+      const body = {
+        contents: [
+          {
+            role: 'user',
+            parts: [
+              { text: `${systemPrompt}\n\nTask / Instructions:\n${userPrompt}` }
+            ]
+          }
+        ],
+        generationConfig: jsonMode ? { responseMimeType: 'application/json' } : {}
+      }
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+
+      const data = await res.json()
+      if (data.candidates && data.candidates[0]?.content?.parts?.[0]?.text) {
+        return data.candidates[0].content.parts[0].text
+      }
+      lastError = new Error(data.error?.message || `Gemini API error ${res.status}`)
+    } catch (err: unknown) {
+      lastError = err instanceof Error ? err : new Error(String(err))
+    }
+  }
+
+  throw lastError || new Error('All Gemini model endpoints failed')
+}
+
+// Unified LLM text completion
+async function completeText(systemPrompt: string, userPrompt: string): Promise<string> {
+  if (process.env.GEMINI_API_KEY) {
+    try {
+      return await callGemini(systemPrompt, userPrompt, false)
+    } catch (err) {
+      console.warn('Gemini completion error, falling back to OpenAI if available:', err)
+      if (!process.env.OPENAI_API_KEY) throw err
+    }
+  }
+
+  const openai = getOpenAI()
+  const response = await openai.chat.completions.create({
+    model: 'gpt-4o-mini',
+    temperature: 0.5,
+    max_tokens: 600,
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userPrompt },
+    ],
+  })
+
+  return response.choices[0]?.message?.content ?? 'Unable to generate response.'
+}
+
+// Unified LLM JSON completion
+async function completeJson(systemPrompt: string, userPrompt: string, openAiModel: string = 'gpt-4o'): Promise<string> {
+  if (process.env.GEMINI_API_KEY) {
+    try {
+      return await callGemini(systemPrompt, userPrompt, true)
+    } catch (err) {
+      console.warn('Gemini JSON error, falling back to OpenAI if available:', err)
+      if (!process.env.OPENAI_API_KEY) throw err
+    }
+  }
+
+  const openai = getOpenAI()
+  const response = await openai.chat.completions.create({
+    model: openAiModel,
+    temperature: 0.4,
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userPrompt },
+    ],
+    response_format: { type: 'json_object' },
+  })
+
+  return response.choices[0]?.message?.content ?? '{}'
+}
+
 export async function generateAIReport(
   analytics: PerformanceAnalytics,
   period: 'weekly' | 'monthly',
   userName: string
 ): Promise<Omit<AIReport, 'id' | 'user_id' | 'period_start' | 'period_end' | 'analytics' | 'created_at'>> {
-  const openai = getOpenAI()
   const prompt = buildReportPrompt(analytics, period, userName)
-
-  const response = await openai.chat.completions.create({
-    model: 'gpt-4o',
-    temperature: 0.4,
-    messages: [
-      { role: 'system', content: COACH_SYSTEM_PROMPT },
-      { role: 'user', content: prompt },
-    ],
-    response_format: { type: 'json_object' },
-  })
-
-  const raw = response.choices[0]?.message?.content ?? '{}'
-  const parsed = JSON.parse(raw)
+  const raw = await completeJson(COACH_SYSTEM_PROMPT, prompt, 'gpt-4o')
+  
+  let parsed: Record<string, unknown> = {}
+  try {
+    parsed = JSON.parse(raw)
+  } catch {
+    parsed = {}
+  }
 
   return {
     period,
-    behavioral_analysis: parsed.behavioral_analysis ?? '',
-    psychological_patterns: parsed.psychological_patterns ?? '',
-    discipline_feedback: parsed.discipline_feedback ?? '',
-    risk_analysis: parsed.risk_analysis ?? '',
-    strategy_consistency: parsed.strategy_consistency ?? '',
-    improvement_suggestions: parsed.improvement_suggestions ?? [],
-    key_insights: parsed.key_insights ?? [],
+    behavioral_analysis: (parsed.behavioral_analysis as string) ?? '',
+    psychological_patterns: (parsed.psychological_patterns as string) ?? '',
+    discipline_feedback: (parsed.discipline_feedback as string) ?? '',
+    risk_analysis: (parsed.risk_analysis as string) ?? '',
+    strategy_consistency: (parsed.strategy_consistency as string) ?? '',
+    improvement_suggestions: (parsed.improvement_suggestions as string[]) ?? [],
+    key_insights: (parsed.key_insights as string[]) ?? [],
     overall_discipline_score: analytics.discipline_score,
     behavioral_consistency_score: analytics.behavioral_consistency_score,
     risk_quality_score: analytics.risk_quality_score,
@@ -126,8 +216,6 @@ export async function chatWithCoach(
   analytics: PerformanceAnalytics,
   conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }>,
 ): Promise<string> {
-  const openai = getOpenAI()
-
   const contextPrompt = `
 You have access to this trader's current performance data:
 - Win Rate: ${analytics.win_rate}%
@@ -141,6 +229,20 @@ Answer questions about their trading behavior, performance patterns, and psychol
 Do NOT predict markets. Do NOT give buy/sell signals.
 `
 
+  if (process.env.GEMINI_API_KEY) {
+    try {
+      const historyFormatted = conversationHistory.length
+        ? '\n\nConversation History:\n' + conversationHistory.map(m => `${m.role.toUpperCase()}: ${m.content}`).join('\n')
+        : ''
+      const fullPrompt = `${contextPrompt}${historyFormatted}\n\nUSER QUESTION:\n${userMessage}`
+      return await callGemini(COACH_SYSTEM_PROMPT, fullPrompt, false)
+    } catch (err) {
+      console.warn('Gemini chat error, attempting OpenAI fallback:', err)
+      if (!process.env.OPENAI_API_KEY) throw err
+    }
+  }
+
+  const openai = getOpenAI()
   const messages: OpenAI.ChatCompletionMessageParam[] = [
     { role: 'system', content: COACH_SYSTEM_PROMPT + '\n\n' + contextPrompt },
     ...conversationHistory.map(m => ({ role: m.role, content: m.content } as OpenAI.ChatCompletionMessageParam)),
@@ -162,8 +264,6 @@ export async function generateProactiveInsights(
   recentTrades: number,
   currentStreak: { type: 'win' | 'loss'; count: number }
 ): Promise<CoachingInsight[]> {
-  const openai = getOpenAI()
-
   const prompt = `
 Given this trader's data, generate 2-3 proactive coaching insights.
 
@@ -173,30 +273,20 @@ Recent context:
 - Discipline score: ${analytics.discipline_score}/100
 - Key flags: ${getTopFlags(analytics)}
 
-Respond ONLY with a JSON object with this exact shape (required for json_object mode):
+Respond ONLY with a JSON object with this exact shape:
 {
   "insights": [
     {
       "insight_type": "pattern|warning|achievement|suggestion",
       "title": "Short title (max 8 words)",
       "body": "Specific coaching insight (2-3 sentences)",
-      "priority": 1-10
+      "priority": 5
     }
   ]
 }
 `
 
-  const response = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
-    temperature: 0.4,
-    messages: [
-      { role: 'system', content: COACH_SYSTEM_PROMPT },
-      { role: 'user', content: prompt },
-    ],
-    response_format: { type: 'json_object' },
-  })
-
-  const raw = response.choices[0]?.message?.content ?? '{"insights":[]}'
+  const raw = await completeJson(COACH_SYSTEM_PROMPT, prompt, 'gpt-4o-mini')
   let parsed: unknown
   try { parsed = JSON.parse(raw) } catch { parsed = { insights: [] } }
   const insightsArray = Array.isArray(parsed)
@@ -228,20 +318,10 @@ export async function generateTradeNarrative(
   },
   analytics: PerformanceAnalytics
 ): Promise<string> {
-  const openai = getOpenAI()
   const outcome = trade.pnl > 0 ? `win of $${trade.pnl}` : `loss of $${Math.abs(trade.pnl)}`
+  const prompt = `Analyze this trade behaviorally: ${trade.symbol} ${trade.direction}, ${outcome}, emotion: ${trade.emotion}, alignment: ${trade.alignmentScore}/100. Write 2-3 sentences on decision quality, not outcome.`
 
-  const response = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
-    temperature: 0.4,
-    max_tokens: 200,
-    messages: [
-      { role: 'system', content: COACH_SYSTEM_PROMPT },
-      { role: 'user', content: `Analyze this trade behaviorally: ${trade.symbol} ${trade.direction}, ${outcome}, emotion: ${trade.emotion}, alignment: ${trade.alignmentScore}/100. Write 2-3 sentences on decision quality, not outcome.` },
-    ],
-  })
-
-  return response.choices[0]?.message?.content ?? ''
+  return await completeText(COACH_SYSTEM_PROMPT, prompt)
 }
 
 function getBestSession(analytics: PerformanceAnalytics): string {
