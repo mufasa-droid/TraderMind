@@ -148,36 +148,43 @@ export default function JournalPage() {
 
   useEffect(() => {
     let cancelled = false
-    try {
-      const supabase = createClient()
-      supabase
-        .from('behavioral_logs')
-        .select('*')
-        .order('logged_at', { ascending: false })
-        .limit(20)
-        .then(({ data, error: err }) => {
-          if (cancelled) return
-          if (!err && data && data.length > 0) {
-            const mapped: JournalEntry[] = (data as BehavioralLog[]).map(l => ({
-              id: l.id,
-              date: formatLogDate(l.logged_at),
-              type: (l.log_type as 'pre_trade' | 'post_trade' | 'daily') || 'pre_trade',
-              emotion: l.emotion || 'neutral',
-              trade: l.strategy_used || (l.trade_id ? `Trade #${l.trade_id.slice(0, 6)}` : 'Manual Setup'),
-              confidence: l.confidence_level || 7,
-              stress: l.stress_level || 3,
-              fear: l.fear_level || 2,
-              focus: l.focus_level || 8,
-              notes: l.setup_notes || l.pre_trade_reasoning || l.post_trade_reflection || '',
-              lesson: l.lesson_learned || null,
-              hasScreenshot: Boolean(l.screenshot_url)
-            }))
-            setEntries(mapped)
-          }
-        })
-    } catch {
-      // Demo fallback
+    async function loadLogs() {
+      try {
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user || cancelled) return
+
+        const { data, error: err } = await supabase
+          .from('behavioral_logs')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('logged_at', { ascending: false })
+          .limit(20)
+
+        if (cancelled) return
+        if (!err && data && data.length > 0) {
+          const mapped: JournalEntry[] = (data as BehavioralLog[]).map(l => ({
+            id: l.id,
+            date: formatLogDate(l.logged_at),
+            type: (l.log_type as 'pre_trade' | 'post_trade' | 'daily') || 'pre_trade',
+            emotion: l.emotion || 'neutral',
+            trade: l.strategy_used || (l.trade_id ? `Trade #${l.trade_id.slice(0, 6)}` : 'Manual Setup'),
+            confidence: l.confidence_level || 7,
+            stress: l.stress_level || 3,
+            fear: l.fear_level || 2,
+            focus: l.focus_level || 8,
+            notes: l.setup_notes || l.pre_trade_reasoning || l.post_trade_reflection || '',
+            lesson: l.lesson_learned || null,
+            hasScreenshot: Boolean(l.screenshot_url)
+          }))
+          // Rule 2.9: Demo entries always visible on the left (never remove them)
+          setEntries([...mapped, ...DEMO_ENTRIES])
+        }
+      } catch {
+        // Demo fallback
+      }
     }
+    loadLogs()
     return () => { cancelled = true }
   }, [])
 

@@ -144,37 +144,43 @@ export default function TradesPage() {
 
   useEffect(() => {
     let cancelled = false
-    try {
-      const supabase = createClient()
-      supabase
-        .from('trades')
-        .select('*')
-        .eq('status', 'closed')
-        .order('opened_at', { ascending: false })
-        .limit(20)
-        .then(({ data, error: err }) => {
-          if (cancelled) return
-          if (!err && data && data.length > 0) {
-            const mapped = data.map((t: Trade) => ({
-              id: t.id,
-              symbol: t.symbol,
-              direction: t.direction === 'long' ? 'Long' : 'Short',
-              pnl: Math.round(t.net_pnl ?? 0),
-              rr: t.reward_risk_ratio ?? (t.net_pnl && t.net_pnl > 0 ? 2.0 : -1.0),
-              risk: t.risk_pct ?? 1.2,
-              emotion: (t.alignment_score ?? 50) < 40 ? 'Revenge' : (t.alignment_score ?? 50) > 75 ? 'Focused' : 'Calm',
-              alignment: t.alignment_score ?? 78,
-              session: t.session === 'new_york' ? 'New York' : t.session ? t.session.charAt(0).toUpperCase() + t.session.slice(1) : 'London',
-              strategy: t.strategy_name ?? 'Breakout',
-              duration: t.duration_minutes ? `${Math.floor(t.duration_minutes / 60)}h ${t.duration_minutes % 60}m` : '2h 10m',
-              opened: new Date(t.opened_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })
-            }))
-            setTradesList(mapped)
-          }
-        })
-    } catch {
-      // Demo fallback
+    async function loadTrades() {
+      try {
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user || cancelled) return
+
+        const { data, error: err } = await supabase
+          .from('trades')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('status', 'closed')
+          .order('opened_at', { ascending: false })
+          .limit(20)
+
+        if (cancelled) return
+        if (!err && data && data.length > 0) {
+          const mapped = data.map((t: Trade) => ({
+            id: t.id,
+            symbol: t.symbol,
+            direction: t.direction === 'long' ? 'Long' : 'Short',
+            pnl: Math.round(t.net_pnl ?? 0),
+            rr: t.reward_risk_ratio ?? (t.net_pnl && t.net_pnl > 0 ? 2.0 : -1.0),
+            risk: t.risk_pct ?? 1.2,
+            emotion: (t.alignment_score ?? 50) < 40 ? 'Revenge' : (t.alignment_score ?? 50) > 75 ? 'Focused' : 'Calm',
+            alignment: t.alignment_score ?? 78,
+            session: t.session === 'new_york' ? 'New York' : t.session ? t.session.charAt(0).toUpperCase() + t.session.slice(1) : 'London',
+            strategy: t.strategy_name ?? 'Breakout',
+            duration: t.duration_minutes ? `${Math.floor(t.duration_minutes / 60)}h ${t.duration_minutes % 60}m` : '2h 10m',
+            opened: new Date(t.opened_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })
+          }))
+          setTradesList(mapped)
+        }
+      } catch {
+        // Demo fallback
+      }
     }
+    loadTrades()
     return () => { cancelled = true }
   }, [])
 
