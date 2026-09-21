@@ -9,6 +9,7 @@ import {
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import NotificationDropdown from '@/components/layout/NotificationDropdown'
+import ProfileSettingsModal from '@/components/layout/ProfileSettingsModal'
 
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'Overview', icon: LayoutDashboard },
@@ -101,6 +102,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [userName, setUserName] = useState<string>('Alex Kim')
   const [initials, setInitials] = useState('AK')
   const [currentDateStr, setCurrentDateStr] = useState<string>('')
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
 
   useEffect(() => {
     const updateTime = () => {
@@ -201,8 +203,30 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
           </Link>
 
-          {/* User Profile */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 8px' }}>
+          {/* User Profile Card */}
+          <div
+            onClick={() => setIsSettingsOpen(true)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '8px 10px',
+              borderRadius: '8px',
+              background: 'transparent',
+              border: '1px solid transparent',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = 'var(--surface-2)'
+              e.currentTarget.style.borderColor = 'var(--border)'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = 'transparent'
+              e.currentTarget.style.borderColor = 'transparent'
+            }}
+            title="Click to manage account settings & profile"
+          >
             <div style={{
               width: '30px', height: '30px', borderRadius: '50%', flexShrink: 0,
               background: 'var(--surface-3)', border: '1px solid var(--border)',
@@ -213,9 +237,38 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{userName}</div>
-              <div style={{ fontSize: '9px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.3px', textTransform: 'uppercase' }}>PRO TRADER</div>
+              <div style={{ fontSize: '9px', color: 'var(--accent)', fontFamily: 'var(--font-mono)', letterSpacing: '0.3px', textTransform: 'uppercase' }}>Settings & Profile</div>
             </div>
-            <button onClick={handleSignOut} title="Sign out" style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px', color: 'var(--text-3)', display: 'flex' }}>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                setIsSettingsOpen(true)
+              }}
+              title="Account Settings"
+              style={{
+                background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px',
+                color: 'var(--text-3)', display: 'flex', borderRadius: '4px',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.color = 'var(--text)')}
+              onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-3)')}
+            >
+              <Settings size={15} strokeWidth={1.8} />
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                handleSignOut()
+              }}
+              title="Sign out"
+              style={{
+                background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px',
+                color: 'var(--text-3)', display: 'flex', borderRadius: '4px',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.color = 'var(--red)')}
+              onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-3)')}
+            >
               <LogOut size={15} strokeWidth={1.8} />
             </button>
           </div>
@@ -281,6 +334,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {children}
         </main>
       </div>
+
+      {/* Profile & Account Settings Modal */}
+      <ProfileSettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        userName={userName}
+        userEmail={userEmail}
+        initials={initials}
+        onProfileUpdated={(newName) => {
+          setUserName(newName)
+          const newInitials = newName.split(' ').map(s => s[0]).join('').slice(0, 2).toUpperCase()
+          setInitials(newInitials)
+        }}
+      />
     </div>
   )
 }
