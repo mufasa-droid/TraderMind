@@ -27,6 +27,7 @@ export interface UserSettings {
   notifications_enabled: boolean
   theme: 'dark' | 'light'
   default_currency: string
+  max_daily_trades?: number
 }
 
 // ── BROKER ───────────────────────────────────────────────────

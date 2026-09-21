@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard, Brain, BookOpen, Target, Settings, Zap,
-  Bell, LogOut, Clock
+  Bell, LogOut, Clock, Image
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
@@ -16,6 +16,7 @@ const NAV_ITEMS = [
   { href: '/trades', label: 'Trade History', icon: Clock },
   { href: '/journal', label: 'Journal', icon: BookOpen },
   { href: '/goals', label: 'Goals & Rules', icon: Target },
+  { href: '/screenshots', label: 'Screenshots', icon: Image },
 ]
 
 const styles = {
