@@ -217,9 +217,63 @@ function CustomEquityTooltip({ active, payload, label }: CustomEquityTooltipProp
 }
 
 
+// ── MINI SPARKLINES COMPONENT ─────────────────────────────────
+function MiniSparkline({ data, color, id }: { data: number[]; color: string; id: string }) {
+  if (!data || data.length < 2) return null
+
+  const width = 44
+  const height = 14
+  const pad = 2
+
+  const min = Math.min(...data)
+  const max = Math.max(...data)
+  const range = max - min === 0 ? 1 : max - min
+
+  const points = data.map((val, idx) => {
+    const x = pad + (idx / (data.length - 1)) * (width - pad * 2)
+    const y = height - pad - ((val - min) / range) * (height - pad * 2)
+    return { x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10 }
+  })
+
+  const pathD = points.reduce((acc, curr, idx) => {
+    return idx === 0 ? `M ${curr.x} ${curr.y}` : `${acc} L ${curr.x} ${curr.y}`
+  }, '')
+
+  const fillD = `${pathD} L ${points[points.length - 1].x} ${height} L ${points[0].x} ${height} Z`
+  const lastPoint = points[points.length - 1]
+  const gradId = `spark-${id}`
+
+  return (
+    <svg
+      width={width}
+      height={height}
+      viewBox={`0 0 ${width} ${height}`}
+      style={{ overflow: 'visible', display: 'block', flexShrink: 0 }}
+      aria-hidden="true"
+    >
+      <defs>
+        <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity={0.25} />
+          <stop offset="100%" stopColor={color} stopOpacity={0} />
+        </linearGradient>
+      </defs>
+      <path d={fillD} fill={`url(#${gradId})`} />
+      <path
+        d={pathD}
+        fill="none"
+        stroke={color}
+        strokeWidth={1.3}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx={lastPoint.x} cy={lastPoint.y} r={1.8} fill={color} />
+    </svg>
+  )
+}
+
 // ── SCORE CARD COMPONENT (prompts/build-dashboard.md) ─────────
 function ScoreCard({
-  label, value, delta, deltaPositive, color, barColor
+  label, value, delta, deltaPositive, color, barColor, sparkline, id
 }: {
   label: string
   value: number
@@ -227,6 +281,8 @@ function ScoreCard({
   deltaPositive: boolean
   color: string
   barColor: string
+  sparkline?: number[]
+  id: string
 }) {
   return (
     <div style={{
@@ -237,7 +293,7 @@ function ScoreCard({
       {/* 2px Colored Top Accent Bar */}
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: barColor }} />
       
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
         <span style={{
           fontSize: '10px',
           fontWeight: 700,
@@ -245,17 +301,25 @@ function ScoreCard({
           textTransform: 'uppercase',
           letterSpacing: '0.8px',
           fontFamily: 'var(--font-mono)',
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
         }}>
           {label}
         </span>
-        <span style={{
-          fontSize: '11px',
-          fontWeight: 700,
-          fontFamily: 'var(--font-mono)',
-          color: deltaPositive ? 'var(--green)' : 'var(--red)',
-        }}>
-          {deltaPositive ? '↑ ' : '↓ '}{delta}
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+          {sparkline && <MiniSparkline data={sparkline} color={barColor} id={id} />}
+          <span style={{
+            fontSize: '11px',
+            fontWeight: 700,
+            fontFamily: 'var(--font-mono)',
+            color: deltaPositive ? 'var(--green)' : 'var(--red)',
+            display: 'inline-flex',
+            alignItems: 'center',
+          }}>
+            {deltaPositive ? '↑ ' : '↓ '}{delta}
+          </span>
+        </div>
       </div>
 
       <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginTop: '8px' }}>
@@ -466,6 +530,8 @@ export default function DashboardPage() {
           deltaPositive={true}
           color="var(--accent)"
           barColor="var(--accent)"
+          sparkline={[71, 72, 70, 74, 73, 75, 74, 76, 75, 78, 77, 79, 77, 78]}
+          id="discipline"
         />
         <ScoreCard
           label="Behavioral Consistency"
@@ -474,6 +540,8 @@ export default function DashboardPage() {
           deltaPositive={true}
           color="var(--green)"
           barColor="var(--green)"
+          sparkline={[74, 75, 76, 78, 77, 79, 80, 81, 80, 82, 83, 83, 84, 84]}
+          id="consistency"
         />
         <ScoreCard
           label="Risk Quality"
@@ -482,6 +550,8 @@ export default function DashboardPage() {
           deltaPositive={false}
           color="var(--amber)"
           barColor="var(--amber)"
+          sparkline={[66, 65, 67, 65, 64, 63, 64, 62, 63, 62, 61, 60, 62, 61]}
+          id="risk"
         />
         <ScoreCard
           label="Emotional Stability"
@@ -490,6 +560,8 @@ export default function DashboardPage() {
           deltaPositive={true}
           color="var(--purple)"
           barColor="var(--purple)"
+          sparkline={[59, 60, 58, 62, 61, 64, 65, 66, 68, 67, 70, 71, 71, 72]}
+          id="emotional"
         />
       </div>
 
