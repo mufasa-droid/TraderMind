@@ -100,6 +100,123 @@ const tooltipStyle = {
   itemStyle: { color: 'var(--text)' },
 }
 
+interface CustomEquityTooltipProps {
+  active?: boolean
+  payload?: Array<{
+    name: string
+    value: number
+    payload: {
+      date: string
+      equity: number
+      discipline: number
+    }
+  }>
+  label?: string
+}
+
+function CustomEquityTooltip({ active, payload, label }: CustomEquityTooltipProps) {
+  if (!active || !payload || !payload.length) return null
+
+  const item = payload[0]?.payload
+  if (!item) return null
+
+  return (
+    <div
+      style={{
+        background: 'rgba(17, 19, 24, 0.95)',
+        backdropFilter: 'blur(10px)',
+        border: '1px solid rgba(255, 255, 255, 0.1)',
+        borderRadius: '8px',
+        padding: '10px 14px',
+        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.5)',
+        minWidth: '170px',
+        pointerEvents: 'none',
+      }}
+    >
+      <div
+        style={{
+          fontSize: '10px',
+          fontWeight: 700,
+          color: 'var(--text-3)',
+          fontFamily: 'var(--font-mono)',
+          textTransform: 'uppercase',
+          letterSpacing: '0.6px',
+          marginBottom: '8px',
+          paddingBottom: '5px',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}
+      >
+        <span>{label || item.date}</span>
+        <span style={{ fontSize: '9px', color: 'var(--text-3)' }}>OVERLAY</span>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span
+              style={{
+                width: '7px',
+                height: '7px',
+                borderRadius: '50%',
+                background: 'var(--green)',
+                boxShadow: '0 0 6px rgba(62,207,142,0.6)',
+                display: 'inline-block',
+              }}
+            />
+            <span style={{ fontSize: '11px', color: 'var(--text-2)' }}>Equity</span>
+          </div>
+          <span
+            style={{
+              fontSize: '12px',
+              fontWeight: 700,
+              color: 'var(--green)',
+              fontFamily: 'var(--font-mono)',
+              letterSpacing: '-0.3px',
+            }}
+          >
+            ${Number(item.equity).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+          </span>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span
+              style={{
+                width: '7px',
+                height: '7px',
+                borderRadius: '50%',
+                background: 'var(--accent)',
+                boxShadow: '0 0 6px rgba(108,142,255,0.6)',
+                display: 'inline-block',
+              }}
+            />
+            <span style={{ fontSize: '11px', color: 'var(--text-2)' }}>Discipline</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '2px' }}>
+            <span
+              style={{
+                fontSize: '12px',
+                fontWeight: 700,
+                color: 'var(--accent)',
+                fontFamily: 'var(--font-mono)',
+              }}
+            >
+              {item.discipline}
+            </span>
+            <span style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
+              /100
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+
 // ── SCORE CARD COMPONENT (prompts/build-dashboard.md) ─────────
 function ScoreCard({
   label, value, delta, deltaPositive, color, barColor
@@ -508,8 +625,12 @@ export default function DashboardPage() {
                     tickLine={false}
                   />
                   <Tooltip
-                    {...tooltipStyle}
-                    formatter={(v: any, name: any) => [name === 'Equity' ? `$${Number(v).toLocaleString()}` : `${v}/100`, name]}
+                    content={<CustomEquityTooltip />}
+                    cursor={{
+                      stroke: 'rgba(255, 255, 255, 0.16)',
+                      strokeWidth: 1,
+                      strokeDasharray: '3 3',
+                    }}
                   />
                   <Area
                     yAxisId="equity"
@@ -520,7 +641,7 @@ export default function DashboardPage() {
                     fill="url(#equityGradMain)"
                     name="Equity"
                     dot={false}
-                    activeDot={{ r: 4, fill: 'var(--green)' }}
+                    activeDot={{ r: 4, fill: 'var(--green)', stroke: 'var(--surface)', strokeWidth: 2 }}
                   />
                   <Line
                     yAxisId="disc"
@@ -531,6 +652,7 @@ export default function DashboardPage() {
                     strokeDasharray="4 3"
                     name="Discipline"
                     dot={false}
+                    activeDot={{ r: 4, fill: 'var(--accent)', stroke: 'var(--surface)', strokeWidth: 2 }}
                   />
                 </ComposedChart>
               </ResponsiveContainer>
