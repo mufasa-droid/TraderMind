@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import NotificationDropdown from '@/components/layout/NotificationDropdown'
 
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'Overview', icon: LayoutDashboard },
@@ -99,6 +100,30 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [userEmail, setUserEmail] = useState<string | null>(null)
   const [userName, setUserName] = useState<string>('Alex Kim')
   const [initials, setInitials] = useState('AK')
+  const [currentDateStr, setCurrentDateStr] = useState<string>('')
+
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date()
+      const datePart = now.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        timeZone: 'UTC',
+      })
+      const timePart = now.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+        timeZone: 'UTC',
+      })
+      setCurrentDateStr(`${datePart} · ${timePart} UTC`)
+    }
+
+    updateTime()
+    const interval = setInterval(updateTime, 10000)
+    return () => clearInterval(interval)
+  }, [])
 
   useEffect(() => {
     try {
@@ -225,19 +250,29 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            <button style={{
-              background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px',
-              color: 'var(--text-2)', position: 'relative', display: 'flex'
+            <NotificationDropdown />
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '11px',
+              color: 'var(--text-2)',
+              fontFamily: 'var(--font-mono)',
+              background: 'var(--surface-2)',
+              padding: '4px 10px',
+              borderRadius: '6px',
+              border: '1px solid var(--border)',
             }}>
-              <Bell size={16} strokeWidth={1.8} />
               <span style={{
-                position: 'absolute', top: '3px', right: '3px', width: '6px', height: '6px',
-                borderRadius: '50%', background: 'var(--red)', border: '1.5px solid var(--surface)'
+                width: '6px',
+                height: '6px',
+                borderRadius: '50%',
+                background: 'var(--green)',
+                boxShadow: '0 0 6px rgba(62,207,142,0.6)',
+                display: 'inline-block',
               }} />
-            </button>
-            <span style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
-              May 26, 2026 · UTC
-            </span>
+              <span>{currentDateStr || 'Syncing UTC…'}</span>
+            </div>
           </div>
         </header>
 
