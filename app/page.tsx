@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { Brain, Zap, Shield, BarChart3, Target, Link2, type LucideIcon } from 'lucide-react'
 
 // ── TYPES ────────────────────────────────────────────────────
 type AISandboxScenario = {
@@ -25,50 +26,52 @@ const TECH_STACK = [
 
 const BROKERS = ['MT4', 'MT5', 'Binance', 'Bybit', 'cTrader', 'TradingView', 'DXTrade']
 
-const FEATURES = [
+type Feature = {
+  icon: LucideIcon
+  color: string
+  bg: string
+  title: string
+  desc: string
+}
+
+const FEATURES: Feature[] = [
   {
-    icon: '🧠',
-    iconLabel: 'brain',
+    icon: Brain,
     color: '#6C8EFF',
     bg: 'rgba(108,142,255,0.1)',
     title: 'AI Behavioral Coaching',
     desc: 'Weekly AI analysis of your psychology, emotional patterns, and decision quality — insights no market tool can deliver.',
   },
   {
-    icon: '⚡',
-    iconLabel: 'lightning',
+    icon: Zap,
     color: '#3ECF8E',
     bg: 'rgba(62,207,142,0.1)',
     title: 'Real-Time Trade Evaluation',
     desc: 'Get an alignment score, risk rating, and behavioral check based on your own historical data — before you enter.',
   },
   {
-    icon: '🛡',
-    iconLabel: 'shield',
+    icon: Shield,
     color: '#F5A623',
     bg: 'rgba(245,166,35,0.1)',
     title: 'Behavioral Intelligence Engine',
     desc: 'Automatically detects revenge trading, FOMO entries, post-win risk creep, overtrading, and 8 other damaging patterns.',
   },
   {
-    icon: '📊',
-    iconLabel: 'chart',
+    icon: BarChart3,
     color: '#B48EFF',
     bg: 'rgba(180,142,255,0.1)',
     title: 'Performance Analytics',
     desc: 'Session-by-session, instrument-by-instrument, strategy-by-strategy — know exactly when, where, and how you perform best.',
   },
   {
-    icon: '🎯',
-    iconLabel: 'target',
+    icon: Target,
     color: '#1DE9C2',
     bg: 'rgba(29,233,194,0.1)',
     title: 'Goals & Rule Enforcement',
     desc: 'Define your trading rules. The platform monitors compliance and flags every violation, keeping you accountable.',
   },
   {
-    icon: '🔗',
-    iconLabel: 'link',
+    icon: Link2,
     color: '#3ECF8E',
     bg: 'rgba(62,207,142,0.1)',
     title: 'Live Broker Sync',
@@ -554,15 +557,28 @@ export default function LandingPage() {
           <p style={{ fontSize: '15px', color: S.text2, marginTop: '10px' }}>Not beginners. Not signal seekers. Traders who want to improve.</p>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
-          {FEATURES.map(f => (
-            <div key={f.title} className="feature-card" style={{ padding: '24px', borderRadius: '12px', background: S.surface, border: `1px solid ${S.border}` }}>
-              <div style={{ width: '44px', height: '44px', borderRadius: '10px', background: f.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', marginBottom: '16px' }}>
-                {f.icon}
+          {FEATURES.map(f => {
+            const Icon = f.icon
+            return (
+              <div key={f.title} className="feature-card" style={{ padding: '24px', borderRadius: '12px', background: S.surface, border: `1px solid ${S.border}` }}>
+                <div style={{
+                  width: '44px',
+                  height: '44px',
+                  borderRadius: '10px',
+                  background: f.bg,
+                  border: `1px solid ${f.color}25`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginBottom: '16px',
+                }}>
+                  <Icon size={22} color={f.color} strokeWidth={2} />
+                </div>
+                <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '8px', color: S.text }}>{f.title}</h3>
+                <p style={{ fontSize: '14px', color: S.text2, lineHeight: 1.7 }}>{f.desc}</p>
               </div>
-              <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '8px', color: S.text }}>{f.title}</h3>
-              <p style={{ fontSize: '14px', color: S.text2, lineHeight: 1.7 }}>{f.desc}</p>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </section>
 
