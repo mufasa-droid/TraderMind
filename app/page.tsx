@@ -331,65 +331,121 @@ function AISandbox() {
 // ── FLOW DIAGRAM (SVG) ────────────────────────────────────────
 function FlowDiagram() {
   return (
-    <svg width="100%" viewBox="0 0 720 280" aria-label="Two-layer AI architecture: raw trades flow into the deterministic engine producing scores, which feed the AI interpretation layer producing coaching insights">
+    <svg
+      width="100%"
+      viewBox="0 0 860 380"
+      style={{ maxWidth: '860px', height: 'auto', display: 'block', margin: '0 auto', overflow: 'visible' }}
+      aria-label="Two-layer AI architecture: raw trades flow into the deterministic engine producing scores, which feed the AI interpretation layer producing coaching insights"
+    >
       <defs>
         <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
           <path d="M2 1L8 5L2 9" fill="none" stroke="#555C6E" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
         </marker>
+        <marker id="arr-green" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="#3ECF8E" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </marker>
+        <marker id="arr-accent" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="#6C8EFF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </marker>
+        <linearGradient id="l1-grad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="rgba(62,207,142,0.08)" />
+          <stop offset="100%" stopColor="rgba(62,207,142,0.02)" />
+        </linearGradient>
+        <linearGradient id="l2-grad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="rgba(108,142,255,0.08)" />
+          <stop offset="100%" stopColor="rgba(108,142,255,0.02)" />
+        </linearGradient>
       </defs>
 
-      {/* Layer 1 box */}
-      <rect x="20" y="60" width="200" height="160" rx="10" fill="rgba(62,207,142,0.07)" stroke="rgba(62,207,142,0.3)" strokeWidth="1" />
-      <text x="120" y="88" textAnchor="middle" fill="#8B90A0" fontSize="9" fontFamily="'DM Mono', monospace" letterSpacing="1">LAYER 01</text>
-      <text x="120" y="108" textAnchor="middle" fill="#E8EAF0" fontSize="13" fontWeight="600" fontFamily="Syne, system-ui">Deterministic</text>
-      <text x="120" y="124" textAnchor="middle" fill="#E8EAF0" fontSize="13" fontWeight="600" fontFamily="Syne, system-ui">Engine</text>
-      {['Win rate / RR / streaks', 'Behavioral flag detection', 'Discipline scoring', 'Risk quality scoring', 'Trade alignment'].map((item, i) => (
+      {/* ── TOP INPUT: Raw Trade Data ── */}
+      <rect x="74" y="10" width="140" height="34" rx="7" fill="#161920" stroke="rgba(255,255,255,0.12)" strokeWidth="1" />
+      <circle cx="92" cy="27" r="3" fill="#3ECF8E" />
+      <text x="148" y="23" textAnchor="middle" fill="#E8EAF0" fontSize="10.5" fontWeight="600" fontFamily="Syne, system-ui">Raw Trade Data</text>
+      <text x="148" y="35" textAnchor="middle" fill="#8B90A0" fontSize="8" fontFamily="'DM Mono', monospace">Broker Sync / Manual</text>
+      <line x1="144" y1="44" x2="144" y2="68" stroke="#3ECF8E" strokeWidth="1.5" strokeDasharray="3 3" markerEnd="url(#arr-green)" />
+
+      {/* ── LAYER 01: Deterministic Engine ── */}
+      <rect x="24" y="70" width="240" height="216" rx="12" fill="url(#l1-grad)" stroke="rgba(62,207,142,0.3)" strokeWidth="1.2" />
+      <text x="144" y="94" textAnchor="middle" fill="#3ECF8E" fontSize="9" fontFamily="'DM Mono', monospace" letterSpacing="1.2" fontWeight="700">LAYER 01</text>
+      <text x="144" y="113" textAnchor="middle" fill="#E8EAF0" fontSize="14" fontWeight="700" fontFamily="Syne, system-ui">Deterministic Engine</text>
+      <rect x="74" y="121" width="140" height="18" rx="4" fill="rgba(62,207,142,0.12)" />
+      <text x="144" y="134" textAnchor="middle" fill="#3ECF8E" fontSize="9" fontFamily="'DM Mono', monospace">Pure TypeScript · No AI</text>
+      <line x1="44" y1="147" x2="244" y2="147" stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
+
+      {[
+        'Win rate / RR / streaks',
+        '12 behavioral flag detectors',
+        'Discipline scoring (0–100)',
+        'Consistency & risk metrics',
+        'Session & strategy analytics',
+      ].map((item, i) => (
         <g key={item}>
-          <circle cx="38" cy={150 + i * 18} r="2" fill="#3ECF8E" />
-          <text x="46" y={154 + i * 18} fill="#8B90A0" fontSize="10" fontFamily="Syne, system-ui">{item}</text>
+          <circle cx="44" cy={165 + i * 20} r="2.5" fill="#3ECF8E" />
+          <text x="54" y={169 + i * 20} fill="#8B90A0" fontSize="10.5" fontFamily="Syne, system-ui">{item}</text>
         </g>
       ))}
 
-      {/* Arrow 1 */}
-      <line x1="220" y1="140" x2="276" y2="140" stroke="#555C6E" strokeWidth="1.5" markerEnd="url(#arr)" />
-      <text x="248" y="132" textAnchor="middle" fill="#555C6E" fontSize="9" fontFamily="'DM Mono', monospace">scores</text>
+      {/* ── ARROW 1: Layer 1 -> Analytics ── */}
+      <line x1="264" y1="178" x2="326" y2="178" stroke="#555C6E" strokeWidth="1.5" markerEnd="url(#arr)" />
+      <rect x="272" y="159" width="48" height="15" rx="3" fill="#111318" stroke="rgba(255,255,255,0.08)" strokeWidth="0.5" />
+      <text x="296" y="170" textAnchor="middle" fill="#3ECF8E" fontSize="8.5" fontFamily="'DM Mono', monospace">scores</text>
 
-      {/* Middle: Analytics object */}
-      <rect x="280" y="90" width="160" height="100" rx="8" fill="rgba(108,142,255,0.08)" stroke="rgba(108,142,255,0.25)" strokeWidth="1" />
-      <text x="360" y="116" textAnchor="middle" fill="#8B90A0" fontSize="9" fontFamily="'DM Mono', monospace" letterSpacing="1">ANALYTICS</text>
-      {['discipline: 78', 'consistency: 84', 'flags: 3', 'patterns: 6'].map((line, i) => (
-        <text key={line} x="300" y={138 + i * 15} fill="#6C8EFF" fontSize="10" fontFamily="'DM Mono', monospace">{line}</text>
-      ))}
+      {/* ── MIDDLE: Analytics Payload ── */}
+      <rect x="328" y="98" width="204" height="160" rx="10" fill="#0E1117" stroke="rgba(108,142,255,0.25)" strokeWidth="1" />
+      <rect x="328" y="98" width="204" height="28" rx="10" fill="rgba(108,142,255,0.08)" />
+      <circle cx="344" cy="112" r="3" fill="#6C8EFF" />
+      <text x="430" y="116" textAnchor="middle" fill="#6C8EFF" fontSize="9" fontFamily="'DM Mono', monospace" letterSpacing="1.2" fontWeight="700">PERFORMANCE ANALYTICS</text>
 
-      {/* Arrow 2 */}
-      <line x1="440" y1="140" x2="496" y2="140" stroke="#555C6E" strokeWidth="1.5" markerEnd="url(#arr)" />
-      <text x="468" y="132" textAnchor="middle" fill="#555C6E" fontSize="9" fontFamily="'DM Mono', monospace">interprets</text>
-
-      {/* Layer 2 box */}
-      <rect x="500" y="60" width="200" height="160" rx="10" fill="rgba(108,142,255,0.07)" stroke="rgba(108,142,255,0.3)" strokeWidth="1" />
-      <text x="600" y="88" textAnchor="middle" fill="#8B90A0" fontSize="9" fontFamily="'DM Mono', monospace" letterSpacing="1">LAYER 02</text>
-      <text x="600" y="108" textAnchor="middle" fill="#E8EAF0" fontSize="13" fontWeight="600" fontFamily="Syne, system-ui">AI Interpretation</text>
-      <text x="600" y="124" textAnchor="middle" fill="#E8EAF0" fontSize="13" fontWeight="600" fontFamily="Syne, system-ui">Layer</text>
-      {['Weekly coaching reports', 'Behavioral narratives', 'Chat coach (GPT-4o)', 'Proactive insights', 'Trade narratives'].map((item, i) => (
-        <g key={item}>
-          <circle cx="518" cy={150 + i * 18} r="2" fill="#6C8EFF" />
-          <text x="526" y={154 + i * 18} fill="#8B90A0" fontSize="10" fontFamily="Syne, system-ui">{item}</text>
+      {[
+        { label: 'discipline', val: '78 / 100', col: '#6C8EFF' },
+        { label: 'consistency', val: '84 / 100', col: '#3ECF8E' },
+        { label: 'risk_quality', val: '61 / 100', col: '#F5A623' },
+        { label: 'emotional_stability', val: '72 / 100', col: '#B48EFF' },
+        { label: 'flags_active', val: '3 detected', col: '#FF5F5F' },
+        { label: 'session_edge', val: '"London 67%"', col: '#3ECF8E' },
+      ].map((row, i) => (
+        <g key={row.label}>
+          <text x="342" y={143 + i * 18} fill="#8B90A0" fontSize="9.5" fontFamily="'DM Mono', monospace">{row.label}:</text>
+          <text x="518" y={143 + i * 18} textAnchor="end" fill={row.col} fontSize="9.5" fontFamily="'DM Mono', monospace" fontWeight="600">{row.val}</text>
         </g>
       ))}
 
-      {/* Raw trades input (top) */}
-      <rect x="64" y="10" width="112" height="30" rx="6" fill="#161920" stroke="rgba(255,255,255,0.07)" strokeWidth="1" />
-      <text x="120" y="29" textAnchor="middle" fill="#8B90A0" fontSize="10" fontFamily="'DM Mono', monospace">Raw trade data</text>
-      <line x1="120" y1="40" x2="120" y2="58" stroke="#555C6E" strokeWidth="1" markerEnd="url(#arr)" strokeDasharray="4 2" />
+      {/* ── ARROW 2: Analytics -> Layer 2 ── */}
+      <line x1="532" y1="178" x2="594" y2="178" stroke="#555C6E" strokeWidth="1.5" markerEnd="url(#arr)" />
+      <rect x="538" y="159" width="52" height="15" rx="3" fill="#111318" stroke="rgba(255,255,255,0.08)" strokeWidth="0.5" />
+      <text x="564" y="170" textAnchor="middle" fill="#6C8EFF" fontSize="8.5" fontFamily="'DM Mono', monospace">interprets</text>
 
-      {/* Output (bottom right) */}
-      <rect x="544" y="240" width="112" height="30" rx="6" fill="#161920" stroke="rgba(108,142,255,0.25)" strokeWidth="1" />
-      <text x="600" y="259" textAnchor="middle" fill="#6C8EFF" fontSize="10" fontFamily="'DM Mono', monospace">Coaching output</text>
-      <line x1="600" y1="220" x2="600" y2="238" stroke="#555C6E" strokeWidth="1" markerEnd="url(#arr)" strokeDasharray="4 2" />
+      {/* ── LAYER 02: AI Interpretation Layer ── */}
+      <rect x="596" y="70" width="240" height="216" rx="12" fill="url(#l2-grad)" stroke="rgba(108,142,255,0.3)" strokeWidth="1.2" />
+      <text x="716" y="94" textAnchor="middle" fill="#6C8EFF" fontSize="9" fontFamily="'DM Mono', monospace" letterSpacing="1.2" fontWeight="700">LAYER 02</text>
+      <text x="716" y="113" textAnchor="middle" fill="#E8EAF0" fontSize="14" fontWeight="700" fontFamily="Syne, system-ui">AI Interpretation Layer</text>
+      <rect x="636" y="121" width="160" height="18" rx="4" fill="rgba(108,142,255,0.12)" />
+      <text x="716" y="134" textAnchor="middle" fill="#6C8EFF" fontSize="9" fontFamily="'DM Mono', monospace">OpenAI GPT-4o · Explains Only</text>
+      <line x1="616" y1="147" x2="816" y2="147" stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
 
-      {/* No signals note */}
-      <rect x="248" y="228" width="224" height="26" rx="5" fill="rgba(245,166,35,0.08)" stroke="rgba(245,166,35,0.2)" strokeWidth="0.5" />
-      <text x="360" y="245" textAnchor="middle" fill="#F5A623" fontSize="10" fontFamily="'DM Mono', monospace">⚠ No buy/sell signals — ever</text>
+      {[
+        'Weekly & monthly coaching',
+        'Interactive AI chat coach',
+        'Root-cause emotional insights',
+        'Behavioral pattern narratives',
+        'Actionable discipline guidance',
+      ].map((item, i) => (
+        <g key={item}>
+          <circle cx="616" cy={165 + i * 20} r="2.5" fill="#6C8EFF" />
+          <text x="626" y={169 + i * 20} fill="#8B90A0" fontSize="10.5" fontFamily="Syne, system-ui">{item}</text>
+        </g>
+      ))}
+
+      {/* ── BOTTOM OUTPUT: Coaching Output (under Layer 2) ── */}
+      <line x1="716" y1="286" x2="716" y2="318" stroke="#6C8EFF" strokeWidth="1.5" strokeDasharray="3 3" markerEnd="url(#arr-accent)" />
+      <rect x="646" y="320" width="140" height="34" rx="7" fill="#161920" stroke="rgba(108,142,255,0.3)" strokeWidth="1" />
+      <circle cx="664" cy="337" r="3" fill="#6C8EFF" />
+      <text x="722" y="333" textAnchor="middle" fill="#6C8EFF" fontSize="10.5" fontWeight="600" fontFamily="Syne, system-ui">Coaching Output</text>
+      <text x="722" y="345" textAnchor="middle" fill="#8B90A0" fontSize="8" fontFamily="'DM Mono', monospace">Reports · Chat · Actions</text>
+
+      {/* ── GUARDRAIL CALLOUT (centered at bottom) ── */}
+      <rect x="290" y="292" width="280" height="28" rx="6" fill="rgba(245,166,35,0.08)" stroke="rgba(245,166,35,0.22)" strokeWidth="0.5" />
+      <text x="430" y="310" textAnchor="middle" fill="#F5A623" fontSize="9.5" fontFamily="'DM Mono', monospace">⚠ Zero buy/sell signals — behavioral only</text>
     </svg>
   )
 }
@@ -609,8 +665,8 @@ export default function LandingPage() {
             All calculations are deterministic — no AI guesswork in the numbers. The AI only interprets the patterns in plain English.
           </p>
           <FlowDiagram />
-          <div style={{ marginTop: '24px', display: 'inline-block', padding: '12px 20px', borderRadius: '8px', background: 'rgba(245,166,35,0.08)', border: '1px solid rgba(245,166,35,0.2)', fontSize: '13px', color: S.text2, fontFamily: S.mono }}>
-            ⚠ The AI never generates buy/sell signals. It only interprets your behavior.
+          <div style={{ marginTop: '28px', display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 20px', borderRadius: '24px', background: 'rgba(245,166,35,0.06)', border: '1px solid rgba(245,166,35,0.18)', fontSize: '12.5px', color: S.amber, fontFamily: S.mono }}>
+            <span>🛡</span> Strict separation: The AI only interprets behavior — it never predicts price or gives market signals.
           </div>
         </div>
       </section>
