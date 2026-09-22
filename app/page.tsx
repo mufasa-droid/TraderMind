@@ -515,6 +515,10 @@ export default function LandingPage() {
         .cta-primary:hover { box-shadow: 0 0 40px rgba(108,142,255,0.4) !important; transform: translateY(-1px); }
         .cta-primary { transition: all 0.2s; }
         .nav-link:hover { color: #E8EAF0 !important; }
+        .footer-link { transition: color 0.15s ease; }
+        .footer-link:hover { color: #E8EAF0 !important; }
+        .footer-chip { transition: all 0.2s ease; }
+        .footer-chip:hover { border-color: rgba(108,142,255,0.3) !important; background: #161920 !important; transform: translateY(-1px); }
       `}</style>
 
       {/* ── NAV ── */}
@@ -717,35 +721,184 @@ export default function LandingPage() {
       <div style={styles.divider} />
 
       {/* ── FOOTER ── */}
-      <footer style={{ padding: '40px 24px 32px', background: S.surface }}>
+      <footer style={{ padding: '64px 24px 36px', background: '#090B0E', borderTop: `1px solid ${S.border}` }}>
         <div style={{ maxWidth: '1120px', margin: '0 auto' }}>
-          {/* Tech stack */}
-          <div style={{ marginBottom: '32px', textAlign: 'center' }}>
-            <p style={{ fontSize: '11px', color: S.text3, fontFamily: S.mono, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '16px' }}>Built with</p>
+          {/* Main 4-Column Grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '40px', marginBottom: '48px' }}>
+
+            {/* Col 1: Brand & Mission */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '26px', height: '26px', borderRadius: '6px', background: S.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 800, color: '#fff' }}>TM</div>
+                <span style={{ fontSize: '18px', fontWeight: 800, letterSpacing: '-0.5px', color: S.text }}>TraderMind</span>
+              </div>
+              <p style={{ fontSize: '13px', color: S.text2, lineHeight: 1.6, maxWidth: '280px' }}>
+                Most trading tools analyze the market. We analyze the trader — measuring psychology, discipline, and behavioral risk.
+              </p>
+              <div>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '5px 12px', borderRadius: '20px', background: 'rgba(62,207,142,0.08)', border: '1px solid rgba(62,207,142,0.2)', fontSize: '11px', fontFamily: S.mono, color: S.green }}>
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: S.green, animation: 'pulse 1.8s infinite' }} />
+                  Deterministic Engine Online
+                </div>
+              </div>
+              <div style={{ marginTop: '4px' }}>
+                <a
+                  href="https://github.com/mufasa-droid/TraderMind"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="footer-chip"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '8px 14px',
+                    borderRadius: '8px',
+                    background: S.surface,
+                    border: `1px solid ${S.border2}`,
+                    color: S.text,
+                    fontSize: '12px',
+                    fontFamily: S.mono,
+                    textDecoration: 'none',
+                  }}
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+                    <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+                  </svg>
+                  <span>mufasa-droid / TraderMind</span>
+                  <span style={{ color: S.text3 }}>↗</span>
+                </a>
+              </div>
+            </div>
+
+            {/* Col 2: Platform Links */}
+            <div>
+              <p style={{ fontSize: '11px', fontFamily: S.mono, color: S.accent, textTransform: 'uppercase', letterSpacing: '1.2px', fontWeight: 700, marginBottom: '16px' }}>Platform</p>
+              <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {[
+                  { label: 'Behavioral Intelligence Engine', href: '#features' },
+                  { label: 'Real-Time Trade Evaluation', href: '#features' },
+                  { label: 'AI Psychological Coaching', href: '#features' },
+                  { label: 'Performance Analytics', href: '#features' },
+                  { label: 'Goals & Rule Enforcement', href: '#features' },
+                  { label: 'Interactive AI Sandbox', href: '#demo' },
+                ].map(item => (
+                  <li key={item.label}>
+                    <a href={item.href} className="footer-link" style={{ fontSize: '13px', color: S.text2, textDecoration: 'none' }}>
+                      {item.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Col 3: Architecture & System */}
+            <div>
+              <p style={{ fontSize: '11px', fontFamily: S.mono, color: S.accent, textTransform: 'uppercase', letterSpacing: '1.2px', fontWeight: 700, marginBottom: '16px' }}>Architecture</p>
+              <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {[
+                  { label: 'Two-Layer Architecture', href: '#how-it-works' },
+                  { label: 'Layer 1: Deterministic Engine', href: '#how-it-works' },
+                  { label: 'Layer 2: GPT-4o Insights', href: '#how-it-works' },
+                  { label: 'MetaTrader 4 & 5 Sync', href: '#features' },
+                  { label: 'Crypto & Broker Integrations', href: '#features' },
+                  { label: 'Free & Pro Pricing', href: '#pricing' },
+                ].map(item => (
+                  <li key={item.label}>
+                    <a href={item.href} className="footer-link" style={{ fontSize: '13px', color: S.text2, textDecoration: 'none' }}>
+                      {item.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Col 4: Institutional Guardrails */}
+            <div>
+              <p style={{ fontSize: '11px', fontFamily: S.mono, color: S.amber, textTransform: 'uppercase', letterSpacing: '1.2px', fontWeight: 700, marginBottom: '16px' }}>Guardrails & Ethics</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ padding: '12px', borderRadius: '8px', background: S.surface, border: `1px solid ${S.border}` }}>
+                  <div style={{ fontSize: '12px', fontWeight: 700, color: S.text, marginBottom: '4px' }}>🛡 Zero Trade Signals</div>
+                  <div style={{ fontSize: '11.5px', color: S.text2, lineHeight: 1.5 }}>
+                    Strict policy: We never predict price or recommend trade entries. Only trader behavior is measured.
+                  </div>
+                </div>
+                <div style={{ padding: '12px', borderRadius: '8px', background: S.surface, border: `1px solid ${S.border}` }}>
+                  <div style={{ fontSize: '12px', fontWeight: 700, color: S.text, marginBottom: '4px' }}>🔒 Read-Only Broker Sync</div>
+                  <div style={{ fontSize: '11.5px', color: S.text2, lineHeight: 1.5 }}>
+                    Zero execution capability. TraderMind cannot place, modify, or close trades on your broker account.
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          {/* Tech Stack Strip */}
+          <div style={{ padding: '24px 0', borderTop: `1px solid ${S.border}`, borderBottom: `1px solid ${S.border}`, marginBottom: '28px' }}>
+            <p style={{ fontSize: '10.5px', color: S.text3, fontFamily: S.mono, textTransform: 'uppercase', letterSpacing: '1.5px', textAlign: 'center', marginBottom: '14px' }}>
+              Built with Institutional-Grade Architecture
+            </p>
             <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }}>
-              {TECH_STACK.map(t => (
-                <span key={t.name} style={{ padding: '5px 12px', borderRadius: '6px', fontSize: '12px', fontFamily: S.mono, background: '#0D0F14', border: `1px solid ${S.border}`, color: S.text2, display: 'flex', alignItems: 'center', gap: '5px' }}>
-                  <span style={{ color: t.color, fontSize: '10px' }}>{t.icon}</span>
+              {[
+                { name: 'Next.js 15', icon: <svg width="13" height="13" viewBox="0 0 180 180" fill="none"><circle cx="90" cy="90" r="90" fill="#000"/><path d="M149.5 157.4L69.1 54H54v72h12.1V69.4l73.9 95.4c3.3-2.2 6.5-4.7 9.5-7.4z" fill="#fff"/><path d="M115.9 54H128v72h-12.1V54z" fill="#fff"/></svg> },
+                { name: 'TypeScript', icon: <span style={{ fontWeight: 800, fontSize: '9px', color: '#3178C6', background: 'rgba(49,120,198,0.15)', padding: '1px 3px', borderRadius: '2px' }}>TS</span> },
+                { name: 'Tailwind CSS', icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="#38BDF8"><path d="M12.001 4.8c-3.2 0-5.2 1.6-6 4.8 1.2-1.6 2.6-2.2 4.2-1.8.913.228 1.565.89 2.288 1.624C13.666 10.618 15.027 12 18.001 12c3.2 0 5.2-1.6 6-4.8-1.2 1.6-2.6 2.2-4.2 1.8-.913-.228-1.565-.89-2.288-1.624C16.337 6.182 14.976 4.8 12.001 4.8zm-6 7.2c-3.2 0-5.2 1.6-6 4.8 1.2-1.6 2.6-2.2 4.2-1.8.913.228 1.565.89 2.288 1.624 1.177 1.194 2.538 2.576 5.512 2.576 3.2 0 5.2-1.6 6-4.8-1.2 1.6-2.6 2.2-4.2 1.8-.913-.228-1.565-.89-2.288-1.624C10.337 13.382 8.976 12 6.001 12z"/></svg> },
+                { name: 'Supabase', icon: <svg width="11" height="11" viewBox="0 0 24 24" fill="#3ECF8E"><path d="M21.362 9.354H12V.396a.396.396 0 0 0-.716-.233L.12 14.282a.396.396 0 0 0 .319.638H12v8.958a.396.396 0 0 0 .716.233l11.164-14.119a.396.396 0 0 0-.319-.638z"/></svg> },
+                { name: 'OpenAI GPT-4o', icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#74AA9C" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg> },
+                { name: 'Recharts', icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#8884d8" strokeWidth="2"><rect x="3" y="12" width="4" height="9" rx="1"/><rect x="10" y="7" width="4" height="14" rx="1"/><rect x="17" y="3" width="4" height="18" rx="1"/></svg> },
+                { name: 'MetaAPI SDK', icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#F5A623" strokeWidth="2"><path d="M12 2l8 4.5v9L12 20l-8-4.5v-9L12 2z"/></svg> },
+                { name: 'Vercel Edge', icon: <svg width="11" height="11" viewBox="0 0 24 24" fill="#fff"><path d="M12 1L24 22H0L12 1Z"/></svg> },
+              ].map(t => (
+                <span
+                  key={t.name}
+                  className="footer-chip"
+                  style={{
+                    padding: '5px 12px',
+                    borderRadius: '6px',
+                    fontSize: '11.5px',
+                    fontFamily: S.mono,
+                    background: S.surface,
+                    border: `1px solid ${S.border}`,
+                    color: S.text2,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  {t.icon}
                   {t.name}
                 </span>
               ))}
             </div>
           </div>
 
-          {/* Bottom row */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', paddingTop: '24px', borderTop: `1px solid ${S.border}` }}>
+          {/* Sub-Footer Bottom Bar */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div style={{ width: '22px', height: '22px', borderRadius: '5px', background: S.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 800, color: '#fff' }}>TM</div>
-              <span style={{ fontSize: '14px', fontWeight: 600, color: S.text }}>TraderMind</span>
-              <span style={{ fontSize: '11px', color: S.text3, fontFamily: S.mono }}>· Portfolio Project · 2026</span>
+              <span style={{ fontSize: '12px', color: S.text3, fontFamily: S.mono }}>
+                © 2026 TraderMind. Portfolio Project. All rights reserved.
+              </span>
             </div>
-            <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
-              <a href="https://github.com/mufasa-droid/TraderMind" target="_blank" rel="noopener noreferrer" style={{ fontSize: '12px', color: S.text3, textDecoration: 'none', fontFamily: S.mono, display: 'flex', alignItems: 'center', gap: '5px', border: `1px solid ${S.border}`, padding: '5px 12px', borderRadius: '6px' }}>
-                ⌥ GitHub Repository
-              </a>
-              <span style={{ fontSize: '12px', color: S.text3, fontFamily: S.mono }}>Next.js · TypeScript · Supabase · OpenAI</span>
-            </div>
-            <p style={{ fontSize: '12px', color: S.text3, fontFamily: S.mono }}>We analyze the trader, not the market</p>
+
+            <p style={{ fontSize: '11.5px', color: S.text3, fontFamily: S.mono, margin: 0 }}>
+              TraderMind analyzes trader behavior, not market direction. No financial advice.
+            </p>
+
+            <a
+              href="#"
+              style={{
+                fontSize: '12px',
+                color: S.text2,
+                textDecoration: 'none',
+                fontFamily: S.mono,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+              }}
+              className="footer-link"
+            >
+              Back to top ↑
+            </a>
           </div>
         </div>
       </footer>
