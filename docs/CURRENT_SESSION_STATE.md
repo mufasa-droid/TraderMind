@@ -22,20 +22,31 @@ Every core feature of the platform is fully implemented, responsive, and passing
 | **Demo Seed Dataset** | `supabase/seed.sql` | ✅ Executed | Idempotent seed script with Alex Kim profile, 47 closed trades (+$1,247 P&L, 59.6% WR), MT5 broker connection, behavioral logs, flags, and rules. |
 | **Authentication Flow** | `app/auth/login/page.tsx`<br/>`app/auth/register/page.tsx`<br/>`app/auth/callback/route.ts`<br/>`middleware.ts` | ✅ Verified | Login & Registration cards, password toggle, Supabase auth handshake, demo bypass, and protected dashboard redirects. |
 
+| **Free MQL5 Desktop EA Sync** | `public/downloads/TraderMind_Sync.mq5`<br/>`app/api/broker/webhook/route.ts`<br/>`scripts/simulate_mt5_stream.js` | ✅ Completed | Custom MT5 Expert Advisor (`TraderMind_Sync.mq5`), high-throughput ingestion webhook with deal deduplication, and streaming test simulator. |
+| **Broker Connect Hub** | `app/(dashboard)/broker/connect/page.tsx`<br/>`app/api/broker/sync/route.ts` | ✅ Completed | Dual-mode broker integration (Free Desktop EA & Cloud Bridge), 7 broker cards, private sync keys, setup modal, and status telemetry. |
+| **Goals & Rules Manager** | `app/(dashboard)/goals/page.tsx`<br/>`app/api/goals/route.ts`<br/>`app/api/rules/route.ts` | ✅ Completed | Interactive trading rule toggles, active violation counters, daily risk sliders, and session preference filters. |
+| **Screenshots Gallery** | `app/(dashboard)/screenshots/page.tsx` | ✅ Completed | Upload to Supabase Storage `screenshots` bucket, grid view, metadata tags, and full-size modal viewer. |
+
 ---
 
 ## 2. Git Commit History (Recent Milestone Commits)
 
-- `477428c` — `feat: add user registration page with Supabase Auth`
-- `85fcca9` — `fix: make storage migration idempotent with DROP POLICY IF EXISTS`
-- `2548165` — `fix: update flag_type to impulse_trading to match check constraint`
-- `35cc434` — `fix: update seed.sql to use clean idempotent delete-and-insert for all table constraints`
-- `6e6d25d` — `data: add Supabase seed script for standard portfolio demo dataset`
-- `df6b8cf` — `feat: build Pre-Trade Evaluation widget and trade intelligence log`
-- `4993fd1` — `feat: build Behavioral Journal page with psychological entry form`
-- `4bc06d5` — `feat: build Behavioral Intelligence Hub with Radar, Scatter, and Timeline`
-- `7bc9c0a` — `feat: complete AI Coach Monthly Report and Chat Coach with robust API error handling`
-- `bf9a37c` — `docs: add comprehensive project reference and configure gitignore for local instructions`
+- `7d72c23` — `feat: enhance MT5 webhook ingestion resilience and add live deal stream simulator`
+- `e8f8d95` — `feat: implement free MQL5 Desktop EA sync, webhook ingestion endpoint, and UI controls`
+- `4dad7da` — `feat(landing): redesign footer into institutional multi-column layout`
+- `6cc14fc` — `fix(landing): redesign architecture flow diagram layout and spacing`
+- `6775b26` — `feat(landing): replace emojis in platform features section with lucide icons`
+- `810a1f1` — `feat: make profile card interactive with settings modal and account deletion`
+- `b1b701e` — `feat: make topbar date dynamic with live UTC clock and add responsive notification dropdown with empty state`
+- `55f73e7` — `feat: add glassmorphic AuthCard with smooth Sign In / Sign Up top tab switcher`
+- `be53e4b` — `fix: add safe Supabase fallbacks for demo mode, error boundaries, and signup CTAs`
+- `02eb9cf` — `feat: add first-class Google Gemini API integration with OpenAI fallback`
+- `ccb71a0` — `feat: add institutional mini sparklines to behavioral score cards`
+- `ec02843` — `feat: add synchronized vertical crosshair and enhanced dual-axis tooltip to equity curve`
+- `bf18ca5` — `feat: add interactive table sorting with visual direction indicators to trade history`
+- `8b9a2b3` — `fix: enforce user_id scoping on trades and journal and preserve demo entries`
+- `7ad7ef1` — `feat: add screenshots to sidebar nav, wire trade-screenshots bucket with full-size preview, and align goals with tokens`
+- `6bca526` — `feat: align auth and onboarding flows with password confirmation, profile init, and 7 brokers`
 
 ---
 
