@@ -38,6 +38,21 @@ export default function AuthCard({ initialMode = 'signin' }: AuthCardProps) {
   const [signUpError, setSignUpError] = useState<string | null>(null)
   const [signUpSuccess, setSignUpSuccess] = useState(false)
 
+  // Check URL query parameters for errors or notices on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      const err = params.get('error')
+      if (err) {
+        setSignInError(decodeURIComponent(err))
+      }
+      const deleted = params.get('deleted')
+      if (deleted) {
+        setSignInError('Your account has been deleted.')
+      }
+    }
+  }, [])
+
   // Sync mode with URL if query param or path changes
   const switchMode = (newMode: AuthMode) => {
     setMode(newMode)
@@ -63,6 +78,10 @@ export default function AuthCard({ initialMode = 'signin' }: AuthCardProps) {
       })
 
       if (error) {
+        if (error.message.toLowerCase().includes('email not confirmed')) {
+          setSignInError('Your email address has not been confirmed yet. Please check your inbox (including spam) for the verification link, or disable "Confirm email" in your Supabase Auth settings.')
+          return
+        }
         // Demo mode bypass if demo mode active or unconfigured
         if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true' || !process.env.NEXT_PUBLIC_SUPABASE_URL) {
           router.push('/dashboard')
@@ -137,6 +156,7 @@ export default function AuthCard({ initialMode = 'signin' }: AuthCardProps) {
           data: {
             full_name: fullName || 'Trader',
           },
+          emailRedirectTo: typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : undefined,
         },
       })
 
@@ -148,22 +168,37 @@ export default function AuthCard({ initialMode = 'signin' }: AuthCardProps) {
       // Rule 3.21 — New User Initialization
       const userId = data.user?.id
       if (userId) {
-        await supabase.from('users').upsert({
-          id: userId,
-          email: signUpEmail,
-          full_name: fullName || 'Trader',
-          timezone: 'UTC',
-          plan: 'free',
-          broker_connected: false,
-          onboarding_completed: false,
-        })
+        try {
+          await supabase.from('users').upsert({
+            id: userId,
+            email: signUpEmail,
+            full_name: fullName || 'Trader',
+            timezone: 'UTC',
+            plan: 'free',
+            broker_connected: false,
+            onboarding_completed: false,
+          })
 
-        await supabase.from('user_settings').upsert({
-          user_id: userId,
-          max_risk_per_trade_pct: 2.0,
-          max_daily_loss_pct: 3.0,
-          preferred_sessions: ['london', 'new_york'],
-        }, { onConflict: 'user_id' })
+          await supabase.from('user_settings').upsert({
+            user_id: userId,
+            max_risk_per_trade_pct: 2.0,
+            max_daily_loss_pct: 3.0,
+            preferred_sessions: ['london', 'new_york'],
+          }, { onConflict: 'user_id' })
+        } catch {
+          // Client upsert may be blocked by RLS if session is not yet active
+        }
+
+        // Ensure user row and settings exist via admin endpoint (bypasses RLS if session is not yet active)
+        await fetch('/api/auth/init-user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId,
+            email: signUpEmail,
+            fullName: fullName || 'Trader',
+          }),
+        }).catch(() => {})
       }
 
       if (data?.session) {
@@ -533,10 +568,14 @@ export default function AuthCard({ initialMode = 'signin' }: AuthCardProps) {
                     Account Created!
                   </h2>
                   <p style={{ fontSize: '13px', color: 'var(--text-2)', lineHeight: 1.6, marginBottom: '24px' }}>
-                    Check your email confirmation link or jump straight into the onboarding experience.
+                    We sent a verification link to <strong style={{ color: 'var(--text)' }}>{signUpEmail}</strong>. Please check your inbox (and spam) to confirm your email, then sign in.
                   </p>
-                  <Link
-                    href="/auth/onboarding"
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSignUpSuccess(false)
+                      switchMode('signin')
+                    }}
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -544,14 +583,15 @@ export default function AuthCard({ initialMode = 'signin' }: AuthCardProps) {
                       padding: '10px 20px',
                       borderRadius: '8px',
                       background: 'var(--accent)',
+                      border: 'none',
                       color: '#fff',
                       fontSize: '13px',
                       fontWeight: 700,
-                      textDecoration: 'none',
+                      cursor: 'pointer',
                     }}
                   >
-                    Continue to Onboarding <ArrowRight size={15} />
-                  </Link>
+                    Proceed to Sign In <ArrowRight size={15} />
+                  </button>
                 </div>
               ) : (
                 <>

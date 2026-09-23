@@ -46,6 +46,10 @@ export async function updateSession(request: NextRequest) {
     pathname === '/api/auth/callback' // allow OAuth callback
 
   const isApi = pathname.startsWith('/api/')
+  const isPublicApi =
+    pathname === '/api/auth/callback' ||
+    pathname === '/api/auth/init-user' ||
+    pathname.startsWith('/api/broker/webhook')
 
   // Protect dashboard + app routes (Rule 3.16 & Section 6.3)
   const protectedPaths = [
@@ -54,9 +58,9 @@ export async function updateSession(request: NextRequest) {
   ]
   const isProtected = protectedPaths.some(p => pathname.startsWith(p))
 
-  if (!user && !isDemo && (isProtected || isApi)) {
+  if (!user && !isDemo && (isProtected || (isApi && !isPublicApi))) {
     // For API, return 401 JSON instead of redirect
-    if (isApi && pathname !== '/api/auth/callback') {
+    if (isApi) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
     if (isProtected) {
@@ -67,8 +71,8 @@ export async function updateSession(request: NextRequest) {
     }
   }
 
-  // If authenticated user hits /auth/login, send to dashboard
-  if (user && pathname.startsWith('/auth/login')) {
+  // If authenticated user hits /auth/login or /auth/register, send to dashboard
+  if (user && (pathname.startsWith('/auth/login') || pathname.startsWith('/auth/register'))) {
     const url = request.nextUrl.clone()
     url.pathname = '/dashboard'
     return NextResponse.redirect(url)
