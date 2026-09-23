@@ -25,8 +25,9 @@ function detectInstrumentType(symbol: string): 'forex' | 'crypto' | 'commodities
 export async function GET() {
   return NextResponse.json({
     status: 'ok',
-    service: 'tradermind-mql5-webhook',
-    version: '1.0.0',
+    service: 'tradermind-broker-webhook',
+    supported_platforms: ['mt5', 'mt4', 'ctrader'],
+    version: '1.1.0',
     timestamp: new Date().toISOString(),
   })
 }
@@ -90,9 +91,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized: Invalid sync_key' }, { status: 401 })
     }
 
-    const platform = (body.platform === 'mt4' ? 'mt4' : 'mt5') as 'mt4' | 'mt5'
-    const accountLogin = String(body.account_login || body.login || 'Unknown')
-    const serverName = String(body.server || 'MetaTrader 5 Server')
+    const platformRaw = String(body.platform || 'mt5').toLowerCase()
+    const platform = (['mt4', 'mt5', 'ctrader'].includes(platformRaw) ? platformRaw : 'mt5') as 'mt4' | 'mt5' | 'ctrader'
+    const accountLogin = String(body.account_login || body.login || body.account_id || 'Unknown')
+    const serverName = String(body.server || (platform === 'ctrader' ? 'cTrader Broker' : 'MetaTrader Server'))
     const balance = typeof body.balance === 'number' ? body.balance : parseFloat(body.balance || '0')
     const equity = typeof body.equity === 'number' ? body.equity : parseFloat(body.equity || '0')
     const currency = String(body.currency || 'USD').toUpperCase()
@@ -102,26 +104,27 @@ export async function POST(request: NextRequest) {
     const normalizedTrades: Partial<Trade>[] = []
 
     for (const t of incomingTrades) {
-      if (!t.ticket || !t.symbol) continue
+      const ticketId = t.ticket || t.id || t.position_id
+      if (!ticketId || !t.symbol) continue
 
       const entryPrice = parseFloat(t.entry_price || t.open_price || '0')
-      const exitPrice = t.exit_price ? parseFloat(t.exit_price) : undefined
-      const lotSize = parseFloat(t.lot_size || t.volume || '0.01')
-      const profit = parseFloat(t.profit || '0')
-      const commission = parseFloat(t.commission || '0')
+      const exitPrice = t.exit_price || t.close_price ? parseFloat(t.exit_price || t.close_price) : undefined
+      const lotSize = parseFloat(t.lot_size || t.volume || t.quantity || '0.01')
+      const profit = parseFloat(t.profit || t.gross_profit || '0')
+      const commission = parseFloat(t.commission || t.commissions || '0')
       const swap = parseFloat(t.swap || '0')
-      const netPnl = profit + commission + swap
+      const netPnl = typeof t.net_pnl === 'number' ? t.net_pnl : (profit + commission + swap)
 
-      const typeStr = String(t.type || '').toUpperCase()
-      const direction: 'long' | 'short' = (typeStr === 'BUY' || typeStr === '0' || typeStr === 'DEAL_TYPE_BUY') ? 'long' : 'short'
+      const typeStr = String(t.type || t.trade_type || '').toUpperCase()
+      const direction: 'long' | 'short' = (typeStr === 'BUY' || typeStr === '0' || typeStr === 'DEAL_TYPE_BUY' || typeStr === 'LONG') ? 'long' : 'short'
 
-      const openDate = t.open_time ? new Date(t.open_time) : new Date()
-      const closeDate = t.close_time ? new Date(t.close_time) : openDate
+      const openDate = t.open_time ? new Date(t.open_time) : (t.entry_time ? new Date(t.entry_time) : new Date())
+      const closeDate = t.close_time ? new Date(t.close_time) : (t.closing_time ? new Date(t.closing_time) : openDate)
       const durationMinutes = Math.max(1, Math.round((closeDate.getTime() - openDate.getTime()) / 60000))
 
       normalizedTrades.push({
         user_id: user.id,
-        external_trade_id: `mt5-${t.ticket}`,
+        external_trade_id: `${platform}-${ticketId}`,
         symbol: String(t.symbol).toUpperCase(),
         instrument_type: detectInstrumentType(String(t.symbol)),
         direction,
@@ -215,13 +218,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Rule 3.12 / 1.4: Log processed trades to terminal for instant visibility
+    const platformLabel = platform === 'ctrader' ? 'cTrader' : platform.toUpperCase()
     if (normalizedTrades.length > 0) {
-      console.log(`[MT5 Webhook] Ingested ${normalizedTrades.length} trades for Account ${accountLogin} (${serverName}):`)
+      console.log(`[${platformLabel} Webhook] Ingested ${normalizedTrades.length} trades for Account ${accountLogin} (${serverName}):`)
       for (const tr of normalizedTrades) {
         console.log(`  -> Ticket: ${tr.external_trade_id} | ${tr.symbol} ${tr.direction?.toUpperCase()} | Net PnL: $${tr.net_pnl?.toFixed(2)} | Session: ${tr.session}`)
       }
     } else if (body.heartbeat) {
-      console.log(`[MT5 Webhook] Heartbeat received from Account ${accountLogin} | Balance: $${balance.toFixed(2)} | Equity: $${equity.toFixed(2)}`)
+      console.log(`[${platformLabel} Webhook] Heartbeat received from Account ${accountLogin} | Balance: $${balance.toFixed(2)} | Equity: $${equity.toFixed(2)}`)
     }
 
     return NextResponse.json({

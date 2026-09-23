@@ -23,7 +23,8 @@ Every core feature of the platform is fully implemented, responsive, and passing
 | **Authentication Flow** | `app/auth/login/page.tsx`<br/>`app/auth/register/page.tsx`<br/>`app/auth/callback/route.ts`<br/>`middleware.ts` | ✅ Verified | Login & Registration cards, password toggle, Supabase auth handshake, demo bypass, and protected dashboard redirects. |
 
 | **Free MQL5 Desktop EA Sync** | `public/downloads/TraderMind_Sync.mq5`<br/>`app/api/broker/webhook/route.ts`<br/>`scripts/simulate_mt5_stream.js` | ✅ Completed | Custom MT5 Expert Advisor (`TraderMind_Sync.mq5`), high-throughput ingestion webhook with deal deduplication, and streaming test simulator. |
-| **Broker Connect Hub** | `app/(dashboard)/broker/connect/page.tsx`<br/>`app/api/broker/sync/route.ts` | ✅ Completed | Dual-mode broker integration (Free Desktop EA & Cloud Bridge), 7 broker cards, private sync keys, setup modal, and status telemetry. |
+| **Free cTrader C# cBot Sync** | `public/downloads/TraderMind_Sync_cTrader.cs`<br/>`app/api/broker/webhook/route.ts` | ✅ Completed | Custom cTrader Automate C# cBot (`TraderMind_Sync_cTrader.cs`), `Positions.Closed` real-time streaming, historical deal sweep, and balance telemetry. |
+| **Broker Connect Hub** | `app/(dashboard)/broker/connect/page.tsx`<br/>`app/api/broker/sync/route.ts` | ✅ Completed | Multi-broker integration (Free MT5 EA, cTrader cBot, & Cloud Bridge), 7 broker cards, private sync keys, setup modal, and status telemetry. |
 | **Goals & Rules Manager** | `app/(dashboard)/goals/page.tsx`<br/>`app/api/goals/route.ts`<br/>`app/api/rules/route.ts` | ✅ Completed | Interactive trading rule toggles, active violation counters, daily risk sliders, and session preference filters. |
 | **Screenshots Gallery** | `app/(dashboard)/screenshots/page.tsx` | ✅ Completed | Upload to Supabase Storage `screenshots` bucket, grid view, metadata tags, and full-size modal viewer. |
 

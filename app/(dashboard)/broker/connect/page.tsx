@@ -240,9 +240,9 @@ export default function BrokerConnectPage() {
 
   const handleSelectBroker = (brokerId: string) => {
     setSelectedBroker(brokerId)
-    if (brokerId !== 'mt5' && brokerId !== 'mt4') {
+    if (brokerId !== 'mt5' && brokerId !== 'mt4' && brokerId !== 'ctrader') {
       setInfoMessage(
-        `Integration for ${BROKERS.find((b) => b.id === brokerId)?.name} is currently in closed beta. MetaTrader 4/5 are actively supported.`
+        `Integration for ${BROKERS.find((b) => b.id === brokerId)?.name} is currently in closed beta. MetaTrader 4/5 and cTrader are actively supported.`
       )
     } else {
       setInfoMessage(null)
@@ -1359,6 +1359,532 @@ export default function BrokerConnectPage() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* cTrader Configuration Panel */}
+      {selectedBroker === 'ctrader' && (
+        <div
+          style={{
+            marginTop: '8px',
+            borderRadius: '12px',
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
+            overflow: 'hidden',
+          }}
+        >
+          {/* Method Header Bar */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '14px 20px',
+              borderBottom: '1px solid var(--border)',
+              background: 'var(--surface-2)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '8px 16px',
+                  borderRadius: '7px',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  fontFamily: 'var(--font-sans)',
+                  border: '1px solid var(--teal)',
+                  background: 'rgba(29,233,194,0.12)',
+                  color: 'var(--teal)',
+                }}
+              >
+                <Terminal size={14} />
+                cTrader Automate cBot Sync
+                <span
+                  style={{
+                    fontSize: '10px',
+                    fontFamily: 'var(--font-mono)',
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                    background: 'rgba(62,207,142,0.15)',
+                    color: 'var(--green)',
+                    fontWeight: 800,
+                  }}
+                >
+                  FREE
+                </span>
+              </div>
+            </div>
+
+            <span
+              style={{
+                fontSize: '11px',
+                fontFamily: 'var(--font-mono)',
+                color: 'var(--green)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontWeight: 700,
+              }}
+            >
+              <Zap size={13} />
+              WEBHOOK ACTIVE
+            </span>
+          </div>
+
+          <div style={{ padding: '24px' }}>
+            {/* Banner / Value Prop */}
+            <div
+              style={{
+                padding: '16px',
+                borderRadius: '10px',
+                background: 'rgba(29,233,194,0.06)',
+                border: '1px solid rgba(29,233,194,0.2)',
+                marginBottom: '24px',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '14px',
+              }}
+            >
+              <div
+                style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '8px',
+                  background: 'rgba(29,233,194,0.15)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'var(--teal)',
+                  flexShrink: 0,
+                }}
+              >
+                <FileCode size={20} />
+              </div>
+              <div>
+                <div
+                  style={{
+                    fontSize: '14px',
+                    fontWeight: 700,
+                    color: 'var(--text)',
+                    marginBottom: '4px',
+                  }}
+                >
+                  100% Free Real-Time Sync via cTrader C# cBot
+                </div>
+                <p
+                  style={{
+                    fontSize: '13px',
+                    color: 'var(--text-2)',
+                    lineHeight: 1.5,
+                    margin: 0,
+                  }}
+                >
+                  Run the lightweight TraderMind Sync cBot in cTrader Automate. It automatically sweeps your
+                  historical deals and streams real-time trade closures and balance updates directly to your
+                  dashboard via secure WebRequest — zero cloud fees or bridge subscriptions required.
+                </p>
+              </div>
+            </div>
+
+            {/* Download Section */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '16px',
+                background: 'var(--surface-2)',
+                borderRadius: '10px',
+                border: '1px solid var(--border)',
+                marginBottom: '20px',
+              }}
+            >
+              <div>
+                <div
+                  style={{
+                    fontSize: '14px',
+                    fontWeight: 700,
+                    color: 'var(--text)',
+                    marginBottom: '4px',
+                  }}
+                >
+                  Download TraderMind Sync cBot (.cs)
+                </div>
+                <div
+                  style={{
+                    fontSize: '12px',
+                    color: 'var(--text-3)',
+                    fontFamily: 'var(--font-mono)',
+                  }}
+                >
+                  v1.0.0 · C# Source Code · Compatible with cTrader Automate (.NET)
+                </div>
+              </div>
+
+              <a
+                href="/downloads/TraderMind_Sync_cTrader.cs"
+                download="TraderMind_Sync_cTrader.cs"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '10px 18px',
+                  borderRadius: '8px',
+                  background: 'var(--teal)',
+                  color: '#0A0B0E',
+                  fontSize: '13px',
+                  fontWeight: 800,
+                  textDecoration: 'none',
+                  transition: 'opacity 0.15s ease',
+                }}
+              >
+                <Download size={15} />
+                Download cBot (.cs)
+              </a>
+            </div>
+
+            {/* Credentials / Setup Inputs */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(2, 1fr)',
+                gap: '14px',
+                marginBottom: '24px',
+              }}
+            >
+              {/* Sync Key Box */}
+              <div
+                style={{
+                  padding: '16px',
+                  background: 'var(--surface-2)',
+                  borderRadius: '10px',
+                  border: '1px solid var(--border)',
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    color: 'var(--text-3)',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.6px',
+                    marginBottom: '8px',
+                    fontFamily: 'var(--font-mono)',
+                  }}
+                >
+                  Private Sync Key (cBot Input)
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <input
+                    type="text"
+                    readOnly
+                    value={syncKey}
+                    style={{
+                      flex: 1,
+                      padding: '8px 12px',
+                      background: 'var(--surface-3)',
+                      border: '1px solid var(--border)',
+                      borderRadius: '6px',
+                      color: 'var(--teal)',
+                      fontSize: '12px',
+                      fontFamily: 'var(--font-mono)',
+                      outline: 'none',
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => copyToClipboard(syncKey, 'key')}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      padding: '8px 14px',
+                      borderRadius: '6px',
+                      background: copiedKey ? 'var(--green)' : 'var(--surface)',
+                      border: '1px solid var(--border)',
+                      color: copiedKey ? '#0A0B0E' : 'var(--text)',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    {copiedKey ? <Check size={14} /> : <Copy size={14} />}
+                    {copiedKey ? 'Copied' : 'Copy'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Webhook URL Box */}
+              <div
+                style={{
+                  padding: '16px',
+                  background: 'var(--surface-2)',
+                  borderRadius: '10px',
+                  border: '1px solid var(--border)',
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    color: 'var(--text-3)',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.6px',
+                    marginBottom: '8px',
+                    fontFamily: 'var(--font-mono)',
+                  }}
+                >
+                  Webhook Ingestion URL
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <input
+                    type="text"
+                    readOnly
+                    value={webhookUrl}
+                    style={{
+                      flex: 1,
+                      padding: '8px 12px',
+                      background: 'var(--surface-3)',
+                      border: '1px solid var(--border)',
+                      borderRadius: '6px',
+                      color: 'var(--text)',
+                      fontSize: '12px',
+                      fontFamily: 'var(--font-mono)',
+                      outline: 'none',
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => copyToClipboard(webhookUrl, 'url')}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      padding: '8px 14px',
+                      borderRadius: '6px',
+                      background: copiedUrl ? 'var(--green)' : 'var(--surface)',
+                      border: '1px solid var(--border)',
+                      color: copiedUrl ? '#0A0B0E' : 'var(--text)',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    {copiedUrl ? <Check size={14} /> : <Copy size={14} />}
+                    {copiedUrl ? 'Copied' : 'Copy'}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* 4-Step Installation Guide */}
+            <div
+              style={{
+                background: 'var(--surface-2)',
+                borderRadius: '10px',
+                border: '1px solid var(--border)',
+                padding: '20px',
+                marginBottom: '24px',
+              }}
+            >
+              <div
+                style={{
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  color: 'var(--text)',
+                  marginBottom: '16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}
+              >
+                <Terminal size={15} color="var(--teal)" />
+                4-Step cTrader Automate Setup
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <div
+                    style={{
+                      width: '22px',
+                      height: '22px',
+                      borderRadius: '50%',
+                      background: 'rgba(29,233,194,0.15)',
+                      color: 'var(--teal)',
+                      fontSize: '11px',
+                      fontWeight: 800,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                      fontFamily: 'var(--font-mono)',
+                    }}
+                  >
+                    1
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>
+                      Open cTrader Automate
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-3)', lineHeight: 1.5, marginTop: '2px' }}>
+                      In cTrader Desktop, click the <strong>Automate</strong> icon on the left sidebar navigation bar.
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <div
+                    style={{
+                      width: '22px',
+                      height: '22px',
+                      borderRadius: '50%',
+                      background: 'rgba(29,233,194,0.15)',
+                      color: 'var(--teal)',
+                      fontSize: '11px',
+                      fontWeight: 800,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                      fontFamily: 'var(--font-mono)',
+                    }}
+                  >
+                    2
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>
+                      Create New cBot & Paste Source Code
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-3)', lineHeight: 1.5, marginTop: '2px' }}>
+                      Click <strong>New cBot</strong>, replace the default template with the downloaded{' '}
+                      <code style={{ color: 'var(--teal)', fontFamily: 'var(--font-mono)' }}>TraderMind_Sync_cTrader.cs</code>, and click <strong>Build</strong> (Ctrl + B).
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <div
+                    style={{
+                      width: '22px',
+                      height: '22px',
+                      borderRadius: '50%',
+                      background: 'rgba(29,233,194,0.15)',
+                      color: 'var(--teal)',
+                      fontSize: '11px',
+                      fontWeight: 800,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                      fontFamily: 'var(--font-mono)',
+                    }}
+                  >
+                    3
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>
+                      Add Instance to Any Chart
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-3)', lineHeight: 1.5, marginTop: '2px' }}>
+                      Right-click the built cBot in the left list &rarr; click <strong>Add an Instance</strong>. Select any currency pair (e.g. EURUSD).
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <div
+                    style={{
+                      width: '22px',
+                      height: '22px',
+                      borderRadius: '50%',
+                      background: 'rgba(29,233,194,0.15)',
+                      color: 'var(--teal)',
+                      fontSize: '11px',
+                      fontWeight: 800,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                      fontFamily: 'var(--font-mono)',
+                    }}
+                  >
+                    4
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>
+                      Configure Sync Key & Start
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-3)', lineHeight: 1.5, marginTop: '2px' }}>
+                      In the cBot parameters panel, paste your <strong>Private Sync Key</strong>. Click the green <strong>Start</strong> button. When cTrader asks for FullAccess permissions for WebRequest, click Grant.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Test Connection Button & Status */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                paddingTop: '16px',
+                borderTop: '1px solid var(--border)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <button
+                  type="button"
+                  onClick={handleTestWebhook}
+                  disabled={testingWebhook}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '10px 18px',
+                    borderRadius: '8px',
+                    background: 'var(--surface-3)',
+                    border: '1px solid var(--border)',
+                    color: 'var(--text)',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    cursor: testingWebhook ? 'not-allowed' : 'pointer',
+                    fontFamily: 'var(--font-sans)',
+                  }}
+                >
+                  <RefreshCw
+                    size={13}
+                    style={{ animation: testingWebhook ? 'spin 0.8s linear infinite' : 'none' }}
+                  />
+                  {testingWebhook ? 'Verifying...' : 'Test cTrader Webhook Ping'}
+                </button>
+
+                {webhookTestResult && (
+                  <span
+                    style={{
+                      fontSize: '12px',
+                      color: webhookTestResult.includes('verified') ? 'var(--green)' : 'var(--amber)',
+                      fontFamily: 'var(--font-mono)',
+                    }}
+                  >
+                    {webhookTestResult}
+                  </span>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <ShieldCheck size={14} color="var(--green)" />
+                <span style={{ fontSize: '12px', color: 'var(--text-2)', fontFamily: 'var(--font-mono)' }}>
+                  Read-Only WebRequest Protocol
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
