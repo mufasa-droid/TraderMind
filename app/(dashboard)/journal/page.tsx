@@ -257,6 +257,12 @@ export default function JournalPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
+      <style>{`
+        @media (max-width: 1023px) {
+          .journal-main-grid { grid-template-columns: 1fr !important; gap: 16px !important; }
+          .journal-form-column { order: -1 !important; position: static !important; }
+        }
+      `}</style>
       {/* Top Header */}
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
         <div>
@@ -293,7 +299,7 @@ export default function JournalPage() {
       </div>
 
       {/* Main Content Layout */}
-      <div style={{
+      <div className="journal-main-grid" style={{
         display: 'grid',
         gridTemplateColumns: showForm ? 'minmax(0, 1.4fr) minmax(360px, 1fr)' : '1fr',
         gap: '16px',
@@ -438,7 +444,7 @@ export default function JournalPage() {
 
         {/* Right Column: Slide-in Entry Form */}
         {showForm && (
-          <div style={{
+          <div className="journal-form-column" style={{
             background: 'var(--surface)',
             border: '1px solid var(--border)',
             borderRadius: '10px',

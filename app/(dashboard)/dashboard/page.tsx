@@ -285,7 +285,7 @@ function ScoreCard({
   id: string
 }) {
   return (
-    <div style={{
+    <div className="dashboard-score-card" style={{
       ...panelStyle,
       padding: '16px 18px 14px',
       position: 'relative',
@@ -462,6 +462,26 @@ export default function DashboardPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', maxWidth: '1140px', margin: '0 auto' }}>
+      <style>{`
+        @media (max-width: 639px) {
+          .dashboard-score-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }
+          .dashboard-main-grid { grid-template-columns: 1fr !important; gap: 14px !important; }
+          .dashboard-bottom-strip { grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }
+          .dashboard-score-card { padding: 12px 10px 10px !important; }
+          .dashboard-stat-card { padding: 10px 12px !important; }
+          .dashboard-header-row { flex-direction: column !important; align-items: flex-start !important; gap: 12px !important; }
+        }
+        @media (min-width: 640px) and (max-width: 1023px) {
+          .dashboard-score-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; }
+          .dashboard-main-grid { grid-template-columns: 1fr !important; gap: 16px !important; }
+          .dashboard-bottom-strip { grid-template-columns: repeat(3, 1fr) !important; gap: 10px !important; }
+        }
+        @media (min-width: 1024px) {
+          .dashboard-score-grid { grid-template-columns: repeat(4, 1fr) !important; gap: 12px !important; }
+          .dashboard-main-grid { grid-template-columns: 1fr 330px !important; gap: 16px !important; }
+          .dashboard-bottom-strip { grid-template-columns: repeat(6, 1fr) !important; gap: 10px !important; }
+        }
+      `}</style>
       
       {/* ── 1. PAGE HEADER ROW (Title + Date Range Picker) ── */}
       <div>
@@ -475,7 +495,7 @@ export default function DashboardPage() {
         }}>
           TRADERMIND <span style={{ color: 'var(--text-3)' }}>/</span> OVERVIEW
         </div>
-        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+        <div className="dashboard-header-row" style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
           <div>
             <h1 style={{ fontSize: '28px', fontWeight: 800, letterSpacing: '-0.8px', lineHeight: 1, color: 'var(--text)' }}>
               Performance Overview
@@ -522,7 +542,7 @@ export default function DashboardPage() {
       </div>
 
       {/* ── 2. SCORE CARDS (4 Grid Cards) ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
+      <div className="dashboard-score-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
         <ScoreCard
           label="Discipline Score"
           value={discipline}
@@ -639,7 +659,7 @@ export default function DashboardPage() {
       </div>
 
       {/* ── 4. MAIN 2-COLUMN GRID ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 330px', gap: '16px' }}>
+      <div className="dashboard-main-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 330px', gap: '16px' }}>
 
         {/* ── LEFT COLUMN: Equity Chart + Trade Table ── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -1079,7 +1099,7 @@ export default function DashboardPage() {
       </div>
 
       {/* ── 5. BOTTOM STATS STRIP (6 Metrics) ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '10px' }}>
+      <div className="dashboard-bottom-strip" style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '10px' }}>
         {[
           { label: 'Win Rate', value: analytics ? `${analytics.win_rate}%` : '59.6%', color: 'var(--green)' },
           { label: 'Avg R:R', value: analytics ? `${analytics.avg_reward_risk}R` : '2.3R', color: 'var(--green)' },
@@ -1088,7 +1108,7 @@ export default function DashboardPage() {
           { label: 'Net P&L', value: analytics ? `${analytics.net_pnl >= 0 ? '+' : ''}$${Math.round(analytics.net_pnl).toLocaleString()}` : '+$1,247', color: 'var(--green)' },
           { label: 'Best Streak', value: analytics ? `${analytics.max_win_streak} wins` : '6 wins', color: 'var(--green)' },
         ].map(stat => (
-          <div key={stat.label} style={{ ...panelStyle, padding: '14px 16px' }}>
+          <div key={stat.label} className="dashboard-stat-card" style={{ ...panelStyle, padding: '14px 16px' }}>
             <div style={{
               fontSize: '10px',
               fontWeight: 700,

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Brain, Zap, Shield, BarChart3, Target, Link2, type LucideIcon } from 'lucide-react'
+import { Brain, Zap, Shield, BarChart3, Target, Link2, Menu, X, type LucideIcon } from 'lucide-react'
 
 // ── TYPES ────────────────────────────────────────────────────
 type AISandboxScenario = {
@@ -177,7 +177,7 @@ function DashboardMockup() {
       </div>
 
       {/* Score cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', padding: '12px 14px 8px' }}>
+      <div className="mockup-score-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', padding: '12px 14px 8px' }}>
         {[
           { label: 'Discipline Score', value: '78', color: S.accent },
           { label: 'Consistency', value: '84', color: S.green },
@@ -215,12 +215,13 @@ function DashboardMockup() {
       </div>
 
       {/* Mini trade table */}
-      <div style={{ margin: '0 14px 14px', borderRadius: '7px', overflow: 'hidden', border: `1px solid ${S.border}` }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr', background: S.surface2 }}>
-          {['Pair', 'P&L', 'R:R', 'Emotion', 'Alignment'].map(h => (
-            <div key={h} style={{ padding: '5px 8px', fontSize: '9px', color: S.text3, fontFamily: S.mono, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{h}</div>
-          ))}
-        </div>
+      <div style={{ margin: '0 14px 14px', borderRadius: '7px', overflow: 'hidden', border: `1px solid ${S.border}`, overflowX: 'auto' }}>
+        <div style={{ minWidth: '380px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr', background: S.surface2 }}>
+            {['Pair', 'P&L', 'R:R', 'Emotion', 'Alignment'].map(h => (
+              <div key={h} style={{ padding: '5px 8px', fontSize: '9px', color: S.text3, fontFamily: S.mono, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{h}</div>
+            ))}
+          </div>
         {[
           { pair: 'EURUSD', pnl: '+$312', rr: '2.4R', emotion: 'Focused', align: 91, pos: true },
           { pair: 'GBPJPY', pnl: '−$180', rr: '−1R', emotion: 'Revenge', align: 31, pos: false },
@@ -241,6 +242,7 @@ function DashboardMockup() {
             </div>
           </div>
         ))}
+        </div>
       </div>
     </div>
   )
@@ -331,12 +333,14 @@ function AISandbox() {
 // ── FLOW DIAGRAM (SVG) ────────────────────────────────────────
 function FlowDiagram() {
   return (
-    <svg
-      width="100%"
-      viewBox="0 0 860 380"
-      style={{ maxWidth: '860px', height: 'auto', display: 'block', margin: '0 auto', overflow: 'visible' }}
-      aria-label="Two-layer AI architecture: raw trades flow into the deterministic engine producing scores, which feed the AI interpretation layer producing coaching insights"
-    >
+    <div style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: '8px' }}>
+      <div style={{ minWidth: '620px', maxWidth: '860px', margin: '0 auto' }}>
+        <svg
+          width="100%"
+          viewBox="0 0 860 380"
+          style={{ width: '100%', height: 'auto', display: 'block', margin: '0 auto', overflow: 'visible' }}
+          aria-label="Two-layer AI architecture: raw trades flow into the deterministic engine producing scores, which feed the AI interpretation layer producing coaching insights"
+        >
       <defs>
         <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
           <path d="M2 1L8 5L2 9" fill="none" stroke="#555C6E" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -447,12 +451,15 @@ function FlowDiagram() {
       <rect x="290" y="292" width="280" height="28" rx="6" fill="rgba(245,166,35,0.08)" stroke="rgba(245,166,35,0.22)" strokeWidth="0.5" />
       <text x="430" y="310" textAnchor="middle" fill="#F5A623" fontSize="9.5" fontFamily="'DM Mono', monospace">⚠ Zero buy/sell signals — behavioral only</text>
     </svg>
+      </div>
+    </div>
   )
 }
 
 // ── MAIN PAGE ────────────────────────────────────────────────
 export default function LandingPage() {
   const [insightIdx, setInsightIdx] = useState(0)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   useEffect(() => {
     const t = setInterval(() => setInsightIdx(i => (i + 1) % ROTATING_INSIGHTS.length), 3500)
@@ -519,6 +526,29 @@ export default function LandingPage() {
         .footer-link:hover { color: #E8EAF0 !important; }
         .footer-chip { transition: all 0.2s ease; }
         .footer-chip:hover { border-color: rgba(108,142,255,0.3) !important; background: #161920 !important; transform: translateY(-1px); }
+        @media (max-width: 639px) {
+          .mockup-score-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+          }
+          .pricing-grid {
+            grid-template-columns: 1fr !important;
+          }
+        }
+        @media (max-width: 767px) {
+          .desktop-nav-links,
+          .desktop-nav-ctas {
+            display: none !important;
+          }
+          .mobile-nav-toggle {
+            display: flex !important;
+          }
+        }
+        @media (min-width: 768px) {
+          .mobile-nav-toggle,
+          .mobile-nav-drawer {
+            display: none !important;
+          }
+        }
       `}</style>
 
       {/* ── NAV ── */}
@@ -528,17 +558,105 @@ export default function LandingPage() {
             <div style={styles.logoMark}>TM</div>
             <span style={styles.logoText}>TraderMind</span>
           </Link>
-          <div style={styles.navLinks}>
+          <div className="desktop-nav-links" style={styles.navLinks}>
             {[['#features', 'Features'], ['#demo', 'Demo'], ['#how-it-works', 'How It Works'], ['#pricing', 'Pricing']].map(([href, label]) => (
               <a key={href} href={href} className="nav-link" style={styles.navLink}>{label}</a>
             ))}
           </div>
-          <div style={styles.navCtas}>
+          <div className="desktop-nav-ctas" style={styles.navCtas}>
             <Link href="/auth/login" style={styles.btnOutline}>Log in</Link>
             <Link href="/auth/register" style={{ ...styles.btnOutline, borderColor: 'rgba(108,142,255,0.4)', color: '#fff' }}>Sign Up</Link>
             <Link href="/auth/login" className="cta-primary" style={styles.btnAccent}>Try Demo →</Link>
           </div>
+          {/* Mobile Nav Toggle */}
+          <div className="mobile-nav-toggle" style={{ display: 'none', alignItems: 'center', gap: '8px' }}>
+            <Link
+              href="/auth/login"
+              style={{
+                padding: '6px 12px',
+                borderRadius: '6px',
+                fontSize: '12px',
+                fontWeight: 700,
+                background: S.accent,
+                color: '#fff',
+                textDecoration: 'none',
+              }}
+            >
+              Demo →
+            </Link>
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label="Toggle navigation menu"
+              style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '7px',
+                background: S.surface,
+                border: `1px solid ${S.border}`,
+                color: S.text,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+              }}
+            >
+              {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
+            </button>
+          </div>
         </div>
+
+        {/* Mobile Navigation Drawer */}
+        {mobileMenuOpen && (
+          <div
+            className="mobile-nav-drawer"
+            style={{
+              background: 'rgba(10,11,14,0.98)',
+              borderBottom: `1px solid ${S.border}`,
+              padding: '16px 24px 20px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '14px',
+            }}
+          >
+            {[['#features', 'Features'], ['#demo', 'Demo'], ['#how-it-works', 'How It Works'], ['#pricing', 'Pricing']].map(([href, label]) => (
+              <a
+                key={href}
+                href={href}
+                onClick={() => setMobileMenuOpen(false)}
+                className="nav-link"
+                style={{ fontSize: '15px', color: S.text, textDecoration: 'none', fontWeight: 600, padding: '4px 0' }}
+              >
+                {label}
+              </a>
+            ))}
+            <div style={{ height: '1px', background: S.border, margin: '4px 0' }} />
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <Link
+                href="/auth/login"
+                onClick={() => setMobileMenuOpen(false)}
+                style={{ ...styles.btnOutline, flex: 1, textAlign: 'center' }}
+              >
+                Log in
+              </Link>
+              <Link
+                href="/auth/register"
+                onClick={() => setMobileMenuOpen(false)}
+                style={{ ...styles.btnOutline, flex: 1, textAlign: 'center', borderColor: 'rgba(108,142,255,0.4)', color: '#fff' }}
+              >
+                Sign Up
+              </Link>
+            </div>
+            <Link
+              href="/auth/login"
+              onClick={() => setMobileMenuOpen(false)}
+              className="cta-primary"
+              style={{ ...styles.btnAccent, textAlign: 'center', padding: '10px' }}
+            >
+              Try Guest Demo →
+            </Link>
+          </div>
+        )}
       </nav>
 
       {/* ── HERO ── */}
@@ -550,7 +668,7 @@ export default function LandingPage() {
           ⚡ AI-Powered Trading Performance Coach
         </div>
 
-        <h1 style={{ fontSize: 'clamp(36px, 5.5vw, 68px)', fontWeight: 800, letterSpacing: '-2px', lineHeight: 1.05, marginBottom: '24px' }}>
+        <h1 style={{ fontSize: 'clamp(28px, 5.2vw, 68px)', fontWeight: 800, letterSpacing: '-1.5px', lineHeight: 1.08, marginBottom: '24px' }}>
           Most trading tools analyze the market.<br />
           <span style={{ background: `linear-gradient(135deg, ${S.accent}, ${S.purple})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>We analyze the trader.</span>
         </h1>
@@ -682,7 +800,7 @@ export default function LandingPage() {
           <h2 style={{ fontSize: 'clamp(24px, 3.5vw, 40px)', fontWeight: 800, letterSpacing: '-0.8px' }}>Simple pricing.</h2>
           <p style={{ fontSize: '13px', color: S.text3, marginTop: '8px', fontFamily: S.mono }}>* Portfolio demo — both plans accessible via the guest demo</p>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+        <div className="pricing-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
           {[
             {
               name: 'Free', price: '$0', period: 'forever', highlight: false, cta: 'Get Started Free', href: '/auth/register',

@@ -144,6 +144,14 @@ export default function AICoachPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
+      <style>{`
+        @media (max-width: 1023px) {
+          .ai-coach-report-grid { grid-template-columns: 1fr !important; gap: 16px !important; }
+        }
+        @media (max-width: 639px) {
+          .ai-coach-scores-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }
+        }
+      `}</style>
       {/* Top Header & Tab Controls */}
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
         <div>
@@ -197,7 +205,7 @@ export default function AICoachPage() {
 
       {activeTab === 'report' ? (
         /* Report View */
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.8fr) minmax(300px, 1fr)', gap: '16px', alignItems: 'start' }}>
+        <div className="ai-coach-report-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.8fr) minmax(300px, 1fr)', gap: '16px', alignItems: 'start' }}>
           
           {/* Left Column — Score Banner + Narrative Sections */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -250,7 +258,7 @@ export default function AICoachPage() {
               </div>
 
               {/* 4 Score Cards */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
+              <div className="ai-coach-scores-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
                 {[
                   { label: 'Discipline', score: discipline, delta: '+3', color: 'var(--accent)' },
                   { label: 'Consistency', score: consistency, delta: '+7', color: 'var(--green)' },

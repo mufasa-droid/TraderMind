@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard, Brain, BookOpen, Target, Settings, Zap,
-  Bell, LogOut, Clock, Image
+  Bell, LogOut, Clock, Image, Menu, X
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
@@ -21,12 +21,18 @@ const NAV_ITEMS = [
   { href: '/screenshots', label: 'Screenshots', icon: Image },
 ]
 
+const BOTTOM_NAV_ITEMS = [
+  { href: '/dashboard', label: 'Overview', icon: LayoutDashboard },
+  { href: '/behavior', label: 'Behavior', icon: Brain },
+  { href: '/ai-coach', label: 'AI Coach', icon: Zap },
+  { href: '/trades', label: 'Trades', icon: Clock },
+]
+
 const styles = {
   sidebar: {
     width: '210px',
     background: 'var(--surface)',
     borderRight: '1px solid var(--border)',
-    display: 'flex',
     flexDirection: 'column' as const,
     height: '100vh',
     position: 'sticky' as const,
@@ -54,9 +60,8 @@ const styles = {
     flexShrink: 0,
   },
   logoText: { fontSize: '15px', fontWeight: 800, letterSpacing: '-0.3px', color: 'var(--text)' },
-  nav: { padding: '14px 10px', flex: 1, display: 'flex', flexDirection: 'column' as const, gap: '2px' },
+  nav: { padding: '14px 10px', flex: 1, display: 'flex', flexDirection: 'column' as const, gap: '2px', overflowY: 'auto' as const },
   section: { fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.8px', textTransform: 'uppercase' as const, padding: '12px 8px 6px', fontFamily: 'var(--font-mono)' },
-  sep: { height: '1px', background: 'var(--border)', margin: '10px 0' },
   footer: { padding: '12px 10px', borderTop: '1px solid var(--border)' },
   brokerBadge: {
     padding: '10px 12px',
@@ -70,10 +75,23 @@ const styles = {
   },
 }
 
-function NavItem({ href, label, icon: Icon, active }: { href: string; label: string; icon: React.ElementType; active: boolean }) {
+function NavItem({
+  href,
+  label,
+  icon: Icon,
+  active,
+  onClick,
+}: {
+  href: string
+  label: string
+  icon: React.ElementType
+  active: boolean
+  onClick?: () => void
+}) {
   return (
     <Link
       href={href}
+      onClick={onClick}
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -102,7 +120,26 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [userName, setUserName] = useState<string>('Alex Kim')
   const [initials, setInitials] = useState('AK')
   const [currentDateStr, setCurrentDateStr] = useState<string>('')
+  const [currentShortTimeStr, setCurrentShortTimeStr] = useState<string>('')
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+
+  // Auto-close mobile drawer on route change
+  useEffect(() => {
+    setIsMobileMenuOpen(false)
+  }, [pathname])
+
+  // Prevent background scrolling when mobile drawer is open
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [isMobileMenuOpen])
 
   useEffect(() => {
     const updateTime = () => {
@@ -120,6 +157,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         timeZone: 'UTC',
       })
       setCurrentDateStr(`${datePart} · ${timePart} UTC`)
+      setCurrentShortTimeStr(`${timePart} UTC`)
     }
 
     updateTime()
@@ -155,9 +193,40 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg)' }}>
-      {/* Sidebar */}
-      <aside style={styles.sidebar}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg)', position: 'relative' }}>
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes slideInLeft {
+          from { transform: translateX(-100%); }
+          to { transform: translateX(0); }
+        }
+        @media (min-width: 768px) {
+          .desktop-sidebar { display: flex !important; }
+          .mobile-nav-bar { display: none !important; }
+          .mobile-menu-trigger { display: none !important; }
+          .mobile-header-stats { display: none !important; }
+          .desktop-header-stats { display: flex !important; }
+          .desktop-time-badge { display: flex !important; }
+          .mobile-time-badge { display: none !important; }
+        }
+        @media (max-width: 767px) {
+          .desktop-sidebar { display: none !important; }
+          .mobile-nav-bar { display: flex !important; }
+          .mobile-menu-trigger { display: flex !important; }
+          .mobile-header-stats { display: flex !important; }
+          .desktop-header-stats { display: none !important; }
+          .desktop-time-badge { display: none !important; }
+          .mobile-time-badge { display: flex !important; }
+          .dashboard-main-content { padding: 14px 12px 76px 12px !important; }
+          .dashboard-topbar { padding: 0 12px !important; }
+        }
+      `}</style>
+
+      {/* ── DESKTOP SIDEBAR ── */}
+      <aside className="desktop-sidebar" style={styles.sidebar}>
         {/* Logo */}
         <div style={styles.logo}>
           <div style={styles.logoMark}>TM</div>
@@ -275,10 +344,177 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
       </aside>
 
-      {/* Main Container */}
+      {/* ── MOBILE DRAWER OVERLAY ── */}
+      {isMobileMenuOpen && (
+        <>
+          <div
+            onClick={() => setIsMobileMenuOpen(false)}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(0, 0, 0, 0.72)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+              zIndex: 90,
+              animation: 'fadeIn 0.2s ease-out',
+            }}
+          />
+          <aside
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              bottom: 0,
+              width: '270px',
+              maxWidth: '82vw',
+              background: 'var(--surface)',
+              borderRight: '1px solid var(--border)',
+              display: 'flex',
+              flexDirection: 'column',
+              zIndex: 100,
+              boxShadow: '0 0 50px rgba(0, 0, 0, 0.9)',
+              animation: 'slideInLeft 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+            }}
+          >
+            {/* Drawer Header */}
+            <div style={{
+              ...styles.logo,
+              justifyContent: 'space-between',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={styles.logoMark}>TM</div>
+                <div>
+                  <div style={styles.logoText}>TraderMind</div>
+                  <div style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>v1.0 · Pro</div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsMobileMenuOpen(false)}
+                style={{
+                  background: 'var(--surface-2)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '6px',
+                  color: 'var(--text-2)',
+                  cursor: 'pointer',
+                  padding: '6px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Drawer Navigation */}
+            <nav style={styles.nav}>
+              <div style={styles.section}>Platform Navigation</div>
+              {NAV_ITEMS.map(item => (
+                <NavItem
+                  key={item.href}
+                  href={item.href}
+                  label={item.label}
+                  icon={item.icon}
+                  active={pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href + '/'))}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                />
+              ))}
+              <div style={{ flex: 1 }} />
+            </nav>
+
+            {/* Drawer Footer */}
+            <div style={styles.footer}>
+              {/* Broker Status */}
+              <Link
+                href="/broker/connect"
+                onClick={() => setIsMobileMenuOpen(false)}
+                style={{ textDecoration: 'none', display: 'block' }}
+              >
+                <div style={{
+                  ...styles.brokerBadge,
+                  cursor: 'pointer',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                    <span style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.5px' }}>MT5 · LINK</span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10px', fontWeight: 700, color: 'var(--green)', fontFamily: 'var(--font-mono)' }}>
+                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--green)', display: 'inline-block' }} /> CONNECTED
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--text-2)', fontFamily: 'var(--font-mono)' }}>
+                    <span>≋</span> 0.42ms Latency
+                  </div>
+                </div>
+              </Link>
+
+              {/* User Profile Card */}
+              <div
+                onClick={() => {
+                  setIsMobileMenuOpen(false)
+                  setIsSettingsOpen(true)
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '8px 10px',
+                  borderRadius: '8px',
+                  background: 'var(--surface-2)',
+                  border: '1px solid var(--border)',
+                  cursor: 'pointer',
+                }}
+              >
+                <div style={{
+                  width: '30px', height: '30px', borderRadius: '50%', flexShrink: 0,
+                  background: 'var(--surface-3)', border: '1px solid var(--border)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: 'var(--text)', fontSize: '11px', fontWeight: 700, fontFamily: 'var(--font-mono)'
+                }}>
+                  {initials}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{userName}</div>
+                  <div style={{ fontSize: '9px', color: 'var(--accent)', fontFamily: 'var(--font-mono)', letterSpacing: '0.3px', textTransform: 'uppercase' }}>Account & Profile</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setIsMobileMenuOpen(false)
+                    setIsSettingsOpen(true)
+                  }}
+                  title="Account Settings"
+                  style={{
+                    background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px',
+                    color: 'var(--text-2)', display: 'flex', borderRadius: '4px',
+                  }}
+                >
+                  <Settings size={15} strokeWidth={1.8} />
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleSignOut()
+                  }}
+                  title="Sign out"
+                  style={{
+                    background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px',
+                    color: 'var(--text-3)', display: 'flex', borderRadius: '4px',
+                  }}
+                >
+                  <LogOut size={15} strokeWidth={1.8} />
+                </button>
+              </div>
+            </div>
+          </aside>
+        </>
+      )}
+
+      {/* ── MAIN CONTENT CONTAINER ── */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         {/* Top bar */}
-        <header style={{
+        <header className="dashboard-topbar" style={{
           height: '48px',
           background: 'var(--surface)',
           borderBottom: '1px solid var(--border)',
@@ -289,23 +525,70 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           flexShrink: 0,
           position: 'sticky',
           top: 0,
-          zIndex: 10,
+          zIndex: 20,
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <span style={{ fontSize: '12px', fontFamily: 'var(--font-mono)', color: 'var(--text-2)' }}>
-              Balance: <span style={{ color: 'var(--green)', fontWeight: 600 }}>$11,247.50</span>
-            </span>
-            <span style={{ fontSize: '12px', fontFamily: 'var(--font-mono)', color: 'var(--text-2)' }}>
-              Equity: <span style={{ color: 'var(--green)', fontWeight: 600 }}>$11,380.20</span>
-            </span>
-            <span style={{ fontSize: '12px', fontFamily: 'var(--font-mono)', color: 'var(--text-2)' }}>
-              P&L today: <span style={{ color: 'var(--green)', fontWeight: 600 }}>+$312.00</span>
-            </span>
+          {/* Left section: Hamburger button (mobile) + Balance/P&L */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+            {/* Mobile Hamburger Trigger */}
+            <button
+              type="button"
+              className="mobile-menu-trigger"
+              onClick={() => setIsMobileMenuOpen(true)}
+              style={{
+                background: 'var(--surface-2)',
+                border: '1px solid var(--border)',
+                borderRadius: '6px',
+                color: 'var(--text)',
+                cursor: 'pointer',
+                padding: '6px',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+              aria-label="Open menu"
+            >
+              <Menu size={16} />
+            </button>
+
+            {/* Desktop Metrics */}
+            <div className="desktop-header-stats" style={{ alignItems: 'center', gap: '16px' }}>
+              <span style={{ fontSize: '12px', fontFamily: 'var(--font-mono)', color: 'var(--text-2)' }}>
+                Balance: <span style={{ color: 'var(--green)', fontWeight: 600 }}>$11,247.50</span>
+              </span>
+              <span style={{ fontSize: '12px', fontFamily: 'var(--font-mono)', color: 'var(--text-2)' }}>
+                Equity: <span style={{ color: 'var(--green)', fontWeight: 600 }}>$11,380.20</span>
+              </span>
+              <span style={{ fontSize: '12px', fontFamily: 'var(--font-mono)', color: 'var(--text-2)' }}>
+                P&L today: <span style={{ color: 'var(--green)', fontWeight: 600 }}>+$312.00</span>
+              </span>
+            </div>
+
+            {/* Mobile Metrics (Compact) */}
+            <div className="mobile-header-stats" style={{ alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', color: 'var(--text-2)' }}>
+                $11.2k
+              </span>
+              <span style={{
+                fontSize: '11px',
+                fontFamily: 'var(--font-mono)',
+                color: 'var(--green)',
+                fontWeight: 700,
+                background: 'rgba(62,207,142,0.1)',
+                padding: '2px 6px',
+                borderRadius: '4px',
+                border: '1px solid rgba(62,207,142,0.25)',
+              }}>
+                +$312
+              </span>
+            </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+
+          {/* Right section: Notifications + UTC Badge */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
             <NotificationDropdown />
-            <div style={{
-              display: 'flex',
+            
+            {/* Desktop Full Date Badge */}
+            <div className="desktop-time-badge" style={{
               alignItems: 'center',
               gap: '6px',
               fontSize: '11px',
@@ -326,14 +609,103 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               }} />
               <span>{currentDateStr || 'Syncing UTC…'}</span>
             </div>
+
+            {/* Mobile Compact Time Badge */}
+            <div className="mobile-time-badge" style={{
+              alignItems: 'center',
+              gap: '5px',
+              fontSize: '10px',
+              color: 'var(--text-2)',
+              fontFamily: 'var(--font-mono)',
+              background: 'var(--surface-2)',
+              padding: '4px 8px',
+              borderRadius: '6px',
+              border: '1px solid var(--border)',
+            }}>
+              <span style={{
+                width: '5px',
+                height: '5px',
+                borderRadius: '50%',
+                background: 'var(--green)',
+                boxShadow: '0 0 5px rgba(62,207,142,0.6)',
+                display: 'inline-block',
+              }} />
+              <span>{currentShortTimeStr || 'UTC'}</span>
+            </div>
           </div>
         </header>
 
         {/* Page content */}
-        <main style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
+        <main className="dashboard-main-content" style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
           {children}
         </main>
       </div>
+
+      {/* ── MOBILE BOTTOM NAVIGATION BAR ── */}
+      <nav className="mobile-nav-bar" style={{
+        position: 'fixed',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: '56px',
+        background: 'rgba(17, 19, 24, 0.94)',
+        backdropFilter: 'blur(20px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+        borderTop: '1px solid var(--border)',
+        zIndex: 50,
+        alignItems: 'center',
+        justifyContent: 'space-around',
+        padding: '0 4px',
+        boxShadow: '0 -4px 20px rgba(0, 0, 0, 0.5)',
+      }}>
+        {BOTTOM_NAV_ITEMS.map(item => {
+          const Icon = item.icon
+          const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href + '/'))
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              style={{
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                height: '100%',
+                textDecoration: 'none',
+                color: isActive ? 'var(--accent)' : 'var(--text-3)',
+                gap: '3px',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <Icon size={17} strokeWidth={isActive ? 2.3 : 1.8} style={{ color: isActive ? 'var(--accent)' : 'var(--text-3)' }} />
+              <span style={{ fontSize: '10px', fontWeight: isActive ? 700 : 500 }}>{item.label}</span>
+            </Link>
+          )
+        })}
+
+        {/* "More" button to toggle full drawer */}
+        <button
+          type="button"
+          onClick={() => setIsMobileMenuOpen(true)}
+          style={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: '100%',
+            background: 'transparent',
+            border: 'none',
+            color: 'var(--text-3)',
+            gap: '3px',
+            cursor: 'pointer',
+          }}
+        >
+          <Menu size={17} strokeWidth={1.8} />
+          <span style={{ fontSize: '10px', fontWeight: 500 }}>More</span>
+        </button>
+      </nav>
 
       {/* Profile & Account Settings Modal */}
       <ProfileSettingsModal

@@ -252,6 +252,14 @@ export default function GoalsPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '1100px' }}>
+      <style>{`
+        @media (max-width: 1023px) {
+          .goals-main-grid { grid-template-columns: 1fr !important; gap: 16px !important; }
+        }
+        @media (max-width: 639px) {
+          .goals-summary-grid { grid-template-columns: 1fr !important; gap: 8px !important; }
+        }
+      `}</style>
       {/* Header */}
       <div>
         <h1 style={{ fontSize: '24px', fontWeight: 800, letterSpacing: '-0.6px', color: 'var(--text)' }}>
@@ -263,11 +271,11 @@ export default function GoalsPage() {
         </p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '16px' }}>
+      <div className="goals-main-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '16px' }}>
         {/* Left Column: Rules Summary & Rule List */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           {/* Rule Compliance Summary Cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+          <div className="goals-summary-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
             {[
               {
                 label: 'Compliant Rules',

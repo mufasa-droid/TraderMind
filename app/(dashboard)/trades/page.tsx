@@ -284,6 +284,24 @@ export default function TradesPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
+      <style>{`
+        @media (max-width: 767px) {
+          .trades-eval-input-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; }
+          .trades-eval-input-grid > div:last-child { grid-column: 1 / -1 !important; }
+          .trades-eval-output-grid { grid-template-columns: 1fr !important; gap: 12px !important; }
+          .trades-eval-badges-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 6px !important; }
+        }
+        @media (min-width: 768px) and (max-width: 1023px) {
+          .trades-eval-input-grid { grid-template-columns: repeat(3, 1fr) !important; gap: 10px !important; }
+          .trades-eval-output-grid { grid-template-columns: 1fr !important; gap: 14px !important; }
+          .trades-eval-badges-grid { grid-template-columns: repeat(4, 1fr) !important; gap: 8px !important; }
+        }
+        @media (min-width: 1024px) {
+          .trades-eval-input-grid { grid-template-columns: repeat(5, 1fr) !important; gap: 12px !important; }
+          .trades-eval-output-grid { grid-template-columns: auto 1fr !important; gap: 16px !important; }
+          .trades-eval-badges-grid { grid-template-columns: repeat(4, 1fr) !important; gap: 8px !important; }
+        }
+      `}</style>
       {/* Top Header */}
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
         <div>
@@ -343,7 +361,7 @@ export default function TradesPage() {
           </div>
 
           {/* 5 Input Fields Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '12px', alignItems: 'flex-end' }}>
+          <div className="trades-eval-input-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '12px', alignItems: 'flex-end' }}>
             {/* Symbol */}
             <div>
               <div style={labelStyle}>Symbol</div>
@@ -432,7 +450,7 @@ export default function TradesPage() {
 
           {/* Evaluator Output Display */}
           {evalResult && (
-            <div style={{
+            <div className="trades-eval-output-grid" style={{
               marginTop: '4px',
               paddingTop: '16px',
               borderTop: '1px solid var(--border)',
@@ -442,7 +460,7 @@ export default function TradesPage() {
               alignItems: 'start'
             }}>
               {/* 4 Result Badges */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
+              <div className="trades-eval-badges-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
                 {[
                   { label: 'Alignment', value: evalResult.alignment_score },
                   { label: 'Discipline', value: evalResult.discipline_score },

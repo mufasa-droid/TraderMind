@@ -252,6 +252,7 @@ export default function BrokerConnectPage() {
 
   return (
     <div
+      className="broker-page-container"
       style={{
         maxWidth: '820px',
         margin: '0 auto',
@@ -259,6 +260,24 @@ export default function BrokerConnectPage() {
         fontFamily: 'var(--font-sans)',
       }}
     >
+      <style>{`
+        @media (max-width: 639px) {
+          .broker-page-container {
+            padding: 16px 12px !important;
+          }
+          .broker-cards-grid {
+            grid-template-columns: 1fr !important;
+          }
+          .broker-inputs-2col {
+            grid-template-columns: 1fr !important;
+          }
+        }
+        @media (max-width: 767px) {
+          .broker-inputs-3col {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
       {/* Header */}
       <div style={{ marginBottom: '24px' }}>
         <h1
@@ -301,6 +320,7 @@ export default function BrokerConnectPage() {
 
       {/* Broker Cards Grid */}
       <div
+        className="broker-cards-grid"
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(2, 1fr)',
@@ -631,6 +651,7 @@ export default function BrokerConnectPage() {
 
               {/* Credentials / Setup Inputs */}
               <div
+                className="broker-inputs-2col"
                 style={{
                   display: 'grid',
                   gridTemplateColumns: 'repeat(2, 1fr)',
@@ -1128,6 +1149,7 @@ export default function BrokerConnectPage() {
 
               {/* 3-column input fields */}
               <div
+                className="broker-inputs-3col"
                 style={{
                   display: 'grid',
                   gridTemplateColumns: 'repeat(3, 1fr)',
@@ -1534,6 +1556,7 @@ export default function BrokerConnectPage() {
 
             {/* Credentials / Setup Inputs */}
             <div
+              className="broker-inputs-2col"
               style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(2, 1fr)',

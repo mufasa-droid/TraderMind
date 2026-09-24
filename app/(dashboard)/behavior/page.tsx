@@ -187,6 +187,20 @@ interface TimelineItem {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
+      <style>{`
+        @media (max-width: 767px) {
+          .behavior-alerts-grid { grid-template-columns: 1fr !important; gap: 10px !important; }
+          .behavior-charts-grid { grid-template-columns: 1fr !important; gap: 14px !important; }
+        }
+        @media (min-width: 768px) and (max-width: 1023px) {
+          .behavior-alerts-grid { grid-template-columns: repeat(3, 1fr) !important; gap: 10px !important; }
+          .behavior-charts-grid { grid-template-columns: 1fr !important; gap: 14px !important; }
+        }
+        @media (min-width: 1024px) {
+          .behavior-alerts-grid { grid-template-columns: repeat(3, 1fr) !important; gap: 14px !important; }
+          .behavior-charts-grid { grid-template-columns: 1fr 1fr !important; gap: 16px !important; }
+        }
+      `}</style>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
         <div>
@@ -208,7 +222,7 @@ interface TimelineItem {
       </div>
 
       {/* 3 Pattern Alert Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
+      <div className="behavior-alerts-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
         {ALERTS.map(alert => (
           <div
             key={alert.title}
@@ -248,7 +262,7 @@ interface TimelineItem {
       </div>
 
       {/* 2x2 Charts Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+      <div className="behavior-charts-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
         
         {/* Panel 1: Behavioral Profile Radar Chart */}
         <div style={{
