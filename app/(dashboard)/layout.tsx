@@ -21,13 +21,6 @@ const NAV_ITEMS = [
   { href: '/screenshots', label: 'Screenshots', icon: Image },
 ]
 
-const BOTTOM_NAV_ITEMS = [
-  { href: '/dashboard', label: 'Overview', icon: LayoutDashboard },
-  { href: '/behavior', label: 'Behavior', icon: Brain },
-  { href: '/ai-coach', label: 'AI Coach', icon: Zap },
-  { href: '/trades', label: 'Trades', icon: Clock },
-]
-
 const styles = {
   sidebar: {
     width: '210px',
@@ -193,7 +186,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg)', position: 'relative' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg)', position: 'relative', overflowX: 'hidden', maxWidth: '100vw', width: '100%' }}>
       <style>{`
         @keyframes fadeIn {
           from { opacity: 0; }
@@ -205,7 +198,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         }
         @media (min-width: 768px) {
           .desktop-sidebar { display: flex !important; }
-          .mobile-nav-bar { display: none !important; }
           .mobile-menu-trigger { display: none !important; }
           .mobile-header-stats { display: none !important; }
           .desktop-header-stats { display: flex !important; }
@@ -214,13 +206,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         }
         @media (max-width: 767px) {
           .desktop-sidebar { display: none !important; }
-          .mobile-nav-bar { display: flex !important; }
           .mobile-menu-trigger { display: flex !important; }
           .mobile-header-stats { display: flex !important; }
           .desktop-header-stats { display: none !important; }
           .desktop-time-badge { display: none !important; }
           .mobile-time-badge { display: flex !important; }
-          .dashboard-main-content { padding: 14px 12px 76px 12px !important; }
+          .dashboard-main-content { padding: 16px 14px 28px 14px !important; }
           .dashboard-topbar { padding: 0 12px !important; }
         }
       `}</style>
@@ -512,7 +503,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       )}
 
       {/* ── MAIN CONTENT CONTAINER ── */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, maxWidth: '100%', overflowX: 'hidden' }}>
         {/* Top bar */}
         <header className="dashboard-topbar" style={{
           height: '48px',
@@ -636,76 +627,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </header>
 
         {/* Page content */}
-        <main className="dashboard-main-content" style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
+        <main className="dashboard-main-content" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '24px', minWidth: 0, maxWidth: '100%' }}>
           {children}
         </main>
       </div>
-
-      {/* ── MOBILE BOTTOM NAVIGATION BAR ── */}
-      <nav className="mobile-nav-bar" style={{
-        position: 'fixed',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        height: '56px',
-        background: 'rgba(17, 19, 24, 0.94)',
-        backdropFilter: 'blur(20px) saturate(180%)',
-        WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-        borderTop: '1px solid var(--border)',
-        zIndex: 50,
-        alignItems: 'center',
-        justifyContent: 'space-around',
-        padding: '0 4px',
-        boxShadow: '0 -4px 20px rgba(0, 0, 0, 0.5)',
-      }}>
-        {BOTTOM_NAV_ITEMS.map(item => {
-          const Icon = item.icon
-          const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href + '/'))
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              style={{
-                flex: 1,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                height: '100%',
-                textDecoration: 'none',
-                color: isActive ? 'var(--accent)' : 'var(--text-3)',
-                gap: '3px',
-                transition: 'all 0.15s ease',
-              }}
-            >
-              <Icon size={17} strokeWidth={isActive ? 2.3 : 1.8} style={{ color: isActive ? 'var(--accent)' : 'var(--text-3)' }} />
-              <span style={{ fontSize: '10px', fontWeight: isActive ? 700 : 500 }}>{item.label}</span>
-            </Link>
-          )
-        })}
-
-        {/* "More" button to toggle full drawer */}
-        <button
-          type="button"
-          onClick={() => setIsMobileMenuOpen(true)}
-          style={{
-            flex: 1,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            height: '100%',
-            background: 'transparent',
-            border: 'none',
-            color: 'var(--text-3)',
-            gap: '3px',
-            cursor: 'pointer',
-          }}
-        >
-          <Menu size={17} strokeWidth={1.8} />
-          <span style={{ fontSize: '10px', fontWeight: 500 }}>More</span>
-        </button>
-      </nav>
 
       {/* Profile & Account Settings Modal */}
       <ProfileSettingsModal

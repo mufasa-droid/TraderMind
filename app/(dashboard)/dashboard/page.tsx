@@ -221,9 +221,9 @@ function CustomEquityTooltip({ active, payload, label }: CustomEquityTooltipProp
 function MiniSparkline({ data, color, id }: { data: number[]; color: string; id: string }) {
   if (!data || data.length < 2) return null
 
-  const width = 44
+  const width = 36
   const height = 14
-  const pad = 2
+  const pad = 1
 
   const min = Math.min(...data)
   const max = Math.max(...data)
@@ -289,25 +289,29 @@ function ScoreCard({
       ...panelStyle,
       padding: '16px 18px 14px',
       position: 'relative',
+      minWidth: 0,
+      overflow: 'hidden',
     }}>
       {/* 2px Colored Top Accent Bar */}
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: barColor }} />
       
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px', minWidth: 0 }}>
         <span style={{
           fontSize: '10px',
           fontWeight: 700,
           color: 'var(--text-3)',
           textTransform: 'uppercase',
-          letterSpacing: '0.8px',
+          letterSpacing: '0.6px',
           fontFamily: 'var(--font-mono)',
           whiteSpace: 'nowrap',
           overflow: 'hidden',
           textOverflow: 'ellipsis',
+          minWidth: 0,
+          flex: 1,
         }}>
           {label}
         </span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
           {sparkline && <MiniSparkline data={sparkline} color={barColor} id={id} />}
           <span style={{
             fontSize: '11px',
@@ -316,6 +320,7 @@ function ScoreCard({
             color: deltaPositive ? 'var(--green)' : 'var(--red)',
             display: 'inline-flex',
             alignItems: 'center',
+            flexShrink: 0,
           }}>
             {deltaPositive ? '↑ ' : '↓ '}{delta}
           </span>
@@ -461,25 +466,25 @@ export default function DashboardPage() {
   const avgRiskLive = analytics?.avg_risk_per_trade ?? 1.64
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', maxWidth: '1140px', margin: '0 auto' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', maxWidth: '1140px', width: '100%', minWidth: 0, margin: '0 auto', overflowX: 'hidden' }}>
       <style>{`
         @media (max-width: 639px) {
-          .dashboard-score-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }
-          .dashboard-main-grid { grid-template-columns: 1fr !important; gap: 14px !important; }
-          .dashboard-bottom-strip { grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }
-          .dashboard-score-card { padding: 12px 10px 10px !important; }
-          .dashboard-stat-card { padding: 10px 12px !important; }
+          .dashboard-score-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 8px !important; }
+          .dashboard-main-grid { grid-template-columns: minmax(0, 1fr) !important; gap: 14px !important; }
+          .dashboard-bottom-strip { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 8px !important; }
+          .dashboard-score-card { padding: 12px 10px 10px !important; min-width: 0 !important; overflow: hidden !important; }
+          .dashboard-stat-card { padding: 10px 12px !important; min-width: 0 !important; overflow: hidden !important; }
           .dashboard-header-row { flex-direction: column !important; align-items: flex-start !important; gap: 12px !important; }
         }
         @media (min-width: 640px) and (max-width: 1023px) {
-          .dashboard-score-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; }
-          .dashboard-main-grid { grid-template-columns: 1fr !important; gap: 16px !important; }
-          .dashboard-bottom-strip { grid-template-columns: repeat(3, 1fr) !important; gap: 10px !important; }
+          .dashboard-score-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 10px !important; }
+          .dashboard-main-grid { grid-template-columns: minmax(0, 1fr) !important; gap: 16px !important; }
+          .dashboard-bottom-strip { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 10px !important; }
         }
         @media (min-width: 1024px) {
-          .dashboard-score-grid { grid-template-columns: repeat(4, 1fr) !important; gap: 12px !important; }
-          .dashboard-main-grid { grid-template-columns: 1fr 330px !important; gap: 16px !important; }
-          .dashboard-bottom-strip { grid-template-columns: repeat(6, 1fr) !important; gap: 10px !important; }
+          .dashboard-score-grid { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; gap: 12px !important; }
+          .dashboard-main-grid { grid-template-columns: minmax(0, 1fr) 330px !important; gap: 16px !important; }
+          .dashboard-bottom-strip { grid-template-columns: repeat(6, minmax(0, 1fr)) !important; gap: 10px !important; }
         }
       `}</style>
       
@@ -659,10 +664,10 @@ export default function DashboardPage() {
       </div>
 
       {/* ── 4. MAIN 2-COLUMN GRID ── */}
-      <div className="dashboard-main-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 330px', gap: '16px' }}>
+      <div className="dashboard-main-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 330px', gap: '16px', minWidth: 0, maxWidth: '100%' }}>
 
         {/* ── LEFT COLUMN: Equity Chart + Trade Table ── */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', minWidth: 0, maxWidth: '100%', overflow: 'hidden' }}>
 
           {/* Dual-Axis Equity + Discipline Chart */}
           <div style={panelStyle}>
@@ -684,7 +689,7 @@ export default function DashboardPage() {
                 </div>
               </div>
             </div>
-            <div style={{ padding: '14px 12px 6px' }}>
+            <div style={{ padding: '14px 12px 6px', width: '100%', minWidth: 0, overflow: 'hidden' }}>
               <ResponsiveContainer width="100%" height={210}>
                 <ComposedChart data={equityChartData} margin={{ top: 6, right: 10, left: 0, bottom: 0 }}>
                   <defs>
@@ -770,8 +775,8 @@ export default function DashboardPage() {
                 View all trades →
               </Link>
             </div>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+            <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', width: '100%', maxWidth: '100%' }}>
+              <table style={{ width: '100%', minWidth: '520px', borderCollapse: 'collapse', textAlign: 'left' }}>
                 <thead>
                   <tr style={{ background: 'var(--surface-2)' }}>
                     {['Pair', 'P&L', 'R:R', 'Risk %', 'Emotion', 'Session', 'Alignment'].map(h => (
@@ -886,7 +891,7 @@ export default function DashboardPage() {
         </div>
 
         {/* ── RIGHT COLUMN: Live Eval, Flags, Sessions, Emotions, Risk ── */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', minWidth: 0, maxWidth: '100%', overflow: 'hidden' }}>
 
           {/* Live Trade Evaluation Widget */}
           <div style={{
@@ -987,7 +992,7 @@ export default function DashboardPage() {
             <div style={panelHeaderStyle}>
               <span style={{ fontSize: '13px', fontWeight: 700 }}>Session Performance</span>
             </div>
-            <div style={{ padding: '14px' }}>
+            <div style={{ padding: '14px', width: '100%', minWidth: 0, overflow: 'hidden' }}>
               <ResponsiveContainer width="100%" height={125}>
                 <BarChart data={sessionDataLive} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
