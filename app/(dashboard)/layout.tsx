@@ -186,7 +186,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg)', position: 'relative', overflowX: 'hidden', maxWidth: '100vw', width: '100%' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg)', position: 'relative', overflowX: 'clip', maxWidth: '100vw', width: '100%' }}>
       <style>{`
         @keyframes fadeIn {
           from { opacity: 0; }
@@ -503,11 +503,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       )}
 
       {/* ── MAIN CONTENT CONTAINER ── */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, maxWidth: '100%', overflowX: 'hidden' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, maxWidth: '100%', overflowX: 'clip' }}>
         {/* Top bar */}
         <header className="dashboard-topbar" style={{
           height: '48px',
-          background: 'var(--surface)',
+          background: 'rgba(17, 19, 24, 0.94)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
           borderBottom: '1px solid var(--border)',
           display: 'flex',
           alignItems: 'center',
@@ -516,7 +518,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           flexShrink: 0,
           position: 'sticky',
           top: 0,
-          zIndex: 20,
+          zIndex: 50,
+          width: '100%',
         }}>
           {/* Left section: Hamburger button (mobile) + Balance/P&L */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
@@ -627,7 +630,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </header>
 
         {/* Page content */}
-        <main className="dashboard-main-content" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '24px', minWidth: 0, maxWidth: '100%' }}>
+        <main className="dashboard-main-content" style={{ flex: 1, padding: '24px', minWidth: 0, maxWidth: '100%', overflowX: 'clip' }}>
           {children}
         </main>
       </div>

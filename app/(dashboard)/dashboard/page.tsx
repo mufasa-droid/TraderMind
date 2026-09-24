@@ -466,7 +466,7 @@ export default function DashboardPage() {
   const avgRiskLive = analytics?.avg_risk_per_trade ?? 1.64
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', maxWidth: '1140px', width: '100%', minWidth: 0, margin: '0 auto', overflowX: 'hidden' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', maxWidth: '1140px', width: '100%', minWidth: 0, margin: '0 auto', overflowX: 'clip' }}>
       <style>{`
         @media (max-width: 639px) {
           .dashboard-score-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 8px !important; }
