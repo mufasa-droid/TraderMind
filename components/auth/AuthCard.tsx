@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Eye, EyeOff, ArrowRight, CheckCircle2 } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
+import { createClient, isSupabaseConfigured } from '@/lib/supabase/client'
 
 export type AuthMode = 'signin' | 'signup'
 
@@ -70,6 +70,16 @@ export default function AuthCard({ initialMode = 'signin' }: AuthCardProps) {
     setSignInLoading(true)
     setSignInError(null)
 
+    if (!isSupabaseConfigured()) {
+      if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+        router.push('/dashboard')
+        return
+      }
+      setSignInError('Supabase is not configured on this deployment. Please add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to your Vercel Environment Variables.')
+      setSignInLoading(false)
+      return
+    }
+
     try {
       const supabase = createClient()
       const { error } = await supabase.auth.signInWithPassword({
@@ -113,8 +123,12 @@ export default function AuthCard({ initialMode = 'signin' }: AuthCardProps) {
         router.push('/dashboard')
         return
       }
-      const msg = err instanceof Error ? err.message : String(err)
-      setSignInError(msg)
+      const rawMsg = err instanceof Error ? err.message : String(err)
+      if (rawMsg.toLowerCase().includes('failed to fetch')) {
+        setSignInError('Failed to connect to authentication server. Please verify your Supabase URL (NEXT_PUBLIC_SUPABASE_URL) in Vercel environment variables.')
+      } else {
+        setSignInError(rawMsg)
+      }
     } finally {
       setSignInLoading(false)
     }
@@ -138,9 +152,12 @@ export default function AuthCard({ initialMode = 'signin' }: AuthCardProps) {
       return
     }
 
-    // Demo/portfolio bypass if demo mode without keys
-    if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true' && (!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL.includes('YOUR_PROJECT'))) {
-      router.push('/auth/onboarding')
+    if (!isSupabaseConfigured()) {
+      if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+        router.push('/auth/onboarding')
+        return
+      }
+      setSignUpError('Supabase is not configured on this deployment. Please add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to your Vercel Environment Variables.')
       return
     }
 
@@ -161,6 +178,10 @@ export default function AuthCard({ initialMode = 'signin' }: AuthCardProps) {
       })
 
       if (error) {
+        if (error.message.toLowerCase().includes('database error saving new user')) {
+          setSignUpError('Supabase database error: The database trigger "handle_new_user" encountered an error. Please run the updated SQL trigger fix in your Supabase SQL Editor.')
+          return
+        }
         setSignUpError(error.message)
         return
       }
@@ -208,8 +229,12 @@ export default function AuthCard({ initialMode = 'signin' }: AuthCardProps) {
         setSignUpSuccess(true)
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err)
-      setSignUpError(msg)
+      const rawMsg = err instanceof Error ? err.message : String(err)
+      if (rawMsg.toLowerCase().includes('failed to fetch')) {
+        setSignUpError('Failed to connect to authentication server. Please verify your Supabase URL (NEXT_PUBLIC_SUPABASE_URL) in Vercel environment variables.')
+      } else {
+        setSignUpError(rawMsg)
+      }
     } finally {
       setSignUpLoading(false)
     }

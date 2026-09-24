@@ -16,6 +16,7 @@ import {
   ExternalLink,
   FileCode,
 } from 'lucide-react'
+import { BrokerLogo } from '@/components/broker/BrokerLogos'
 
 const BROKERS = [
   {
@@ -333,23 +334,8 @@ export default function BrokerConnectPage() {
                 }}
               >
                 {/* Logo badge */}
-                <div
-                  style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '8px',
-                    background: broker.accentBg,
-                    border: `1px solid ${broker.color}40`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '11px',
-                    fontWeight: 800,
-                    color: broker.color,
-                    fontFamily: 'var(--font-mono)',
-                  }}
-                >
-                  {broker.shortName}
+                <div style={{ flexShrink: 0 }}>
+                  <BrokerLogo id={broker.id} size={38} />
                 </div>
 
                 {/* Status */}
