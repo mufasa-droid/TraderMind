@@ -28,6 +28,18 @@
 
     --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
+
+    /* 71UI Motion Tokens */
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+    --dur-press: 160ms;
+    --dur-fast: 150ms;
+    --dur-base: 200ms;
+
+    /* 71UI Depth & Elevation */
+    --shadow-ring: 0 0 0 1px rgba(255, 255, 255, 0.08);
+    --shadow-bevel: inset 0 1px 0 rgba(255, 255, 255, 0.08), inset 0 -1px 0 rgba(0, 0, 0, 0.7);
   }
 }
 
@@ -39,6 +51,7 @@
     font-family: var(--font-sans);
     overflow-x: clip;
     max-width: 100vw;
+    scroll-behavior: smooth;
   }
   body {
     background: var(--bg);
@@ -63,6 +76,27 @@
   @keyframes bounce {
     0%, 100% { transform: translateY(0); }
     50% { transform: translateY(-4px); }
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+}
+
+@layer utilities {
+  .hatched-band {
+    height: 24px;
+    background-image: repeating-linear-gradient(135deg, transparent 0 6px, rgba(255, 255, 255, 0.035) 6px 7px);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
   }
 }
 
