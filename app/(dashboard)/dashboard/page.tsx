@@ -9,7 +9,7 @@ import {
 import {
   Brain, TrendingUp, AlertTriangle, Shield,
   Zap, Clock, Target, ArrowUpRight, ArrowDownRight,
-  ChevronRight, Sparkles, Activity
+  ChevronRight, Sparkles, Activity, Layers
 } from 'lucide-react'
 import type { PerformanceAnalytics, Trade, BehavioralFlag } from '@/types'
 
@@ -71,35 +71,27 @@ type AnalyticsResponse = {
   range: { start: string; end: string; label: string }
 }
 
-// ── DESIGN SYSTEM STYLES ──────────────────────────────────────
-const panelStyle = {
-  background: 'var(--surface)',
+// ── APPLE GLASS PANEL STYLES ─────────────────────────────────
+const glassCardStyle = {
+  background: 'rgba(17, 19, 24, 0.72)',
+  backdropFilter: 'blur(24px) saturate(180%)',
+  WebkitBackdropFilter: 'blur(24px) saturate(180%)',
   border: '1px solid var(--border)',
-  borderRadius: '10px',
+  borderRadius: '14px',
+  boxShadow: 'var(--glass-highlight)',
   overflow: 'hidden' as const,
+  position: 'relative' as const,
 }
 
-const panelHeaderStyle = {
+const cardHeaderStyle = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'space-between',
-  padding: '12px 16px',
-  borderBottom: '1px solid var(--border)',
+  padding: '14px 18px',
+  borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
 }
 
-const tooltipStyle = {
-  contentStyle: {
-    background: 'var(--surface-2)',
-    border: '1px solid var(--border)',
-    borderRadius: '8px',
-    fontSize: '11px',
-    fontFamily: 'var(--font-mono)',
-    color: 'var(--text)',
-  },
-  labelStyle: { color: 'var(--text-2)', fontSize: '10px', marginBottom: '4px' },
-  itemStyle: { color: 'var(--text)' },
-}
-
+// ── DUAL-AXIS TOOLTIP ─────────────────────────────────────────
 interface CustomEquityTooltipProps {
   active?: boolean
   payload?: Array<{
@@ -123,13 +115,14 @@ function CustomEquityTooltip({ active, payload, label }: CustomEquityTooltipProp
   return (
     <div
       style={{
-        background: 'rgba(17, 19, 24, 0.95)',
-        backdropFilter: 'blur(10px)',
-        border: '1px solid rgba(255, 255, 255, 0.1)',
-        borderRadius: '8px',
-        padding: '10px 14px',
-        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.5)',
-        minWidth: '170px',
+        background: 'rgba(17, 19, 24, 0.92)',
+        backdropFilter: 'blur(24px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+        border: '1px solid rgba(255, 255, 255, 0.12)',
+        borderRadius: '10px',
+        padding: '12px 16px',
+        boxShadow: '0 16px 40px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+        minWidth: '180px',
         pointerEvents: 'none',
       }}
     >
@@ -142,7 +135,7 @@ function CustomEquityTooltip({ active, payload, label }: CustomEquityTooltipProp
           textTransform: 'uppercase',
           letterSpacing: '0.6px',
           marginBottom: '8px',
-          paddingBottom: '5px',
+          paddingBottom: '6px',
           borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
           display: 'flex',
           alignItems: 'center',
@@ -150,10 +143,10 @@ function CustomEquityTooltip({ active, payload, label }: CustomEquityTooltipProp
         }}
       >
         <span>{label || item.date}</span>
-        <span style={{ fontSize: '9px', color: 'var(--text-3)' }}>OVERLAY</span>
+        <span style={{ fontSize: '9px', color: 'var(--accent)' }}>OVERLAY</span>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <span
@@ -162,19 +155,19 @@ function CustomEquityTooltip({ active, payload, label }: CustomEquityTooltipProp
                 height: '7px',
                 borderRadius: '50%',
                 background: 'var(--green)',
-                boxShadow: '0 0 6px rgba(62,207,142,0.6)',
+                boxShadow: '0 0 8px var(--green)',
                 display: 'inline-block',
               }}
             />
-            <span style={{ fontSize: '11px', color: 'var(--text-2)' }}>Equity</span>
+            <span style={{ fontSize: '11.5px', color: 'var(--text-2)' }}>Equity</span>
           </div>
           <span
             style={{
-              fontSize: '12px',
+              fontSize: '12.5px',
               fontWeight: 700,
               color: 'var(--green)',
               fontFamily: 'var(--font-mono)',
-              letterSpacing: '-0.3px',
+              fontFeatureSettings: '"tnum" 1',
             }}
           >
             ${Number(item.equity).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
@@ -189,19 +182,20 @@ function CustomEquityTooltip({ active, payload, label }: CustomEquityTooltipProp
                 height: '7px',
                 borderRadius: '50%',
                 background: 'var(--accent)',
-                boxShadow: '0 0 6px rgba(108,142,255,0.6)',
+                boxShadow: '0 0 8px var(--accent)',
                 display: 'inline-block',
               }}
             />
-            <span style={{ fontSize: '11px', color: 'var(--text-2)' }}>Discipline</span>
+            <span style={{ fontSize: '11.5px', color: 'var(--text-2)' }}>Discipline</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '2px' }}>
             <span
               style={{
-                fontSize: '12px',
+                fontSize: '12.5px',
                 fontWeight: 700,
                 color: 'var(--accent)',
                 fontFamily: 'var(--font-mono)',
+                fontFeatureSettings: '"tnum" 1',
               }}
             >
               {item.discipline}
@@ -216,13 +210,12 @@ function CustomEquityTooltip({ active, payload, label }: CustomEquityTooltipProp
   )
 }
 
-
 // ── MINI SPARKLINES COMPONENT ─────────────────────────────────
 function MiniSparkline({ data, color, id }: { data: number[]; color: string; id: string }) {
   if (!data || data.length < 2) return null
 
-  const width = 36
-  const height = 14
+  const width = 42
+  const height = 16
   const pad = 1
 
   const min = Math.min(...data)
@@ -253,7 +246,7 @@ function MiniSparkline({ data, color, id }: { data: number[]; color: string; id:
     >
       <defs>
         <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity={0.25} />
+          <stop offset="0%" stopColor={color} stopOpacity={0.3} />
           <stop offset="100%" stopColor={color} stopOpacity={0} />
         </linearGradient>
       </defs>
@@ -262,16 +255,16 @@ function MiniSparkline({ data, color, id }: { data: number[]; color: string; id:
         d={pathD}
         fill="none"
         stroke={color}
-        strokeWidth={1.3}
+        strokeWidth={1.4}
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      <circle cx={lastPoint.x} cy={lastPoint.y} r={1.8} fill={color} />
+      <circle cx={lastPoint.x} cy={lastPoint.y} r={2} fill={color} />
     </svg>
   )
 }
 
-// ── SCORE CARD COMPONENT (prompts/build-dashboard.md) ─────────
+// ── APPLE ACTIVITY RING STYLE SCORE CARD ──────────────────────
 function ScoreCard({
   label, value, delta, deltaPositive, color, barColor, sparkline, id
 }: {
@@ -285,58 +278,90 @@ function ScoreCard({
   id: string
 }) {
   return (
-    <div className="dashboard-score-card" style={{
-      ...panelStyle,
-      padding: '16px 18px 14px',
-      position: 'relative',
-      minWidth: 0,
-      overflow: 'hidden',
-    }}>
-      {/* 2px Colored Top Accent Bar */}
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: barColor }} />
-      
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px', minWidth: 0 }}>
-        <span style={{
-          fontSize: '10px',
-          fontWeight: 700,
-          color: 'var(--text-3)',
-          textTransform: 'uppercase',
-          letterSpacing: '0.6px',
-          fontFamily: 'var(--font-mono)',
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          minWidth: 0,
-          flex: 1,
-        }}>
-          {label}
-        </span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
-          {sparkline && <MiniSparkline data={sparkline} color={barColor} id={id} />}
-          <span style={{
+    <div
+      className="dashboard-score-card apple-glass-card"
+      style={{
+        ...glassCardStyle,
+        padding: '18px 20px',
+        position: 'relative',
+        minWidth: 0,
+        overflow: 'hidden',
+        transition: 'transform 0.15s ease, border-color 0.15s ease',
+      }}
+      onMouseEnter={e => {
+        e.currentTarget.style.transform = 'translateY(-2px)'
+        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.14)'
+      }}
+      onMouseLeave={e => {
+        e.currentTarget.style.transform = 'translateY(0)'
+        e.currentTarget.style.borderColor = 'var(--border)'
+      }}
+    >
+      {/* 2px Colored Top Accent Bar with Soft Ambient Glow */}
+      <div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: '2px',
+          background: barColor,
+          boxShadow: `0 0 10px ${barColor}`,
+        }}
+      />
+
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px', minWidth: 0 }}>
+        <span
+          style={{
             fontSize: '11px',
             fontWeight: 700,
+            color: 'var(--text-3)',
+            textTransform: 'uppercase',
+            letterSpacing: '0.6px',
             fontFamily: 'var(--font-mono)',
-            color: deltaPositive ? 'var(--green)' : 'var(--red)',
-            display: 'inline-flex',
-            alignItems: 'center',
-            flexShrink: 0,
-          }}>
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            minWidth: 0,
+            flex: 1,
+          }}
+        >
+          {label}
+        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+          {sparkline && <MiniSparkline data={sparkline} color={barColor} id={id} />}
+          <span
+            style={{
+              fontSize: '11px',
+              fontWeight: 700,
+              fontFamily: 'var(--font-mono)',
+              color: deltaPositive ? 'var(--green)' : 'var(--red)',
+              background: deltaPositive ? 'rgba(62, 207, 142, 0.1)' : 'rgba(255, 95, 95, 0.1)',
+              padding: '2px 6px',
+              borderRadius: '9999px',
+              border: `1px solid ${deltaPositive ? 'rgba(62, 207, 142, 0.25)' : 'rgba(255, 95, 95, 0.25)'}`,
+              display: 'inline-flex',
+              alignItems: 'center',
+              flexShrink: 0,
+            }}
+          >
             {deltaPositive ? '↑ ' : '↓ '}{delta}
           </span>
         </div>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginTop: '8px' }}>
-        <span style={{
-          fontSize: '32px',
-          fontWeight: 800,
-          color,
-          letterSpacing: '-1.2px',
-          lineHeight: 1,
-          fontFamily: 'var(--font-mono)',
-          fontFeatureSettings: '"tnum" 1, "zero" 1',
-        }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginTop: '12px' }}>
+        <span
+          style={{
+            fontSize: '34px',
+            fontWeight: 800,
+            color,
+            letterSpacing: '-1.2px',
+            lineHeight: 1,
+            fontFamily: 'var(--font-mono)',
+            fontFeatureSettings: '"tnum" 1, "zero" 1',
+          }}
+        >
           {value}
         </span>
         <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
@@ -344,19 +369,22 @@ function ScoreCard({
         </span>
       </div>
 
-      <div style={{ fontSize: '11px', color: 'var(--text-3)', marginTop: '4px', fontFamily: 'var(--font-mono)' }}>
+      <div style={{ fontSize: '11px', color: 'var(--text-3)', marginTop: '5px', fontFamily: 'var(--font-mono)' }}>
         vs last month
       </div>
 
-      {/* Progress Bar */}
-      <div style={{ marginTop: '12px', height: '3px', background: 'var(--surface-3)', borderRadius: '2px' }}>
-        <div style={{
-          height: '3px',
-          borderRadius: '2px',
-          background: barColor,
-          width: `${Math.min(100, Math.max(0, value))}%`,
-          transition: 'width 0.6s ease-out'
-        }} />
+      {/* Apple-style Progress Track with Rounded Ends */}
+      <div style={{ marginTop: '14px', height: '4px', background: 'rgba(255, 255, 255, 0.05)', borderRadius: '9999px', overflow: 'hidden' }}>
+        <div
+          style={{
+            height: '4px',
+            borderRadius: '9999px',
+            background: barColor,
+            boxShadow: `0 0 8px ${barColor}`,
+            width: `${Math.min(100, Math.max(0, value))}%`,
+            transition: 'width 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
+          }}
+        />
       </div>
     </div>
   )
@@ -364,22 +392,28 @@ function ScoreCard({
 
 function AlignmentBadge({ score }: { score: number }) {
   const color = score >= 75 ? 'var(--green)' : score >= 50 ? 'var(--amber)' : 'var(--red)'
-  const bg = score >= 75 ? 'rgba(62,207,142,0.12)' : score >= 50 ? 'rgba(245,166,35,0.12)' : 'rgba(255,95,95,0.12)'
+  const bg = score >= 75 ? 'rgba(62, 207, 142, 0.12)' : score >= 50 ? 'rgba(245, 166, 35, 0.12)' : 'rgba(255, 95, 95, 0.12)'
+  const border = score >= 75 ? 'rgba(62, 207, 142, 0.25)' : score >= 50 ? 'rgba(245, 166, 35, 0.25)' : 'rgba(255, 95, 95, 0.25)'
+
   return (
-    <span style={{
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: '4px',
-      padding: '2px 8px',
-      borderRadius: '4px',
-      background: bg,
-      color,
-      fontSize: '11px',
-      fontFamily: 'var(--font-mono)',
-      fontWeight: 600,
-      fontFeatureSettings: '"tnum" 1, "zero" 1',
-    }}>
-      ● {score}
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '5px',
+        padding: '3px 8px',
+        borderRadius: '9999px',
+        background: bg,
+        border: `1px solid ${border}`,
+        color,
+        fontSize: '11px',
+        fontFamily: 'var(--font-mono)',
+        fontWeight: 700,
+        fontFeatureSettings: '"tnum" 1',
+      }}
+    >
+      <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: color, boxShadow: `0 0 6px ${color}` }} />
+      {score}
     </span>
   )
 }
@@ -393,12 +427,14 @@ function EmotionBadge({ emotion }: { emotion: string }) {
     Hesitant: 'var(--text-2)',
   }
   return (
-    <span style={{
-      fontSize: '11px',
-      fontWeight: 500,
-      color: colors[emotion] ?? 'var(--text-2)',
-      fontFamily: 'var(--font-sans)',
-    }}>
+    <span
+      style={{
+        fontSize: '11.5px',
+        fontWeight: 600,
+        color: colors[emotion] ?? 'var(--text-2)',
+        fontFamily: 'var(--font-sans)',
+      }}
+    >
       {emotion}
     </span>
   )
@@ -430,31 +466,35 @@ export default function DashboardPage() {
   }, [range])
 
   const analytics = data?.analytics ?? null
-  const discipline = analytics?.discipline_score ?? 78
-  const consistency = analytics?.behavioral_consistency_score ?? 84
-  const riskQuality = analytics?.risk_quality_score ?? 61
-  const emotional = analytics?.emotional_stability_score ?? 72
+  const hasLiveTrades = (analytics?.total_trades ?? 0) > 0
 
-  const sessionDataLive = analytics
-    ? Object.values(analytics.session_performance).map(s => ({
+  const discipline = hasLiveTrades ? (analytics?.discipline_score ?? 78) : 78
+  const consistency = hasLiveTrades ? (analytics?.behavioral_consistency_score ?? 84) : 84
+  const riskQuality = hasLiveTrades ? (analytics?.risk_quality_score ?? 61) : 61
+  const emotional = hasLiveTrades ? (analytics?.emotional_stability_score ?? 72) : 72
+
+  const sessionDataLive = hasLiveTrades && Object.values(analytics?.session_performance ?? {}).some(s => s.total_trades > 0)
+    ? Object.values(analytics!.session_performance).map(s => ({
         session: s.session === 'new_york' ? 'New York' : s.session.charAt(0).toUpperCase() + s.session.slice(1),
         wr: Math.round(s.win_rate * 10) / 10,
         trades: s.total_trades,
       }))
     : DEMO_SESSION
 
-  const equityChartData = data?.equity_curve?.length
-    ? data.equity_curve.map(p => ({
+  const equityChartData = hasLiveTrades && (data?.equity_curve?.length ?? 0) > 0
+    ? data!.equity_curve.map(p => ({
         date: p.date.slice(5),
         equity: 10000 + p.cumulative,
         discipline: discipline,
       }))
     : DEMO_EQUITY
 
-  const tradesLive = data?.recent_trades?.length ? data.recent_trades : null
-  const flagsLive = analytics?.behavioral_flags ?? null
+  const tradesLive = hasLiveTrades && (data?.recent_trades?.length ?? 0) > 0 ? data!.recent_trades : null
+  const flagsLive = hasLiveTrades && analytics?.behavioral_flags && Object.values(analytics.behavioral_flags).some(c => (c as number) > 0)
+    ? analytics.behavioral_flags
+    : null
 
-  const emotionRows = analytics?.emotion_distribution
+  const emotionRows = hasLiveTrades && analytics?.emotion_distribution
     ? [
         { label: 'Calm / Focused', pct: Math.round(((analytics.emotion_distribution.calm ?? 0) + (analytics.emotion_distribution.focused ?? 0)) * 10) / 10, color: 'var(--green)' },
         { label: 'Overconfident', pct: analytics.emotion_distribution.overconfident ?? 0, color: 'var(--amber)' },
@@ -463,78 +503,119 @@ export default function DashboardPage() {
       ]
     : DEMO_EMOTIONS
 
-  const avgRiskLive = analytics?.avg_risk_per_trade ?? 1.64
+  const avgRiskLive = hasLiveTrades ? (analytics?.avg_risk_per_trade ?? 1.64) : 1.64
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', maxWidth: '1140px', width: '100%', minWidth: 0, margin: '0 auto', overflowX: 'clip' }}>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '20px',
+        maxWidth: '1160px',
+        width: '100%',
+        minWidth: 0,
+        margin: '0 auto',
+        overflowX: 'clip',
+      }}
+    >
       <style>{`
         @media (max-width: 639px) {
-          .dashboard-score-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 8px !important; }
-          .dashboard-main-grid { grid-template-columns: minmax(0, 1fr) !important; gap: 14px !important; }
-          .dashboard-bottom-strip { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 8px !important; }
-          .dashboard-score-card { padding: 12px 10px 10px !important; min-width: 0 !important; overflow: hidden !important; }
-          .dashboard-stat-card { padding: 10px 12px !important; min-width: 0 !important; overflow: hidden !important; }
+          .dashboard-score-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 10px !important; }
+          .dashboard-main-grid { grid-template-columns: minmax(0, 1fr) !important; gap: 16px !important; }
+          .dashboard-bottom-strip { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 10px !important; }
+          .dashboard-score-card { padding: 14px 12px !important; min-width: 0 !important; overflow: hidden !important; }
+          .dashboard-stat-card { padding: 12px 14px !important; min-width: 0 !important; overflow: hidden !important; }
           .dashboard-header-row { flex-direction: column !important; align-items: flex-start !important; gap: 12px !important; }
         }
         @media (min-width: 640px) and (max-width: 1023px) {
-          .dashboard-score-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 10px !important; }
-          .dashboard-main-grid { grid-template-columns: minmax(0, 1fr) !important; gap: 16px !important; }
-          .dashboard-bottom-strip { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 10px !important; }
+          .dashboard-score-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 12px !important; }
+          .dashboard-main-grid { grid-template-columns: minmax(0, 1fr) !important; gap: 18px !important; }
+          .dashboard-bottom-strip { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 12px !important; }
         }
         @media (min-width: 1024px) {
-          .dashboard-score-grid { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; gap: 12px !important; }
-          .dashboard-main-grid { grid-template-columns: minmax(0, 1fr) 330px !important; gap: 16px !important; }
-          .dashboard-bottom-strip { grid-template-columns: repeat(6, minmax(0, 1fr)) !important; gap: 10px !important; }
+          .dashboard-score-grid { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; gap: 14px !important; }
+          .dashboard-main-grid { grid-template-columns: minmax(0, 1fr) 340px !important; gap: 18px !important; }
+          .dashboard-bottom-strip { grid-template-columns: repeat(6, minmax(0, 1fr)) !important; gap: 12px !important; }
         }
       `}</style>
-      
-      {/* ── 1. PAGE HEADER ROW (Title + Date Range Picker) ── */}
+
+      {/* ── 1. PAGE HEADER ROW (Title + Segmented Range Picker) ── */}
       <div>
-        <div style={{
-          fontSize: '10px',
-          fontWeight: 700,
-          color: 'var(--accent)',
-          letterSpacing: '1px',
-          fontFamily: 'var(--font-mono)',
-          marginBottom: '6px'
-        }}>
-          TRADERMIND <span style={{ color: 'var(--text-3)' }}>/</span> OVERVIEW
+        <div
+          style={{
+            fontSize: '11px',
+            fontWeight: 700,
+            color: 'var(--accent)',
+            letterSpacing: '0.8px',
+            fontFamily: 'var(--font-mono)',
+            marginBottom: '6px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+          }}
+        >
+          <span>TRADERMIND</span>
+          <span style={{ color: 'var(--text-3)' }}>/</span>
+          <span>OVERVIEW</span>
         </div>
-        <div className="dashboard-header-row" style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+        <div
+          className="dashboard-header-row"
+          style={{
+            display: 'flex',
+            alignItems: 'flex-end',
+            justifyContent: 'space-between',
+            gap: '12px',
+            flexWrap: 'wrap',
+          }}
+        >
           <div>
-            <h1 style={{ fontSize: '28px', fontWeight: 800, letterSpacing: '-0.8px', lineHeight: 1, color: 'var(--text)' }}>
+            <h1
+              style={{
+                fontSize: '28px',
+                fontWeight: 800,
+                letterSpacing: '-0.03em',
+                lineHeight: 1.1,
+                color: '#FFFFFF',
+              }}
+            >
               Performance Overview
             </h1>
-            <p style={{ fontSize: '11px', color: 'var(--text-3)', marginTop: '6px', fontFamily: 'var(--font-mono)' }}>
+            <p style={{ fontSize: '12px', color: 'var(--text-3)', marginTop: '6px', fontFamily: 'var(--font-mono)' }}>
               {loading ? 'Updating…' : `May 2026 · ${analytics?.total_trades ?? 47} trades · MetaTrader 5 synced`}
             </p>
           </div>
-          <div style={{
-            display: 'flex',
-            gap: '3px',
-            background: 'var(--surface-2)',
-            padding: '3px',
-            borderRadius: '8px',
-            border: '1px solid var(--border)',
-            flexShrink: 0
-          }}>
+
+          {/* Apple Segmented Control */}
+          <div
+            style={{
+              display: 'flex',
+              gap: '2px',
+              background: 'rgba(255, 255, 255, 0.04)',
+              padding: '3px',
+              borderRadius: '9px',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.3)',
+              flexShrink: 0,
+            }}
+          >
             {RANGE_OPTIONS.map(r => (
               <button
                 key={r}
                 type="button"
                 onClick={() => setRange(r)}
+                className="apple-btn"
                 style={{
-                  padding: '5px 12px',
-                  borderRadius: '6px',
-                  fontSize: '11px',
-                  fontWeight: 600,
+                  padding: '6px 14px',
+                  borderRadius: '7px',
+                  fontSize: '11.5px',
+                  fontWeight: 650,
                   fontFamily: 'var(--font-mono)',
-                  border: `1px solid ${range === r ? 'var(--accent)' : 'transparent'}`,
+                  border: `1px solid ${range === r ? 'rgba(255, 255, 255, 0.12)' : 'transparent'}`,
                   cursor: 'pointer',
-                  minWidth: '38px',
-                  background: range === r ? 'var(--accent)' : 'transparent',
+                  minWidth: '40px',
+                  background: range === r ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
                   color: range === r ? '#FFFFFF' : 'var(--text-3)',
-                  boxShadow: range === r ? '0 1px 6px rgba(108,142,255,0.35)' : 'none',
+                  boxShadow: range === r ? '0 2px 8px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.15)' : 'none',
                   transition: 'all 0.15s ease',
                 }}
                 aria-pressed={range === r}
@@ -547,7 +628,7 @@ export default function DashboardPage() {
       </div>
 
       {/* ── 2. SCORE CARDS (4 Grid Cards) ── */}
-      <div className="dashboard-score-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
+      <div className="dashboard-score-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '14px' }}>
         <ScoreCard
           label="Discipline Score"
           value={discipline}
@@ -591,64 +672,82 @@ export default function DashboardPage() {
       </div>
 
       {/* ── 3. AI COACH INSIGHT PANEL ── */}
-      <div style={{
-        background: 'var(--surface)',
-        border: '1px solid var(--border)',
-        borderRadius: '10px',
-        padding: '16px 20px',
-        position: 'relative',
-        overflow: 'hidden',
-      }}>
-        <div style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          bottom: 0,
-          width: '3px',
-          background: 'linear-gradient(180deg, var(--accent), var(--teal))',
-        }} />
+      <div
+        className="apple-glass-card"
+        style={{
+          ...glassCardStyle,
+          padding: '18px 22px',
+          position: 'relative',
+          overflow: 'hidden',
+          border: '1px solid rgba(108, 142, 255, 0.25)',
+          boxShadow: '0 8px 30px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.12)',
+        }}
+      >
+        {/* Left Glowing Accent Pill Bar */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            bottom: 0,
+            width: '4px',
+            background: 'linear-gradient(180deg, var(--accent), var(--purple))',
+            boxShadow: '0 0 12px var(--accent)',
+          }}
+        />
+
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-          <div style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            color: 'var(--accent)',
-            fontSize: '11px',
-            fontWeight: 700,
-            letterSpacing: '0.8px',
-            fontFamily: 'var(--font-mono)',
-          }}>
-            <span>✦</span> AI COACH · WEEKLY BEHAVIORAL INSIGHT
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              color: 'var(--accent)',
+              fontSize: '11px',
+              fontWeight: 700,
+              letterSpacing: '0.8px',
+              fontFamily: 'var(--font-mono)',
+            }}
+          >
+            <Sparkles size={13} />
+            <span>AI COACH · WEEKLY BEHAVIORAL INSIGHT</span>
           </div>
           <Link
             href="/ai-coach"
+            className="apple-btn"
             style={{
-              fontSize: '11px',
+              fontSize: '11.5px',
               color: 'var(--accent)',
               textDecoration: 'none',
               fontFamily: 'var(--font-mono)',
-              fontWeight: 600,
+              fontWeight: 650,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
             }}
           >
-            Full AI Report →
+            <span>Full AI Report</span>
+            <ChevronRight size={13} />
           </Link>
         </div>
-        <p style={{ fontSize: '13px', lineHeight: 1.65, color: 'var(--text-2)' }}>
-          Your London session win rate is <span style={{ color: 'var(--green)', fontWeight: 700 }}>67%</span> (19 points above average). Protect your edge by maintaining risk sizing after winning streaks — your best results occur when stress levels remain ≤ 3/10.
+
+        <p style={{ fontSize: '13.5px', lineHeight: 1.6, color: 'var(--text)', margin: '0 0 14px' }}>
+          Your London session win rate is <strong style={{ color: 'var(--green)', fontWeight: 700 }}>67%</strong> (19 points above average). Protect your edge by maintaining risk sizing after winning streaks — your best results occur when stress levels remain ≤ 3/10.
         </p>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '14px' }}>
+
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
           {[
-            { label: 'LONDON SESSION 67% WR', bg: 'rgba(62,207,142,0.12)', color: 'var(--green)', border: 'rgba(62,207,142,0.25)' },
-            { label: 'POST-WIN RISK CREEP ×6', bg: 'rgba(245,166,35,0.12)', color: 'var(--amber)', border: 'rgba(245,166,35,0.25)' },
-            { label: 'BREAKOUT WR 71%', bg: 'rgba(62,207,142,0.12)', color: 'var(--green)', border: 'rgba(62,207,142,0.25)' },
-            { label: 'REVENGE TRADING ×3', bg: 'rgba(255,95,95,0.12)', color: 'var(--red)', border: 'rgba(255,95,95,0.25)' },
+            { label: 'LONDON SESSION 67% WR', bg: 'rgba(62, 207, 142, 0.1)', color: 'var(--green)', border: 'rgba(62, 207, 142, 0.25)' },
+            { label: 'POST-WIN RISK CREEP ×6', bg: 'rgba(245, 166, 35, 0.1)', color: 'var(--amber)', border: 'rgba(245, 166, 35, 0.25)' },
+            { label: 'BREAKOUT WR 71%', bg: 'rgba(62, 207, 142, 0.1)', color: 'var(--green)', border: 'rgba(62, 207, 142, 0.25)' },
+            { label: 'REVENGE TRADING ×3', bg: 'rgba(255, 95, 95, 0.1)', color: 'var(--red)', border: 'rgba(255, 95, 95, 0.25)' },
           ].map(tag => (
             <span
               key={tag.label}
               style={{
                 padding: '4px 10px',
-                borderRadius: '6px',
-                fontSize: '10px',
+                borderRadius: '9999px',
+                fontSize: '10.5px',
                 fontFamily: 'var(--font-mono)',
                 fontWeight: 700,
                 letterSpacing: '0.4px',
@@ -664,41 +763,50 @@ export default function DashboardPage() {
       </div>
 
       {/* ── 4. MAIN 2-COLUMN GRID ── */}
-      <div className="dashboard-main-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 330px', gap: '16px', minWidth: 0, maxWidth: '100%' }}>
-
+      <div
+        className="dashboard-main-grid"
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'minmax(0, 1fr) 340px',
+          gap: '18px',
+          minWidth: 0,
+          maxWidth: '100%',
+        }}
+      >
         {/* ── LEFT COLUMN: Equity Chart + Trade Table ── */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', minWidth: 0, maxWidth: '100%', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', minWidth: 0, maxWidth: '100%', overflow: 'hidden' }}>
 
           {/* Dual-Axis Equity + Discipline Chart */}
-          <div style={panelStyle}>
-            <div style={panelHeaderStyle}>
+          <div className="apple-glass-card" style={glassCardStyle}>
+            <div style={cardHeaderStyle}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Activity size={15} style={{ color: 'var(--green)' }} />
-                <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>
+                <span style={{ fontSize: '13px', fontWeight: 700, color: '#FFFFFF' }}>
                   Equity Curve & Discipline Overlay
                 </span>
               </div>
               <div style={{ display: 'flex', gap: '16px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
-                  <div style={{ width: '12px', height: '2px', background: 'var(--green)' }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--text-2)', fontFamily: 'var(--font-mono)' }}>
+                  <div style={{ width: '12px', height: '2px', background: 'var(--green)', borderRadius: '1px' }} />
                   Equity
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--text-2)', fontFamily: 'var(--font-mono)' }}>
                   <div style={{ width: '12px', height: '2px', background: 'var(--accent)', borderTop: '2px dashed var(--accent)' }} />
                   Discipline
                 </div>
               </div>
             </div>
-            <div style={{ padding: '14px 12px 6px', width: '100%', minWidth: 0, overflow: 'hidden' }}>
-              <ResponsiveContainer width="100%" height={210}>
-                <ComposedChart data={equityChartData} margin={{ top: 6, right: 10, left: 0, bottom: 0 }}>
+
+            <div style={{ padding: '16px 14px 8px', width: '100%', minWidth: 0, overflow: 'hidden' }}>
+              <ResponsiveContainer width="100%" height={220}>
+                <ComposedChart data={equityChartData} margin={{ top: 8, right: 10, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="equityGradMain" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="var(--green)" stopOpacity={0.18} />
+                      <stop offset="5%" stopColor="var(--green)" stopOpacity={0.22} />
                       <stop offset="95%" stopColor="var(--green)" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.04)" vertical={false} />
                   <XAxis
                     dataKey="date"
                     tick={{ fontSize: 10, fill: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}
@@ -734,7 +842,7 @@ export default function DashboardPage() {
                     type="monotone"
                     dataKey="equity"
                     stroke="var(--green)"
-                    strokeWidth={1.8}
+                    strokeWidth={2}
                     fill="url(#equityGradMain)"
                     name="Equity"
                     dot={false}
@@ -745,7 +853,7 @@ export default function DashboardPage() {
                     type="monotone"
                     dataKey="discipline"
                     stroke="var(--accent)"
-                    strokeWidth={1.5}
+                    strokeWidth={1.6}
                     strokeDasharray="4 3"
                     name="Discipline"
                     dot={false}
@@ -757,40 +865,46 @@ export default function DashboardPage() {
           </div>
 
           {/* Recent Trades Table */}
-          <div style={panelStyle}>
-            <div style={panelHeaderStyle}>
-              <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>
+          <div className="apple-glass-card" style={glassCardStyle}>
+            <div style={cardHeaderStyle}>
+              <span style={{ fontSize: '13px', fontWeight: 700, color: '#FFFFFF' }}>
                 Recent Trades
               </span>
               <Link
                 href="/trades"
+                className="apple-btn"
                 style={{
-                  fontSize: '11px',
+                  fontSize: '11.5px',
                   color: 'var(--accent)',
                   textDecoration: 'none',
                   fontFamily: 'var(--font-mono)',
-                  fontWeight: 600,
+                  fontWeight: 650,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
                 }}
               >
-                View all trades →
+                <span>View all trades</span>
+                <ChevronRight size={13} />
               </Link>
             </div>
+
             <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', width: '100%', maxWidth: '100%' }}>
-              <table style={{ width: '100%', minWidth: '520px', borderCollapse: 'collapse', textAlign: 'left' }}>
+              <table style={{ width: '100%', minWidth: '540px', borderCollapse: 'collapse', textAlign: 'left' }}>
                 <thead>
-                  <tr style={{ background: 'var(--surface-2)' }}>
+                  <tr style={{ background: 'rgba(255, 255, 255, 0.02)' }}>
                     {['Pair', 'P&L', 'R:R', 'Risk %', 'Emotion', 'Session', 'Alignment'].map(h => (
                       <th
                         key={h}
                         style={{
-                          padding: '10px 14px',
+                          padding: '10px 16px',
                           fontSize: '10px',
                           fontWeight: 700,
                           color: 'var(--text-3)',
                           textTransform: 'uppercase',
                           letterSpacing: '0.8px',
                           fontFamily: 'var(--font-mono)',
-                          borderBottom: '1px solid var(--border)',
+                          borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
                         }}
                       >
                         {h}
@@ -816,70 +930,80 @@ export default function DashboardPage() {
                     <tr
                       key={trade.id}
                       style={{
-                        borderBottom: '1px solid rgba(255,255,255,0.03)',
+                        borderBottom: '1px solid rgba(255, 255, 255, 0.03)',
                         transition: 'background 0.15s ease',
                       }}
-                      onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-2)')}
+                      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)')}
                       onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                     >
-                      <td style={{ padding: '12px 14px' }}>
+                      <td style={{ padding: '12px 16px' }}>
                         <div style={{ fontWeight: 700, fontSize: '13px', fontFamily: 'var(--font-mono)', color: 'var(--text)' }}>
                           {trade.symbol}
                         </div>
-                        <div style={{
-                          fontSize: '10px',
-                          fontWeight: 600,
-                          color: trade.direction === 'Long' ? 'var(--green)' : 'var(--red)',
-                          fontFamily: 'var(--font-mono)',
-                          textTransform: 'uppercase',
-                        }}>
+                        <div
+                          style={{
+                            fontSize: '10px',
+                            fontWeight: 700,
+                            color: trade.direction === 'Long' ? 'var(--green)' : 'var(--red)',
+                            fontFamily: 'var(--font-mono)',
+                            textTransform: 'uppercase',
+                          }}
+                        >
                           {trade.direction}
                         </div>
                       </td>
-                      <td style={{
-                        padding: '12px 14px',
-                        color: trade.pnl >= 0 ? 'var(--green)' : 'var(--red)',
-                        fontFamily: 'var(--font-mono)',
-                        fontWeight: 700,
-                        fontSize: '13px',
-                        fontFeatureSettings: '"tnum" 1, "zero" 1',
-                      }}>
-                        {trade.pnl >= 0 ? '+' : ''}${trade.pnl}
+                      <td
+                        style={{
+                          padding: '12px 16px',
+                          color: trade.pnl >= 0 ? 'var(--green)' : 'var(--red)',
+                          fontFamily: 'var(--font-mono)',
+                          fontWeight: 700,
+                          fontSize: '13px',
+                          fontFeatureSettings: '"tnum" 1, "zero" 1',
+                        }}
+                      >
+                        {trade.pnl >= 0 ? `+$${trade.pnl}` : `-$${Math.abs(trade.pnl)}`}
                       </td>
-                      <td style={{
-                        padding: '12px 14px',
-                        color: 'var(--text-2)',
-                        fontFamily: 'var(--font-mono)',
-                        fontSize: '12px',
-                        fontFeatureSettings: '"tnum" 1, "zero" 1',
-                      }}>
+                      <td
+                        style={{
+                          padding: '12px 16px',
+                          color: 'var(--text-2)',
+                          fontFamily: 'var(--font-mono)',
+                          fontSize: '12px',
+                          fontFeatureSettings: '"tnum" 1, "zero" 1',
+                        }}
+                      >
                         {Number(trade.rr).toFixed(1)}R
                       </td>
-                      <td style={{
-                        padding: '12px 14px',
-                        color: trade.risk > 2 ? 'var(--amber)' : 'var(--text-2)',
-                        fontFamily: 'var(--font-mono)',
-                        fontSize: '12px',
-                        fontFeatureSettings: '"tnum" 1, "zero" 1',
-                      }}>
+                      <td
+                        style={{
+                          padding: '12px 16px',
+                          color: trade.risk > 2 ? 'var(--amber)' : 'var(--text-2)',
+                          fontFamily: 'var(--font-mono)',
+                          fontSize: '12px',
+                          fontFeatureSettings: '"tnum" 1, "zero" 1',
+                        }}
+                      >
                         {trade.risk}%
                       </td>
-                      <td style={{ padding: '12px 14px' }}>
+                      <td style={{ padding: '12px 16px' }}>
                         {trade.emotion === '—' ? (
                           <span style={{ fontSize: '11px', color: 'var(--text-3)' }}>—</span>
                         ) : (
                           <EmotionBadge emotion={trade.emotion} />
                         )}
                       </td>
-                      <td style={{
-                        padding: '12px 14px',
-                        color: 'var(--text-3)',
-                        fontFamily: 'var(--font-mono)',
-                        fontSize: '11px',
-                      }}>
+                      <td
+                        style={{
+                          padding: '12px 16px',
+                          color: 'var(--text-3)',
+                          fontFamily: 'var(--font-mono)',
+                          fontSize: '11px',
+                        }}
+                      >
                         {trade.session}
                       </td>
-                      <td style={{ padding: '12px 14px' }}>
+                      <td style={{ padding: '12px 16px' }}>
                         <AlignmentBadge score={trade.alignment} />
                       </td>
                     </tr>
@@ -891,30 +1015,50 @@ export default function DashboardPage() {
         </div>
 
         {/* ── RIGHT COLUMN: Live Eval, Flags, Sessions, Emotions, Risk ── */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', minWidth: 0, maxWidth: '100%', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', minWidth: 0, maxWidth: '100%', overflow: 'hidden' }}>
 
           {/* Live Trade Evaluation Widget */}
-          <div style={{
-            ...panelStyle,
-            background: 'var(--surface-2)',
-            padding: '14px 16px',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
-                <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: 'var(--green)', display: 'inline-block' }} />
-                <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text)' }}>Live Trade Evaluation</span>
+          <div
+            className="apple-glass-card"
+            style={{
+              ...glassCardStyle,
+              background: 'rgba(22, 25, 32, 0.8)',
+              padding: '16px 18px',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span
+                  style={{
+                    width: '7px',
+                    height: '7px',
+                    borderRadius: '50%',
+                    background: 'var(--green)',
+                    boxShadow: '0 0 8px var(--green)',
+                    display: 'inline-block',
+                  }}
+                />
+                <span style={{ fontSize: '12.5px', fontWeight: 700, color: '#FFFFFF' }}>Live Trade Evaluation</span>
               </div>
-              <span style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>EURUSD · Long</span>
+              <span style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>EURUSD · Long</span>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '14px' }}>
               {[
                 { label: 'Alignment', value: '79', color: 'var(--green)' },
                 { label: 'Discipline', value: '82', color: 'var(--accent)' },
                 { label: 'Risk Level', value: 'MOD', color: 'var(--amber)' },
                 { label: 'Session Fit', value: 'HIGH', color: 'var(--green)' },
               ].map(s => (
-                <div key={s.label} style={{ background: 'var(--surface)', borderRadius: '8px', padding: '9px 12px', border: '1px solid var(--border)' }}>
+                <div
+                  key={s.label}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.03)',
+                    borderRadius: '9px',
+                    padding: '10px 12px',
+                    border: '1px solid rgba(255, 255, 255, 0.06)',
+                  }}
+                >
                   <div style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>{s.label}</div>
                   <div style={{ fontSize: '20px', fontWeight: 800, color: s.color, fontFamily: 'var(--font-mono)', marginTop: '2px' }}>
                     {s.value}
@@ -923,28 +1067,43 @@ export default function DashboardPage() {
               ))}
             </div>
 
-            <div style={{
-              background: 'rgba(245,166,35,0.08)',
-              border: '1px solid rgba(245,166,35,0.22)',
-              borderRadius: '7px',
-              padding: '10px 12px',
-              fontSize: '12px',
-              lineHeight: 1.55,
-              color: 'var(--text-2)',
-            }}>
+            <div
+              style={{
+                background: 'rgba(245, 166, 35, 0.08)',
+                border: '1px solid rgba(245, 166, 35, 0.22)',
+                borderRadius: '8px',
+                padding: '11px 13px',
+                fontSize: '12px',
+                lineHeight: 1.5,
+                color: 'var(--text-2)',
+              }}
+            >
               ⚠️ Matches your London breakout pattern, but risk at <strong style={{ color: 'var(--text)' }}>1.8%</strong> exceeds optimal <strong style={{ color: 'var(--text)' }}>1.2%</strong> threshold.
             </div>
           </div>
 
           {/* Behavioral Flags */}
-          <div style={panelStyle}>
-            <div style={panelHeaderStyle}>
-              <span style={{ fontSize: '13px', fontWeight: 700 }}>Behavioral Flags</span>
-              <Link href="/behavior" style={{ fontSize: '11px', color: 'var(--accent)', textDecoration: 'none', fontFamily: 'var(--font-mono)' }}>
-                Details →
+          <div className="apple-glass-card" style={glassCardStyle}>
+            <div style={cardHeaderStyle}>
+              <span style={{ fontSize: '13px', fontWeight: 700, color: '#FFFFFF' }}>Behavioral Flags</span>
+              <Link
+                href="/behavior"
+                className="apple-btn"
+                style={{
+                  fontSize: '11px',
+                  color: 'var(--accent)',
+                  textDecoration: 'none',
+                  fontFamily: 'var(--font-mono)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                }}
+              >
+                <span>Details</span>
+                <ChevronRight size={12} />
               </Link>
             </div>
-            <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {(flagsLive
                 ? Object.entries(flagsLive)
                     .filter(([, count]) => (count as number) > 0)
@@ -963,19 +1122,22 @@ export default function DashboardPage() {
                     display: 'flex',
                     alignItems: 'center',
                     gap: '10px',
-                    padding: '8px 12px',
-                    background: 'var(--surface-2)',
+                    padding: '9px 12px',
+                    background: 'rgba(255, 255, 255, 0.03)',
                     borderRadius: '8px',
-                    border: '1px solid var(--border)',
+                    border: '1px solid rgba(255, 255, 255, 0.06)',
                   }}
                 >
-                  <div style={{
-                    width: '7px',
-                    height: '7px',
-                    borderRadius: '50%',
-                    flexShrink: 0,
-                    background: flag.severity === 'high' ? 'var(--red)' : flag.severity === 'medium' ? 'var(--amber)' : 'var(--green)'
-                  }} />
+                  <div
+                    style={{
+                      width: '7px',
+                      height: '7px',
+                      borderRadius: '50%',
+                      flexShrink: 0,
+                      background: flag.severity === 'high' ? 'var(--red)' : flag.severity === 'medium' ? 'var(--amber)' : 'var(--green)',
+                      boxShadow: `0 0 6px ${flag.severity === 'high' ? 'var(--red)' : flag.severity === 'medium' ? 'var(--amber)' : 'var(--green)'}`,
+                    }}
+                  />
                   <div style={{ flex: 1, fontSize: '12px', fontWeight: 500, color: 'var(--text)' }}>
                     {flag.type}
                   </div>
@@ -988,17 +1150,27 @@ export default function DashboardPage() {
           </div>
 
           {/* Session Performance */}
-          <div style={panelStyle}>
-            <div style={panelHeaderStyle}>
-              <span style={{ fontSize: '13px', fontWeight: 700 }}>Session Performance</span>
+          <div className="apple-glass-card" style={glassCardStyle}>
+            <div style={cardHeaderStyle}>
+              <span style={{ fontSize: '13px', fontWeight: 700, color: '#FFFFFF' }}>Session Performance</span>
             </div>
-            <div style={{ padding: '14px', width: '100%', minWidth: 0, overflow: 'hidden' }}>
+            <div style={{ padding: '14px 16px', width: '100%', minWidth: 0, overflow: 'hidden' }}>
               <ResponsiveContainer width="100%" height={125}>
-                <BarChart data={sessionDataLive} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+                <BarChart data={sessionDataLive} margin={{ top: 0, right: 0, left: -22, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.04)" vertical={false} />
                   <XAxis dataKey="session" tick={{ fontSize: 9, fill: 'var(--text-3)', fontFamily: 'var(--font-mono)' }} axisLine={false} tickLine={false} />
                   <YAxis domain={[0, 100]} tick={{ fontSize: 9, fill: 'var(--text-3)', fontFamily: 'var(--font-mono)' }} axisLine={false} tickLine={false} />
-                  <Tooltip {...tooltipStyle} formatter={(v: any) => [`${v}%`, 'Win Rate']} />
+                  <Tooltip
+                    contentStyle={{
+                      background: 'rgba(17, 19, 24, 0.9)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      borderRadius: '8px',
+                      fontSize: '11px',
+                      fontFamily: 'var(--font-mono)',
+                      color: 'var(--text)',
+                    }}
+                    formatter={(v: any) => [`${v}%`, 'Win Rate']}
+                  />
                   <Bar dataKey="wr" radius={[4, 4, 0, 0]}>
                     {sessionDataLive.map((entry, index) => (
                       <Cell
@@ -1010,17 +1182,27 @@ export default function DashboardPage() {
                 </BarChart>
               </ResponsiveContainer>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginTop: '10px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginTop: '12px' }}>
                 {sessionDataLive.map(s => (
-                  <div key={s.session} style={{ background: 'var(--surface-2)', borderRadius: '7px', padding: '8px 10px', border: '1px solid var(--border)' }}>
+                  <div
+                    key={s.session}
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.03)',
+                      borderRadius: '8px',
+                      padding: '8px 10px',
+                      border: '1px solid rgba(255, 255, 255, 0.06)',
+                    }}
+                  >
                     <div style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>{s.session}</div>
-                    <div style={{
-                      fontSize: '16px',
-                      fontWeight: 700,
-                      fontFamily: 'var(--font-mono)',
-                      color: s.wr >= 65 ? 'var(--green)' : s.wr >= 55 ? 'var(--accent)' : 'var(--amber)',
-                      fontFeatureSettings: '"tnum" 1, "zero" 1',
-                    }}>
+                    <div
+                      style={{
+                        fontSize: '16px',
+                        fontWeight: 700,
+                        fontFamily: 'var(--font-mono)',
+                        color: s.wr >= 65 ? 'var(--green)' : s.wr >= 55 ? 'var(--accent)' : 'var(--amber)',
+                        fontFeatureSettings: '"tnum" 1, "zero" 1',
+                      }}
+                    >
                       {s.wr}%
                     </div>
                     <div style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
@@ -1032,34 +1214,39 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Emotional State */}
-          <div style={panelStyle}>
-            <div style={panelHeaderStyle}>
-              <span style={{ fontSize: '13px', fontWeight: 700 }}>Emotional Breakdown</span>
+          {/* Emotional Breakdown */}
+          <div className="apple-glass-card" style={glassCardStyle}>
+            <div style={cardHeaderStyle}>
+              <span style={{ fontSize: '13px', fontWeight: 700, color: '#FFFFFF' }}>Emotional Breakdown</span>
             </div>
-            <div style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {emotionRows.map(e => (
                 <div key={e.label}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
                     <span style={{ fontSize: '11px', color: 'var(--text-2)' }}>{e.label}</span>
-                    <span style={{
-                      fontSize: '12px',
-                      fontWeight: 700,
-                      color: e.color,
-                      fontFamily: 'var(--font-mono)',
-                      fontFeatureSettings: '"tnum" 1, "zero" 1',
-                    }}>
+                    <span
+                      style={{
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        color: e.color,
+                        fontFamily: 'var(--font-mono)',
+                        fontFeatureSettings: '"tnum" 1, "zero" 1',
+                      }}
+                    >
                       {e.pct}%
                     </span>
                   </div>
-                  <div style={{ height: '3px', background: 'var(--surface-3)', borderRadius: '2px' }}>
-                    <div style={{
-                      height: '3px',
-                      borderRadius: '2px',
-                      background: e.color,
-                      width: `${Math.min(100, e.pct)}%`,
-                      transition: 'width 0.5s ease'
-                    }} />
+                  <div style={{ height: '4px', background: 'rgba(255, 255, 255, 0.05)', borderRadius: '9999px', overflow: 'hidden' }}>
+                    <div
+                      style={{
+                        height: '4px',
+                        borderRadius: '9999px',
+                        background: e.color,
+                        boxShadow: `0 0 6px ${e.color}`,
+                        width: `${Math.min(100, e.pct)}%`,
+                        transition: 'width 0.5s ease',
+                      }}
+                    />
                   </div>
                 </div>
               ))}
@@ -1067,34 +1254,38 @@ export default function DashboardPage() {
           </div>
 
           {/* Risk Meter */}
-          <div style={panelStyle}>
-            <div style={panelHeaderStyle}>
-              <span style={{ fontSize: '13px', fontWeight: 700 }}>Avg Risk Per Trade</span>
+          <div className="apple-glass-card" style={glassCardStyle}>
+            <div style={cardHeaderStyle}>
+              <span style={{ fontSize: '13px', fontWeight: 700, color: '#FFFFFF' }}>Avg Risk Per Trade</span>
             </div>
-            <div style={{ padding: '14px 16px' }}>
+            <div style={{ padding: '14px 18px 16px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '8px' }}>
                 <span style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>Monthly Average</span>
-                <span style={{
-                  fontSize: '22px',
-                  fontWeight: 800,
-                  color: avgRiskLive > 2 ? 'var(--red)' : avgRiskLive > 1.5 ? 'var(--amber)' : 'var(--green)',
-                  fontFamily: 'var(--font-mono)',
-                  fontFeatureSettings: '"tnum" 1, "zero" 1',
-                }}>
+                <span
+                  style={{
+                    fontSize: '22px',
+                    fontWeight: 800,
+                    color: avgRiskLive > 2 ? 'var(--red)' : avgRiskLive > 1.5 ? 'var(--amber)' : 'var(--green)',
+                    fontFamily: 'var(--font-mono)',
+                    fontFeatureSettings: '"tnum" 1, "zero" 1',
+                  }}
+                >
                   {avgRiskLive.toFixed(2)}%
                 </span>
               </div>
-              <div style={{ height: '6px', background: 'var(--surface-3)', borderRadius: '3px', overflow: 'hidden' }}>
-                <div style={{
-                  height: '6px',
-                  borderRadius: '3px',
-                  background: 'linear-gradient(90deg, var(--green), var(--amber), var(--red))',
-                  width: `${Math.min(100, (avgRiskLive / 3) * 100)}%`
-                }} />
+              <div style={{ height: '6px', background: 'rgba(255, 255, 255, 0.06)', borderRadius: '9999px', overflow: 'hidden' }}>
+                <div
+                  style={{
+                    height: '6px',
+                    borderRadius: '9999px',
+                    background: 'linear-gradient(90deg, var(--green), var(--amber), var(--red))',
+                    width: `${Math.min(100, (avgRiskLive / 3) * 100)}%`,
+                  }}
+                />
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', fontSize: '10.5px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
                 <span>0.0%</span>
-                <span style={{ color: 'var(--green)', fontWeight: 600 }}>optimal ≤ 1.2%</span>
+                <span style={{ color: 'var(--green)', fontWeight: 650 }}>optimal ≤ 1.2%</span>
                 <span>3.0%</span>
               </div>
             </div>
@@ -1104,34 +1295,54 @@ export default function DashboardPage() {
       </div>
 
       {/* ── 5. BOTTOM STATS STRIP (6 Metrics) ── */}
-      <div className="dashboard-bottom-strip" style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '10px' }}>
+      <div className="dashboard-bottom-strip" style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '12px' }}>
         {[
-          { label: 'Win Rate', value: analytics ? `${analytics.win_rate}%` : '59.6%', color: 'var(--green)' },
-          { label: 'Avg R:R', value: analytics ? `${analytics.avg_reward_risk}R` : '2.3R', color: 'var(--green)' },
-          { label: 'Max Drawdown', value: analytics ? `${analytics.max_drawdown_pct}%` : '-4.2%', color: 'var(--red)' },
-          { label: 'Profit Factor', value: analytics ? `${analytics.profit_factor}` : '1.87', color: 'var(--amber)' },
-          { label: 'Net P&L', value: analytics ? `${analytics.net_pnl >= 0 ? '+' : ''}$${Math.round(analytics.net_pnl).toLocaleString()}` : '+$1,247', color: 'var(--green)' },
-          { label: 'Best Streak', value: analytics ? `${analytics.max_win_streak} wins` : '6 wins', color: 'var(--green)' },
+          { label: 'Win Rate', value: hasLiveTrades ? `${analytics!.win_rate}%` : '59.6%', color: 'var(--green)' },
+          { label: 'Avg R:R', value: hasLiveTrades ? `${analytics!.avg_reward_risk}R` : '2.3R', color: 'var(--green)' },
+          { label: 'Max Drawdown', value: hasLiveTrades ? `${analytics!.max_drawdown_pct}%` : '-4.2%', color: 'var(--red)' },
+          { label: 'Profit Factor', value: hasLiveTrades ? `${analytics!.profit_factor}` : '1.87', color: 'var(--amber)' },
+          { label: 'Net P&L', value: hasLiveTrades ? `${analytics!.net_pnl >= 0 ? '+' : '-'}$${Math.abs(Math.round(analytics!.net_pnl)).toLocaleString()}` : '+$1,247', color: 'var(--green)' },
+          { label: 'Best Streak', value: hasLiveTrades ? `${analytics!.max_win_streak} wins` : '6 wins', color: 'var(--green)' },
         ].map(stat => (
-          <div key={stat.label} className="dashboard-stat-card" style={{ ...panelStyle, padding: '14px 16px' }}>
-            <div style={{
-              fontSize: '10px',
-              fontWeight: 700,
-              color: 'var(--text-3)',
-              fontFamily: 'var(--font-mono)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.8px',
-            }}>
+          <div
+            key={stat.label}
+            className="dashboard-stat-card apple-glass-card"
+            style={{
+              ...glassCardStyle,
+              padding: '14px 16px',
+              transition: 'transform 0.15s ease, border-color 0.15s ease',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.transform = 'translateY(-2px)'
+              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.14)'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.transform = 'translateY(0)'
+              e.currentTarget.style.borderColor = 'var(--border)'
+            }}
+          >
+            <div
+              style={{
+                fontSize: '10px',
+                fontWeight: 700,
+                color: 'var(--text-3)',
+                fontFamily: 'var(--font-mono)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.8px',
+              }}
+            >
               {stat.label}
             </div>
-            <div style={{
-              fontSize: '20px',
-              fontWeight: 800,
-              color: stat.color,
-              fontFamily: 'var(--font-mono)',
-              fontFeatureSettings: '"tnum" 1, "zero" 1',
-              marginTop: '5px',
-            }}>
+            <div
+              style={{
+                fontSize: '20px',
+                fontWeight: 800,
+                color: stat.color,
+                fontFamily: 'var(--font-mono)',
+                fontFeatureSettings: '"tnum" 1, "zero" 1',
+                marginTop: '6px',
+              }}
+            >
               {stat.value}
             </div>
           </div>
