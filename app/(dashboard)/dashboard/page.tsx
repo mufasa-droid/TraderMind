@@ -485,7 +485,7 @@ export default function DashboardPage() {
     let cancelled = false
     setLoading(true)
 
-    fetch(`/api/analytics?range=${range}`)
+    fetch(`/api/behavioral/analytics?range=${range}`)
       .then(res => (res.ok ? res.json() : null))
       .then((json: AnalyticsResponse | null) => {
         if (!cancelled && json && json.analytics) {
