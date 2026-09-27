@@ -32,6 +32,7 @@ Every core feature of the platform is fully implemented, responsive, and passing
 
 ## 2. Git Commit History (Recent Milestone Commits)
 
+- `77ea802` — `feat: redesign behavioral intelligence page with 71UI dark institutional precision`
 - `737aab4` — `fix: route analytics fetch to /api/behavioral/analytics`
 - `4b89551` — `feat: redesign dashboard shell and overview with 71UI dark institutional precision`
 - `1df8ff6` — `feat(landing): redesign landing page and tokens with 71UI dark institutional precision`
