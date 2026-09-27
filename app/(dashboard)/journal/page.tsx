@@ -1,20 +1,20 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, BookOpen, Camera, CheckCircle, Sparkles, X, ChevronRight } from 'lucide-react'
+import { Plus, BookOpen, Camera, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { BehavioralLog } from '@/types'
 
 const EMOTIONS = [
-  { id: 'calm',            label: 'Calm',          color: 'var(--green)' },
-  { id: 'focused',         label: 'Focused',       color: 'var(--green)' },
+  { id: 'calm',            label: 'Calm',          color: 'var(--green)'  },
+  { id: 'focused',         label: 'Focused',       color: 'var(--green)'  },
   { id: 'neutral',         label: 'Neutral',       color: 'var(--text-2)' },
   { id: 'hesitant',        label: 'Hesitant',      color: 'var(--text-2)' },
-  { id: 'overconfident',   label: 'Overconfident', color: 'var(--amber)' },
-  { id: 'fomo',            label: 'FOMO',          color: 'var(--amber)' },
-  { id: 'stressed',        label: 'Stressed',      color: 'var(--red)' },
-  { id: 'fearful',         label: 'Fearful',       color: 'var(--red)' },
-  { id: 'revenge_trading', label: 'Revenge',       color: 'var(--red)' },
+  { id: 'overconfident',   label: 'Overconfident', color: 'var(--amber)'  },
+  { id: 'fomo',            label: 'FOMO',          color: 'var(--amber)'  },
+  { id: 'stressed',        label: 'Stressed',      color: 'var(--red)'    },
+  { id: 'fearful',         label: 'Fearful',       color: 'var(--red)'    },
+  { id: 'revenge_trading', label: 'Revenge',       color: 'var(--red)'    },
 ]
 
 interface JournalEntry {
@@ -43,7 +43,7 @@ const DEMO_ENTRIES: JournalEntry[] = [
     stress: 2,
     fear: 2,
     focus: 9,
-    notes: 'Clean H1 breakout setup. ATR conditions met (1.4x 14-period MA). Waiting for London open volume to confirm directional momentum before sizing to 1.2%.',
+    notes: 'Clean H1 breakout setup. ATR conditions met. Waiting for London open momentum to confirm.',
     lesson: null,
     hasScreenshot: true,
   },
@@ -57,8 +57,8 @@ const DEMO_ENTRIES: JournalEntry[] = [
     stress: 8,
     fear: 7,
     focus: 3,
-    notes: 'Entered immediately within 4 minutes of EURUSD stop-out. Violated risk limit at 2.4% sizing and skipped pre-trade checklist. Classic emotional reaction to a clean loss.',
-    lesson: 'Mandatory 30-minute cooling period after any stopped trade. Zero exceptions.',
+    notes: 'Entered immediately after EURUSD stop-out. Violated 30-minute cool-down rule. Should not have traded.',
+    lesson: 'Implementing mandatory 30-min break after any stopped trade. No exceptions.',
     hasScreenshot: false,
   },
   {
@@ -71,11 +71,17 @@ const DEMO_ENTRIES: JournalEntry[] = [
     stress: 1,
     fear: 1,
     focus: 9,
-    notes: 'Gold showing strong consolidation above key support. ATR expanding on H4. London-NY overlap window has produced our highest win rate setups this month.',
+    notes: 'Gold showing strong bullish momentum. ATR expanding nicely. London-NY overlap — historically my best period for XAUUSD.',
     lesson: null,
     hasScreenshot: true,
   },
 ]
+
+const TYPE_CONFIG: Record<string, { bg: string; color: string; label: string }> = {
+  pre_trade:  { bg: 'rgba(108,142,255,0.12)', color: 'var(--accent)',  label: 'Pre-Trade'  },
+  post_trade: { bg: 'rgba(180,142,255,0.12)', color: 'var(--purple)',  label: 'Post-Trade' },
+  daily:      { bg: 'rgba(255,255,255,0.06)', color: 'var(--text-2)', label: 'Daily'      },
+}
 
 function formatLogDate(iso: string): string {
   const d = new Date(iso)
@@ -84,12 +90,12 @@ function formatLogDate(iso: string): string {
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
-    hour12: false
+    hour12: false,
   }).replace(',', ' ·')
 }
 
 function SliderInput({
-  label, value, onChange, color
+  label, value, onChange, color,
 }: {
   label: string
   value: number
@@ -97,18 +103,20 @@ function SliderInput({
   color: string
 }) {
   return (
-    <div style={{ marginBottom: '14px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+    <div style={{ marginBottom: '12px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
         <span style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
           {label}
         </span>
-        <span style={{
-          fontSize: '13px',
-          fontWeight: 700,
-          color,
-          fontFamily: 'var(--font-mono)',
-          fontFeatureSettings: '"tnum" 1, "zero" 1'
-        }}>
+        <span
+          style={{
+            fontSize: '13px',
+            fontWeight: 700,
+            color,
+            fontFamily: 'var(--font-mono)',
+            fontVariantNumeric: 'tabular-nums',
+          }}
+        >
           {value}/10
         </span>
       </div>
@@ -124,7 +132,7 @@ function SliderInput({
           cursor: 'pointer',
           height: '4px',
           borderRadius: '2px',
-          background: 'var(--surface-3)'
+          background: 'var(--surface-3)',
         }}
       />
     </div>
@@ -175,7 +183,7 @@ export default function JournalPage() {
             focus: l.focus_level || 8,
             notes: l.setup_notes || l.pre_trade_reasoning || l.post_trade_reflection || '',
             lesson: l.lesson_learned || null,
-            hasScreenshot: Boolean(l.screenshot_url)
+            hasScreenshot: Boolean(l.screenshot_url),
           }))
           // Rule 2.9: Demo entries always visible on the left (never remove them)
           setEntries([...mapped, ...DEMO_ENTRIES])
@@ -192,10 +200,6 @@ export default function JournalPage() {
     e.preventDefault()
     if (!emotion) {
       setError('Please select an emotional state.')
-      return
-    }
-    if (!notes.trim()) {
-      setError('Please provide notes or reflection for this entry.')
       return
     }
 
@@ -256,61 +260,130 @@ export default function JournalPage() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '20px',
+        maxWidth: '1200px',
+        margin: '0 auto',
+        width: '100%',
+        minWidth: 0,
+      }}
+    >
       <style>{`
         @media (max-width: 1023px) {
           .journal-main-grid { grid-template-columns: 1fr !important; gap: 16px !important; }
           .journal-form-column { order: -1 !important; position: static !important; }
         }
       `}</style>
-      {/* Top Header */}
-      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div style={{
-              width: '28px', height: '28px', borderRadius: '6px',
-              background: 'rgba(108,142,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center'
-            }}>
-              <BookOpen size={16} color="var(--accent)" />
-            </div>
-            <h1 style={{ fontSize: '22px', fontWeight: 800, letterSpacing: '-0.5px', color: 'var(--text)' }}>
-              Behavioral Journal
-            </h1>
-          </div>
-          <p style={{ fontSize: '12px', color: 'var(--text-3)', marginTop: '4px', fontFamily: 'var(--font-mono)' }}>
-            {entries.length} logged sessions · Psychological context, emotional states & post-trade lessons
-          </p>
-        </div>
 
-        <button
-          onClick={() => setShowForm(!showForm)}
+      {/* ── 1. HEADER ROW ── */}
+      <div>
+        <div
           style={{
-            display: 'flex', alignItems: 'center', gap: '6px',
-            padding: '8px 16px', borderRadius: '8px',
-            background: showForm ? 'var(--surface-3)' : 'var(--accent)',
-            border: '1px solid var(--border)',
-            color: '#fff', fontSize: '12px', fontWeight: 700,
-            cursor: 'pointer', transition: 'all 0.15s'
+            fontSize: '10px',
+            fontWeight: 700,
+            color: 'var(--accent)',
+            letterSpacing: '0.8px',
+            fontFamily: 'var(--font-mono)',
+            marginBottom: '6px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            textTransform: 'uppercase',
           }}
         >
-          {showForm ? <X size={14} /> : <Plus size={14} />}
-          {showForm ? 'Close Panel' : 'New Journal Entry'}
-        </button>
+          <span>TRADERMIND</span>
+          <span style={{ color: 'var(--text-3)' }}>/</span>
+          <span>BEHAVIORAL JOURNAL</span>
+        </div>
+
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'flex-end',
+            justifyContent: 'space-between',
+            gap: '12px',
+            flexWrap: 'wrap',
+          }}
+        >
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '8px',
+                  background: 'var(--surface-2)',
+                  border: '1px solid var(--border)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'var(--accent)',
+                }}
+              >
+                <BookOpen size={18} />
+              </div>
+              <h1
+                style={{
+                  fontSize: '26px',
+                  fontWeight: 800,
+                  letterSpacing: '-0.03em',
+                  lineHeight: 1.1,
+                  color: 'var(--text)',
+                }}
+              >
+                Behavioral Journal
+              </h1>
+            </div>
+            <p style={{ fontSize: '12px', color: 'var(--text-3)', marginTop: '6px', fontFamily: 'var(--font-mono)' }}>
+              {entries.length} logged sessions · Psychological context, emotional states & post-trade lessons
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setShowForm(!showForm)}
+            className="interactive-btn"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 16px',
+              borderRadius: '6px',
+              background: showForm ? 'var(--surface-3)' : 'var(--accent)',
+              border: '1px solid var(--border)',
+              color: '#fff',
+              fontSize: '12px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              fontFamily: 'var(--font-sans)',
+            }}
+          >
+            {showForm ? <X size={14} /> : <Plus size={14} />}
+            {showForm ? 'Close Panel' : 'New Entry'}
+          </button>
+        </div>
       </div>
 
-      {/* Main Content Layout */}
-      <div className="journal-main-grid" style={{
-        display: 'grid',
-        gridTemplateColumns: showForm ? 'minmax(0, 1.4fr) minmax(360px, 1fr)' : '1fr',
-        gap: '16px',
-        alignItems: 'start'
-      }}>
+      {/* ── 2. MAIN CONTENT GRID (FEED + STICKY FORM) ── */}
+      <div
+        className="journal-main-grid"
+        style={{
+          display: 'grid',
+          gridTemplateColumns: showForm ? 'minmax(0, 1.4fr) 360px' : '1fr',
+          gap: '16px',
+          alignItems: 'start',
+        }}
+      >
         {/* Left Column: Journal Entries Feed */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           {entries.map(entry => {
+            const typeConfig = TYPE_CONFIG[entry.type] ?? TYPE_CONFIG.pre_trade
             const emotionItem = EMOTIONS.find(e => e.id === entry.emotion) ?? {
               label: entry.emotion || 'Neutral',
-              color: 'var(--text-2)'
+              color: 'var(--text-2)',
             }
 
             return (
@@ -321,52 +394,48 @@ export default function JournalPage() {
                   border: '1px solid var(--border)',
                   borderRadius: '10px',
                   overflow: 'hidden',
-                  transition: 'border-color 0.15s'
                 }}
               >
                 {/* Entry Header */}
-                <div style={{
-                  padding: '12px 16px',
-                  borderBottom: '1px solid var(--border)',
-                  background: 'var(--surface-2)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px'
-                }}>
-                  {/* Badge */}
-                  <span style={{
-                    padding: '3px 8px',
-                    borderRadius: '4px',
-                    fontSize: '10px',
-                    fontWeight: 700,
-                    fontFamily: 'var(--font-mono)',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.5px',
-                    background: entry.type === 'pre_trade'
-                      ? 'rgba(108,142,255,0.12)'
-                      : entry.type === 'post_trade'
-                        ? 'rgba(180,142,255,0.12)'
-                        : 'rgba(255,255,255,0.06)',
-                    color: entry.type === 'pre_trade'
-                      ? 'var(--accent)'
-                      : entry.type === 'post_trade'
-                        ? 'var(--purple)'
-                        : 'var(--text-2)',
-                    border: `1px solid ${entry.type === 'pre_trade' ? 'rgba(108,142,255,0.2)' : entry.type === 'post_trade' ? 'rgba(180,142,255,0.2)' : 'var(--border)'}`
-                  }}>
-                    {entry.type === 'pre_trade' ? 'Pre-Trade' : entry.type === 'post_trade' ? 'Post-Trade' : 'Daily Review'}
+                <div
+                  style={{
+                    padding: '12px 16px',
+                    borderBottom: '1px solid var(--border)',
+                    background: 'var(--surface-2)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                  }}
+                >
+                  <span
+                    style={{
+                      padding: '2px 8px',
+                      borderRadius: '4px',
+                      fontSize: '10px',
+                      fontWeight: 700,
+                      fontFamily: 'var(--font-mono)',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      background: typeConfig.bg,
+                      color: typeConfig.color,
+                      border: `1px solid ${typeConfig.color}40`,
+                    }}
+                  >
+                    {typeConfig.label}
                   </span>
 
                   <span style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
                     {entry.date}
                   </span>
 
-                  <span style={{
-                    fontSize: '13px',
-                    fontWeight: 700,
-                    color: 'var(--text)',
-                    marginLeft: 'auto'
-                  }}>
+                  <span
+                    style={{
+                      fontSize: '13px',
+                      fontWeight: 700,
+                      color: 'var(--text)',
+                      marginLeft: 'auto',
+                    }}
+                  >
                     {entry.trade}
                   </span>
 
@@ -379,59 +448,73 @@ export default function JournalPage() {
 
                 {/* Entry Body */}
                 <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {/* Emotional Tag & Psychological Levels */}
+                  {/* Emotional Tag & Psychological Metrics */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                    <div style={{
-                      display: 'flex', alignItems: 'center', gap: '6px',
-                      padding: '5px 12px', borderRadius: '20px',
-                      background: 'var(--surface-2)',
-                      border: '1px solid var(--border)'
-                    }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '4px 10px',
+                        borderRadius: '16px',
+                        background: 'var(--surface-2)',
+                        border: '1px solid var(--border)',
+                      }}
+                    >
                       <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: emotionItem.color }} />
-                      <span style={{ fontSize: '12px', fontWeight: 600, color: emotionItem.color }}>
+                      <span style={{ fontSize: '11px', fontWeight: 600, color: emotionItem.color }}>
                         {emotionItem.label}
                       </span>
                     </div>
 
-                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                       {[
                         { label: 'Conf', val: entry.confidence, col: 'var(--green)' },
                         { label: 'Stress', val: entry.stress, col: entry.stress > 6 ? 'var(--red)' : 'var(--amber)' },
                         { label: 'Fear', val: entry.fear, col: entry.fear > 6 ? 'var(--red)' : 'var(--text-3)' },
                         { label: 'Focus', val: entry.focus, col: 'var(--accent)' },
                       ].map(stat => (
-                        <div key={stat.label} style={{
-                          padding: '4px 8px', borderRadius: '6px',
-                          background: 'var(--surface-2)', border: '1px solid var(--border)',
-                          fontSize: '11px', fontFamily: 'var(--font-mono)', color: 'var(--text-2)'
-                        }}>
+                        <div
+                          key={stat.label}
+                          style={{
+                            padding: '3px 8px',
+                            borderRadius: '5px',
+                            background: 'var(--surface-2)',
+                            border: '1px solid var(--border)',
+                            fontSize: '11px',
+                            fontFamily: 'var(--font-mono)',
+                            color: 'var(--text-2)',
+                          }}
+                        >
                           <span style={{ color: 'var(--text-3)', marginRight: '4px' }}>{stat.label}:</span>
-                          <span style={{ color: stat.col, fontWeight: 700 }}>{stat.val}/10</span>
+                          <span style={{ color: stat.col, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{stat.val}/10</span>
                         </div>
                       ))}
                     </div>
                   </div>
 
                   {/* Notes content */}
-                  <p style={{ fontSize: '13px', lineHeight: 1.7, color: 'var(--text-2)' }}>
+                  <p style={{ fontSize: '13px', lineHeight: 1.65, color: 'var(--text-2)', margin: 0 }}>
                     {entry.notes}
                   </p>
 
-                  {/* Highlighted Lesson box */}
+                  {/* Highlighted Lesson Learned */}
                   {entry.lesson && (
-                    <div style={{
-                      marginTop: '4px',
-                      padding: '12px 14px',
-                      borderRadius: '8px',
-                      background: 'rgba(62, 207, 142, 0.05)',
-                      border: '1px solid rgba(62, 207, 142, 0.2)',
-                      borderLeft: '3px solid var(--green)',
-                      fontSize: '12px',
-                      lineHeight: 1.6,
-                      color: 'var(--text)'
-                    }}>
-                      <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--green)', fontFamily: 'var(--font-mono)', marginBottom: '3px' }}>
-                        KEY TAKEAWAY & RULE REINFORCEMENT
+                    <div
+                      style={{
+                        marginTop: '4px',
+                        padding: '12px 14px',
+                        borderRadius: '6px',
+                        background: 'rgba(62, 207, 142, 0.05)',
+                        border: '1px solid rgba(62, 207, 142, 0.2)',
+                        borderLeft: '3px solid var(--green)',
+                        fontSize: '12px',
+                        lineHeight: 1.6,
+                        color: 'var(--text)',
+                      }}
+                    >
+                      <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--green)', fontFamily: 'var(--font-mono)', marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+                        Key Takeaway & Rule Reinforcement
                       </div>
                       "{entry.lesson}"
                     </div>
@@ -444,48 +527,52 @@ export default function JournalPage() {
 
         {/* Right Column: Slide-in Entry Form */}
         {showForm && (
-          <div className="journal-form-column" style={{
-            background: 'var(--surface)',
-            border: '1px solid var(--border)',
-            borderRadius: '10px',
-            overflow: 'hidden',
-            position: 'sticky',
-            top: '20px'
-          }}>
+          <div
+            className="journal-form-column"
+            style={{
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              borderRadius: '10px',
+              overflow: 'hidden',
+              position: 'sticky',
+              top: '80px',
+              alignSelf: 'flex-start',
+            }}
+          >
             {/* Form Header */}
-            <div style={{
-              padding: '14px 16px',
-              borderBottom: '1px solid var(--border)',
-              background: 'var(--surface-2)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between'
-            }}>
+            <div
+              style={{
+                padding: '12px 16px',
+                borderBottom: '1px solid var(--border)',
+                background: 'var(--surface-2)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <BookOpen size={14} color="var(--accent)" />
-                <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>
+                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>
                   New Journal Entry
                 </span>
               </div>
               <button
+                type="button"
                 onClick={() => setShowForm(false)}
-                style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-3)' }}
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: '16px' }}
               >
-                <X size={15} />
+                ×
               </button>
             </div>
 
             {/* Form Fields */}
-            <form onSubmit={handleSave} style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <form onSubmit={handleSave} style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
               
               {/* Entry Type */}
               <div>
-                <div style={{
-                  fontSize: '10px', fontWeight: 700, color: 'var(--text-3)',
-                  fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '8px'
-                }}>
-                  Log Classification
-                </div>
+                <label style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.8px', display: 'block', marginBottom: '6px' }}>
+                  Entry Classification
+                </label>
                 <div style={{ display: 'flex', gap: '6px' }}>
                   {(['pre_trade', 'post_trade', 'daily'] as const).map(type => (
                     <button
@@ -493,12 +580,17 @@ export default function JournalPage() {
                       type="button"
                       onClick={() => setLogType(type)}
                       style={{
-                        flex: 1, padding: '7px 0', borderRadius: '6px', fontSize: '11px',
-                        fontWeight: 600, fontFamily: 'var(--font-mono)', cursor: 'pointer',
-                        border: `1px solid ${logType === type ? 'rgba(108,142,255,0.4)' : 'var(--border)'}`,
-                        background: logType === type ? 'rgba(108,142,255,0.12)' : 'var(--surface-2)',
-                        color: logType === type ? 'var(--accent)' : 'var(--text-2)',
-                        transition: 'all 0.15s'
+                        flex: 1,
+                        padding: '6px 0',
+                        borderRadius: '6px',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        fontFamily: 'var(--font-mono)',
+                        cursor: 'pointer',
+                        border: `1px solid ${logType === type ? 'var(--accent)' : 'var(--border)'}`,
+                        background: logType === type ? 'var(--surface-3)' : 'var(--surface-2)',
+                        color: logType === type ? 'var(--text)' : 'var(--text-3)',
+                        transition: 'all 0.12s ease',
                       }}
                     >
                       {type === 'pre_trade' ? 'Pre-Trade' : type === 'post_trade' ? 'Post-Trade' : 'Daily'}
@@ -509,12 +601,9 @@ export default function JournalPage() {
 
               {/* Setup / Pair Name */}
               <div>
-                <div style={{
-                  fontSize: '10px', fontWeight: 700, color: 'var(--text-3)',
-                  fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px'
-                }}>
+                <label style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.8px', display: 'block', marginBottom: '6px' }}>
                   Symbol / Setup
-                </div>
+                </label>
                 <input
                   type="text"
                   value={symbol}
@@ -524,40 +613,37 @@ export default function JournalPage() {
                     width: '100%',
                     background: 'var(--surface-2)',
                     border: '1px solid var(--border)',
-                    borderRadius: '7px',
+                    borderRadius: '6px',
                     padding: '8px 12px',
                     fontSize: '12px',
                     color: 'var(--text)',
                     outline: 'none',
-                    fontFamily: 'var(--font-sans)'
+                    fontFamily: 'var(--font-sans)',
                   }}
                 />
               </div>
 
               {/* Emotional State Selector */}
               <div>
-                <div style={{
-                  fontSize: '10px', fontWeight: 700, color: 'var(--text-3)',
-                  fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '8px'
-                }}>
-                  Primary Emotional State
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                <label style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.8px', display: 'block', marginBottom: '6px' }}>
+                  Emotional State
+                </label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
                   {EMOTIONS.map(e => (
                     <button
                       key={e.id}
                       type="button"
                       onClick={() => setEmotion(e.id)}
                       style={{
-                        padding: '5px 12px',
-                        borderRadius: '20px',
+                        padding: '4px 10px',
+                        borderRadius: '14px',
                         fontSize: '11px',
                         fontFamily: 'var(--font-mono)',
                         border: `1px solid ${emotion === e.id ? e.color : 'var(--border)'}`,
                         background: emotion === e.id ? `${e.color}18` : 'transparent',
                         color: emotion === e.id ? e.color : 'var(--text-3)',
                         cursor: 'pointer',
-                        transition: 'all 0.15s'
+                        transition: 'all 0.12s ease',
                       }}
                     >
                       {e.label}
@@ -567,26 +653,25 @@ export default function JournalPage() {
               </div>
 
               {/* Sliders */}
-              <div style={{
-                background: 'var(--surface-2)',
-                border: '1px solid var(--border)',
-                borderRadius: '8px',
-                padding: '14px 14px 2px'
-              }}>
-                <SliderInput label="Confidence Level" value={confidence} onChange={setConfidence} color="var(--green)" />
-                <SliderInput label="Stress Level" value={stress} onChange={setStress} color={stress > 6 ? 'var(--red)' : 'var(--amber)'} />
-                <SliderInput label="Fear / Hesitation" value={fear} onChange={setFear} color={fear > 6 ? 'var(--red)' : 'var(--accent)'} />
-                <SliderInput label="Focus Level" value={focus} onChange={setFocus} color="var(--accent)" />
+              <div
+                style={{
+                  background: 'var(--surface-2)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '8px',
+                  padding: '12px 14px 2px',
+                }}
+              >
+                <SliderInput label="Confidence" value={confidence} onChange={setConfidence} color="var(--green)" />
+                <SliderInput label="Stress" value={stress} onChange={setStress} color={stress > 6 ? 'var(--red)' : 'var(--amber)'} />
+                <SliderInput label="Fear" value={fear} onChange={setFear} color={fear > 6 ? 'var(--red)' : 'var(--accent)'} />
+                <SliderInput label="Focus" value={focus} onChange={setFocus} color="var(--accent)" />
               </div>
 
               {/* Notes */}
               <div>
-                <div style={{
-                  fontSize: '10px', fontWeight: 700, color: 'var(--text-3)',
-                  fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px'
-                }}>
-                  Reasoning & Psychological Notes
-                </div>
+                <label style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.8px', display: 'block', marginBottom: '6px' }}>
+                  Notes & Reasoning
+                </label>
                 <textarea
                   value={notes}
                   onChange={e => setNotes(e.target.value)}
@@ -596,26 +681,23 @@ export default function JournalPage() {
                     width: '100%',
                     background: 'var(--surface-2)',
                     border: '1px solid var(--border)',
-                    borderRadius: '7px',
-                    padding: '10px',
+                    borderRadius: '6px',
+                    padding: '8px 10px',
                     fontSize: '12px',
                     color: 'var(--text)',
                     fontFamily: 'var(--font-sans)',
                     outline: 'none',
                     resize: 'vertical',
-                    lineHeight: 1.6
+                    lineHeight: 1.6,
                   }}
                 />
               </div>
 
-              {/* Lesson Learned (Optional for post-trade) */}
+              {/* Lesson Learned */}
               <div>
-                <div style={{
-                  fontSize: '10px', fontWeight: 700, color: 'var(--text-3)',
-                  fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px'
-                }}>
-                  Lesson Learned / Takeaway (Optional)
-                </div>
+                <label style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.8px', display: 'block', marginBottom: '6px' }}>
+                  Lesson Learned (Optional)
+                </label>
                 <input
                   type="text"
                   value={lesson}
@@ -625,26 +707,28 @@ export default function JournalPage() {
                     width: '100%',
                     background: 'var(--surface-2)',
                     border: '1px solid var(--border)',
-                    borderRadius: '7px',
+                    borderRadius: '6px',
                     padding: '8px 12px',
                     fontSize: '12px',
                     color: 'var(--text)',
                     outline: 'none',
-                    fontFamily: 'var(--font-sans)'
+                    fontFamily: 'var(--font-sans)',
                   }}
                 />
               </div>
 
               {error && (
-                <div style={{
-                  padding: '8px 12px',
-                  borderRadius: '6px',
-                  background: 'rgba(255, 95, 95, 0.08)',
-                  border: '1px solid rgba(255, 95, 95, 0.25)',
-                  fontSize: '11px',
-                  color: 'var(--red)',
-                  fontFamily: 'var(--font-mono)'
-                }}>
+                <div
+                  style={{
+                    padding: '8px 12px',
+                    borderRadius: '6px',
+                    background: 'rgba(255, 95, 95, 0.08)',
+                    border: '1px solid rgba(255, 95, 95, 0.25)',
+                    fontSize: '11px',
+                    color: 'var(--red)',
+                    fontFamily: 'var(--font-mono)',
+                  }}
+                >
                   {error}
                 </div>
               )}
@@ -652,24 +736,25 @@ export default function JournalPage() {
               <button
                 type="submit"
                 disabled={saving}
+                className="interactive-btn"
                 style={{
                   width: '100%',
-                  padding: '11px',
-                  borderRadius: '8px',
+                  padding: '10px',
+                  borderRadius: '6px',
                   background: 'var(--accent)',
                   border: 'none',
                   color: '#fff',
                   fontSize: '13px',
-                  fontWeight: 700,
+                  fontWeight: 600,
                   cursor: saving ? 'not-allowed' : 'pointer',
                   opacity: saving ? 0.7 : 1,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '6px'
+                  gap: '6px',
                 }}
               >
-                {saving ? 'Saving...' : 'Save Journal Entry'}
+                {saving ? 'Saving...' : 'Save Entry'}
               </button>
 
             </form>
