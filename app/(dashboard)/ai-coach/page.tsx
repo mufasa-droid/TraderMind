@@ -1,7 +1,11 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Sparkles, Send, RefreshCw, ChevronRight, Brain, TrendingUp, AlertCircle, Lightbulb, User, ShieldAlert, ArrowRight } from 'lucide-react'
+import {
+  Sparkles, Send, RefreshCw, ChevronRight, Brain,
+  TrendingUp, AlertCircle, Lightbulb, User, ShieldAlert,
+  ArrowRight
+} from 'lucide-react'
 
 const DEMO_REPORT = {
   behavioral_analysis: `Your trading behavior this month shows a clear bifurcation between disciplined and reactive sessions. During London hours, you demonstrate strong pre-trade discipline — risk sizing is consistent at 1.2%, entries are methodical with ATR confirmation, and emotional state logs indicate high focus levels. However, your New York session behavior degrades significantly, particularly following any loss in the preceding London session.\n\nThe post-loss behavioral pattern is your most critical leak: you entered positions within 3–5 minutes of a loss in 6 of your 9 NY-session losses this month. This is a textbook revenge trading pattern. Across these trades, your average risk escalated to 2.4% — double your stated maximum of 1.2%. Combined, these impulse trades cost $485, eroding over 38% of your monthly gains.`,
@@ -30,8 +34,8 @@ const DEMO_REPORT = {
 const INITIAL_MESSAGES = [
   {
     role: 'assistant' as const,
-    content: "I've analyzed your May 2026 trading data. Your discipline score is 78/100 — improving, but 3 behavioral patterns are holding back your performance. Where would you like to start: session performance, emotional patterns, or risk consistency?"
-  }
+    content: "I've analyzed your May 2026 trading data — 47 closed trades, 59.6% win rate, and an overall discipline score of 78/100. Your London session execution represents a clear behavioral strength at 67% WR, but 3 behavioral patterns are holding back your performance. Where would you like to start: your revenge trading pattern, post-win risk creep, or New York session fatigue?",
+  },
 ]
 
 const QUICK_PROMPTS = [
@@ -47,9 +51,8 @@ export default function AICoachPage() {
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [generating, setGenerating] = useState(false)
-  const [report, setReport] = useState<any>(DEMO_REPORT)
+  const [report, setReport] = useState<typeof DEMO_REPORT | null>(DEMO_REPORT)
   const [reportLoading, setReportLoading] = useState(false)
-  const [reportError, setReportError] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -78,21 +81,18 @@ export default function AICoachPage() {
 
   const handleGenerate = async () => {
     setGenerating(true)
-    setReportError(null)
     try {
       const r = await fetch('/api/ai/report', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ period: 'monthly' })
+        body: JSON.stringify({ period: 'monthly' }),
       })
       const j = await r.json()
       if (r.ok && j.data) {
         setReport(j.data)
-      } else {
-        setReportError(j.error || 'Using calibrated demo coaching report')
       }
     } catch {
-      setReportError('Using calibrated demo coaching report')
+      // Keep demo report
     } finally {
       setGenerating(false)
     }
@@ -110,13 +110,12 @@ export default function AICoachPage() {
       const r = await fetch('/api/ai/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: msg, history: messages })
+        body: JSON.stringify({ message: msg, history: messages }),
       })
       const j = await r.json()
       if (r.ok && j.reply) {
         setMessages(prev => [...prev, { role: 'assistant', content: j.reply }])
       } else {
-        // Calibrated contextual demo replies for portfolio demonstration
         const demoReplies: Record<string, string> = {
           "Why do I perform worse in NY sessions?": "Your NY session underperformance (48% win rate vs 67% in London) stems from two quantifiable behavioral factors:\n\n1. **Emotional Carryover:** Stress logs show you enter NY at an average psychological fatigue score of 6.2/10 following London sessions, compared to 3.8/10 at market open.\n2. **Strategy Misalignment:** NY volatility spikes trigger premature stop-outs on breakout setups that were calibrated for London liquidity structure.\n\n**Recommendation:** Cap NY trading at 2 setups max and enforce a mandatory 30-minute break between sessions.",
           "Analyze my revenge trading pattern": "Your revenge trading follows an exact 3-step sequence in your logs:\n\n1. **Trigger:** A London session loss exceeding -$150.\n2. **Omission:** Skipping the post-trade journal entry.\n3. **Impulse Action:** Executing a new position within 3–5 minutes at 2.4% risk (double your 1.2% limit).\n\nAll 3 revenge trades this month occurred on GBPJPY and EURUSD following this exact cycle, totaling -$485 in unnecessary losses.",
@@ -130,7 +129,7 @@ export default function AICoachPage() {
     } catch {
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: "Based on your trading metrics, your highest conviction setups occur during the London session (67% win rate, 2.4R average). To maintain peak decision quality, focus on eliminating post-loss entries in New York."
+        content: "Based on your trading metrics, your highest conviction setups occur during the London session (67% win rate, 2.4R average). To maintain peak decision quality, focus on eliminating post-loss entries in New York.",
       }])
     } finally {
       setIsLoading(false)
@@ -143,113 +142,216 @@ export default function AICoachPage() {
   const emotional = report?.emotional_stability_score ?? DEMO_REPORT.emotional_stability_score
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '20px',
+        maxWidth: '1200px',
+        margin: '0 auto',
+        width: '100%',
+        minWidth: 0,
+      }}
+    >
       <style>{`
         @media (max-width: 1023px) {
           .ai-coach-report-grid { grid-template-columns: 1fr !important; gap: 16px !important; }
+          .ai-coach-chat-grid { grid-template-columns: 1fr !important; }
+          .ai-coach-prompts-sidebar { display: none !important; }
         }
         @media (max-width: 639px) {
           .ai-coach-scores-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }
         }
       `}</style>
-      {/* Top Header & Tab Controls */}
-      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div style={{
-              width: '28px', height: '28px', borderRadius: '6px',
-              background: 'rgba(108,142,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center'
-            }}>
-              <Brain size={16} color="var(--accent)" />
-            </div>
-            <h1 style={{ fontSize: '22px', fontWeight: 800, letterSpacing: '-0.5px', color: 'var(--text)' }}>AI Coach</h1>
-          </div>
-          <p style={{ fontSize: '12px', color: 'var(--text-3)', marginTop: '4px', fontFamily: 'var(--font-mono)' }}>
-            Behavioral intelligence & decision quality coaching
-          </p>
+
+      {/* ── 1. HEADER ROW & TAB TOGGLE ── */}
+      <div>
+        <div
+          style={{
+            fontSize: '10px',
+            fontWeight: 700,
+            color: 'var(--accent)',
+            letterSpacing: '0.8px',
+            fontFamily: 'var(--font-mono)',
+            marginBottom: '6px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            textTransform: 'uppercase',
+          }}
+        >
+          <span>TRADERMIND</span>
+          <span style={{ color: 'var(--text-3)' }}>/</span>
+          <span>AI COACH</span>
         </div>
 
-        {/* Tab Toggle */}
-        <div style={{
-          display: 'flex', gap: '4px', background: 'var(--surface-2)',
-          padding: '4px', borderRadius: '8px', border: '1px solid var(--border)'
-        }}>
-          <button
-            onClick={() => setActiveTab('report')}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'flex-end',
+            justifyContent: 'space-between',
+            gap: '12px',
+            flexWrap: 'wrap',
+          }}
+        >
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '8px',
+                  background: 'var(--surface-2)',
+                  border: '1px solid var(--border)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'var(--accent)',
+                }}
+              >
+                <Brain size={18} />
+              </div>
+              <h1
+                style={{
+                  fontSize: '26px',
+                  fontWeight: 800,
+                  letterSpacing: '-0.03em',
+                  lineHeight: 1.1,
+                  color: 'var(--text)',
+                }}
+              >
+                AI Coach
+              </h1>
+            </div>
+            <p style={{ fontSize: '12px', color: 'var(--text-3)', marginTop: '6px', fontFamily: 'var(--font-mono)' }}>
+              Behavioral intelligence & decision quality coaching · GPT-4o Performance Assessment
+            </p>
+          </div>
+
+          {/* Segmented Tab Controls */}
+          <div
             style={{
-              padding: '6px 16px', borderRadius: '6px', fontSize: '12px', fontWeight: 600,
-              border: 'none', cursor: 'pointer', transition: 'all 0.15s',
-              background: activeTab === 'report' ? 'var(--surface-3)' : 'transparent',
-              color: activeTab === 'report' ? 'var(--text)' : 'var(--text-2)',
-              display: 'flex', alignItems: 'center', gap: '6px'
+              display: 'flex',
+              gap: '3px',
+              background: 'var(--surface)',
+              padding: '3px',
+              borderRadius: '8px',
+              border: '1px solid var(--border)',
             }}
           >
-            <Lightbulb size={13} color={activeTab === 'report' ? 'var(--accent)' : 'currentColor'} />
-            Monthly Report
-          </button>
-          <button
-            onClick={() => setActiveTab('chat')}
-            style={{
-              padding: '6px 16px', borderRadius: '6px', fontSize: '12px', fontWeight: 600,
-              border: 'none', cursor: 'pointer', transition: 'all 0.15s',
-              background: activeTab === 'chat' ? 'var(--surface-3)' : 'transparent',
-              color: activeTab === 'chat' ? 'var(--text)' : 'var(--text-2)',
-              display: 'flex', alignItems: 'center', gap: '6px'
-            }}
-          >
-            <Sparkles size={13} color={activeTab === 'chat' ? 'var(--accent)' : 'currentColor'} />
-            Coach Chat
-          </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('report')}
+              className="interactive-btn"
+              style={{
+                padding: '6px 16px',
+                borderRadius: '6px',
+                fontSize: '12px',
+                fontWeight: 600,
+                border: 'none',
+                cursor: 'pointer',
+                fontFamily: 'var(--font-sans)',
+                background: activeTab === 'report' ? 'var(--surface-3)' : 'transparent',
+                color: activeTab === 'report' ? 'var(--text)' : 'var(--text-3)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              <Lightbulb size={13} color={activeTab === 'report' ? 'var(--accent)' : 'currentColor'} />
+              Monthly Report
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('chat')}
+              className="interactive-btn"
+              style={{
+                padding: '6px 16px',
+                borderRadius: '6px',
+                fontSize: '12px',
+                fontWeight: 600,
+                border: 'none',
+                cursor: 'pointer',
+                fontFamily: 'var(--font-sans)',
+                background: activeTab === 'chat' ? 'var(--surface-3)' : 'transparent',
+                color: activeTab === 'chat' ? 'var(--text)' : 'var(--text-3)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              <Sparkles size={13} color={activeTab === 'chat' ? 'var(--accent)' : 'currentColor'} />
+              Coach Chat
+            </button>
+          </div>
         </div>
       </div>
 
       {activeTab === 'report' ? (
-        /* Report View */
+        /* ── REPORT VIEW ── */
         <div className="ai-coach-report-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.8fr) minmax(300px, 1fr)', gap: '16px', alignItems: 'start' }}>
           
           {/* Left Column — Score Banner + Narrative Sections */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             
-            {/* Score Banner */}
-            <div style={{
-              background: 'linear-gradient(135deg, rgba(108,142,255,0.08) 0%, rgba(62,207,142,0.04) 100%)',
-              border: '1px solid rgba(108,142,255,0.2)',
-              borderRadius: '12px',
-              padding: '20px',
-              position: 'relative',
-              overflow: 'hidden'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
+            {/* Score Banner (Solid 71UI Surface with Accent Top Border) */}
+            <div
+              style={{
+                background: 'var(--surface)',
+                border: '1px solid var(--border)',
+                borderRadius: '10px',
+                padding: '20px',
+                position: 'relative',
+                overflow: 'hidden',
+              }}
+            >
+              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: 'var(--accent)' }} />
+
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px', flexWrap: 'wrap', gap: '10px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{
-                    width: '34px', height: '34px', borderRadius: '8px',
-                    background: 'rgba(108,142,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center'
-                  }}>
-                    <Sparkles size={18} color="var(--accent)" />
+                  <div
+                    style={{
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '8px',
+                      background: 'var(--surface-2)',
+                      border: '1px solid var(--border)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Sparkles size={16} color="var(--accent)" />
                   </div>
                   <div>
                     <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text)' }}>
-                      Monthly Behavioral Analysis · May 2026
+                      Monthly Behavioral Assessment · May 2026
                     </div>
                     <div style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', marginTop: '2px' }}>
-                      47 closed trades · 59.6% win rate · GPT-4o Behavioral Assessment
+                      47 closed trades · 59.6% win rate · Layer 2 Cognitive Psychology Synthesis
                     </div>
                   </div>
                 </div>
 
                 <button
+                  type="button"
                   disabled={generating}
                   onClick={handleGenerate}
+                  className="interactive-btn"
                   style={{
-                    display: 'flex', alignItems: 'center', gap: '6px',
-                    padding: '7px 14px', borderRadius: '7px',
-                    background: 'rgba(108,142,255,0.15)',
-                    border: '1px solid rgba(108,142,255,0.3)',
-                    color: 'var(--accent)', fontSize: '11px', fontWeight: 600,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '7px 14px',
+                    borderRadius: '6px',
+                    background: 'var(--surface-2)',
+                    border: '1px solid var(--border)',
+                    color: 'var(--accent)',
+                    fontSize: '11px',
+                    fontWeight: 600,
                     cursor: generating ? 'not-allowed' : 'pointer',
                     fontFamily: 'var(--font-mono)',
                     opacity: generating ? 0.7 : 1,
-                    transition: 'all 0.15s'
                   }}
                 >
                   <RefreshCw size={12} style={{ animation: generating ? 'spin 1s linear infinite' : undefined }} />
@@ -257,7 +359,7 @@ export default function AICoachPage() {
                 </button>
               </div>
 
-              {/* 4 Score Cards */}
+              {/* 4 Score Cards Strip */}
               <div className="ai-coach-scores-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
                 {[
                   { label: 'Discipline', score: discipline, delta: '+3', color: 'var(--accent)' },
@@ -265,32 +367,41 @@ export default function AICoachPage() {
                   { label: 'Risk Quality', score: riskQuality, delta: '-4', color: 'var(--amber)' },
                   { label: 'Emotional Stability', score: emotional, delta: '+11', color: 'var(--purple)' },
                 ].map(s => (
-                  <div key={s.label} style={{
-                    background: 'rgba(10, 11, 14, 0.6)',
-                    border: '1px solid var(--border)',
-                    borderRadius: '8px',
-                    padding: '12px 10px',
-                    textAlign: 'center'
-                  }}>
-                    <div style={{
-                      fontSize: '26px',
-                      fontWeight: 800,
-                      color: s.color,
-                      fontFamily: 'var(--font-mono)',
-                      fontFeatureSettings: '"tnum" 1, "zero" 1',
-                      letterSpacing: '-0.5px'
-                    }}>
+                  <div
+                    key={s.label}
+                    style={{
+                      background: 'var(--surface-2)',
+                      border: '1px solid var(--border)',
+                      borderRadius: '8px',
+                      padding: '12px 10px',
+                      textAlign: 'center',
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: '26px',
+                        fontWeight: 800,
+                        color: s.color,
+                        fontFamily: 'var(--font-mono)',
+                        fontVariantNumeric: 'tabular-nums',
+                        letterSpacing: '-0.5px',
+                        lineHeight: 1,
+                      }}
+                    >
                       {s.score}
                     </div>
-                    <div style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text)', marginTop: '2px' }}>
+                    <div style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text)', marginTop: '5px' }}>
                       {s.label}
                     </div>
-                    <div style={{
-                      fontSize: '9px',
-                      color: s.delta.startsWith('+') ? 'var(--green)' : 'var(--red)',
-                      fontFamily: 'var(--font-mono)',
-                      marginTop: '2px'
-                    }}>
+                    <div
+                      style={{
+                        fontSize: '9px',
+                        color: s.delta.startsWith('+') ? 'var(--green)' : 'var(--red)',
+                        fontFamily: 'var(--font-mono)',
+                        fontVariantNumeric: 'tabular-nums',
+                        marginTop: '2px',
+                      }}
+                    >
                       {s.delta} MoM
                     </div>
                   </div>
@@ -299,19 +410,25 @@ export default function AICoachPage() {
             </div>
 
             {/* Narrative Section 1: Behavioral Analysis */}
-            <div style={{
-              background: 'var(--surface)',
-              border: '1px solid var(--border)',
-              borderRadius: '10px',
-              overflow: 'hidden'
-            }}>
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: '8px',
-                padding: '12px 16px', borderBottom: '1px solid var(--border)',
-                background: 'var(--surface-2)'
-              }}>
-                <Brain size={15} color="var(--accent)" />
-                <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>
+            <div
+              style={{
+                background: 'var(--surface)',
+                border: '1px solid var(--border)',
+                borderRadius: '10px',
+                overflow: 'hidden',
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '12px 16px',
+                  borderBottom: '1px solid var(--border)',
+                }}
+              >
+                <Brain size={14} color="var(--accent)" />
+                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>
                   Behavioral Analysis
                 </span>
               </div>
@@ -323,19 +440,25 @@ export default function AICoachPage() {
             </div>
 
             {/* Narrative Section 2: Psychological Patterns */}
-            <div style={{
-              background: 'var(--surface)',
-              border: '1px solid var(--border)',
-              borderRadius: '10px',
-              overflow: 'hidden'
-            }}>
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: '8px',
-                padding: '12px 16px', borderBottom: '1px solid var(--border)',
-                background: 'var(--surface-2)'
-              }}>
-                <TrendingUp size={15} color="var(--purple)" />
-                <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>
+            <div
+              style={{
+                background: 'var(--surface)',
+                border: '1px solid var(--border)',
+                borderRadius: '10px',
+                overflow: 'hidden',
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '12px 16px',
+                  borderBottom: '1px solid var(--border)',
+                }}
+              >
+                <TrendingUp size={14} color="var(--purple)" />
+                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>
                   Psychological Patterns
                 </span>
               </div>
@@ -347,19 +470,25 @@ export default function AICoachPage() {
             </div>
 
             {/* Narrative Section 3: Discipline Feedback */}
-            <div style={{
-              background: 'var(--surface)',
-              border: '1px solid var(--border)',
-              borderRadius: '10px',
-              overflow: 'hidden'
-            }}>
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: '8px',
-                padding: '12px 16px', borderBottom: '1px solid var(--border)',
-                background: 'var(--surface-2)'
-              }}>
-                <AlertCircle size={15} color="var(--amber)" />
-                <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>
+            <div
+              style={{
+                background: 'var(--surface)',
+                border: '1px solid var(--border)',
+                borderRadius: '10px',
+                overflow: 'hidden',
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '12px 16px',
+                  borderBottom: '1px solid var(--border)',
+                }}
+              >
+                <ShieldAlert size={14} color="var(--amber)" />
+                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>
                   Discipline Feedback & Rule Adherence
                 </span>
               </div>
@@ -376,39 +505,60 @@ export default function AICoachPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             
             {/* Key Insights Panel */}
-            <div style={{
-              background: 'var(--surface)',
-              border: '1px solid var(--border)',
-              borderRadius: '10px',
-              overflow: 'hidden'
-            }}>
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: '8px',
-                padding: '12px 16px', borderBottom: '1px solid var(--border)',
-                background: 'var(--surface-2)'
-              }}>
-                <Lightbulb size={15} color="var(--amber)" />
-                <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>
-                  Key Data Insights
+            <div
+              style={{
+                background: 'var(--surface)',
+                border: '1px solid var(--border)',
+                borderRadius: '10px',
+                overflow: 'hidden',
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '12px 16px',
+                  borderBottom: '1px solid var(--border)',
+                }}
+              >
+                <Lightbulb size={14} color="var(--amber)" />
+                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>
+                  Key Behavioral Insights
                 </span>
               </div>
               <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {((report?.key_insights ?? DEMO_REPORT.key_insights) as string[]).map((insight: string, i: number) => (
-                  <div key={i} style={{
-                    display: 'flex', gap: '10px', padding: '10px 12px',
-                    background: 'var(--surface-2)', borderRadius: '8px',
-                    border: '1px solid var(--border)'
-                  }}>
-                    <div style={{
-                      width: '20px', height: '20px', borderRadius: '50%',
-                      background: 'rgba(108,142,255,0.15)', color: 'var(--accent)',
-                      fontSize: '11px', fontWeight: 700, display: 'flex', alignItems: 'center',
-                      justifyContent: 'center', flexShrink: 0,
-                      fontFamily: 'var(--font-mono)'
-                    }}>
+                  <div
+                    key={i}
+                    style={{
+                      display: 'flex',
+                      gap: '10px',
+                      padding: '10px 12px',
+                      background: 'var(--surface-2)',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border)',
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: '20px',
+                        height: '20px',
+                        borderRadius: '50%',
+                        background: 'rgba(108,142,255,0.15)',
+                        color: 'var(--accent)',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                        fontFamily: 'var(--font-mono)',
+                      }}
+                    >
                       {i + 1}
                     </div>
-                    <p style={{ fontSize: '12px', lineHeight: 1.55, color: 'var(--text-2)' }}>
+                    <p style={{ fontSize: '12px', lineHeight: 1.55, color: 'var(--text-2)', margin: 0 }}>
                       {insight}
                     </p>
                   </div>
@@ -417,34 +567,52 @@ export default function AICoachPage() {
             </div>
 
             {/* Action Items Panel */}
-            <div style={{
-              background: 'var(--surface)',
-              border: '1px solid var(--border)',
-              borderRadius: '10px',
-              overflow: 'hidden'
-            }}>
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: '8px',
-                padding: '12px 16px', borderBottom: '1px solid var(--border)',
-                background: 'var(--surface-2)'
-              }}>
-                <ChevronRight size={15} color="var(--green)" />
-                <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>
+            <div
+              style={{
+                background: 'var(--surface)',
+                border: '1px solid var(--border)',
+                borderRadius: '10px',
+                overflow: 'hidden',
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '12px 16px',
+                  borderBottom: '1px solid var(--border)',
+                }}
+              >
+                <ChevronRight size={14} color="var(--green)" />
+                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>
                   Action Items for Next Month
                 </span>
               </div>
               <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {((report?.improvement_suggestions ?? DEMO_REPORT.improvement_suggestions) as string[]).map((sug: string, i: number) => (
-                  <div key={i} style={{
-                    display: 'flex', gap: '10px', alignItems: 'flex-start',
-                    padding: '8px 10px', borderRadius: '7px',
-                    background: 'rgba(255,255,255,0.02)'
-                  }}>
-                    <div style={{
-                      width: '6px', height: '6px', borderRadius: '50%',
-                      background: 'var(--green)', marginTop: '6px', flexShrink: 0
-                    }} />
-                    <p style={{ fontSize: '12px', lineHeight: 1.55, color: 'var(--text-2)' }}>
+                  <div
+                    key={i}
+                    style={{
+                      display: 'flex',
+                      gap: '10px',
+                      alignItems: 'flex-start',
+                      padding: '8px 10px',
+                      borderRadius: '6px',
+                      background: 'var(--surface-2)',
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: '6px',
+                        height: '6px',
+                        borderRadius: '50%',
+                        background: 'var(--green)',
+                        marginTop: '6px',
+                        flexShrink: 0,
+                      }}
+                    />
+                    <p style={{ fontSize: '12px', lineHeight: 1.55, color: 'var(--text-2)', margin: 0 }}>
                       {sug}
                     </p>
                   </div>
@@ -452,19 +620,29 @@ export default function AICoachPage() {
               </div>
             </div>
 
-            {/* Ask AI Coach Button */}
+            {/* Switch to Chat Callout Button */}
             <button
+              type="button"
               onClick={() => setActiveTab('chat')}
+              className="interactive-btn"
               style={{
-                width: '100%', padding: '14px 16px', borderRadius: '10px',
-                background: 'rgba(108,142,255,0.12)',
+                width: '100%',
+                padding: '14px 16px',
+                borderRadius: '8px',
+                background: 'var(--surface)',
                 border: '1px solid rgba(108,142,255,0.3)',
-                color: 'var(--accent)', fontSize: '13px', fontWeight: 700,
-                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                transition: 'all 0.15s'
+                color: 'var(--accent)',
+                fontSize: '13px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                fontFamily: 'var(--font-sans)',
               }}
             >
-              <Sparkles size={15} />
+              <Sparkles size={14} />
               Discuss Report with AI Coach
               <ArrowRight size={14} />
             </button>
@@ -473,32 +651,39 @@ export default function AICoachPage() {
 
         </div>
       ) : (
-        /* Chat View */
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'minmax(0, 1fr) 260px',
-          gap: '16px',
-          height: 'calc(100vh - 200px)',
-          minHeight: '520px'
-        }}>
-          {/* Main Chat Box */}
-          <div style={{
-            background: 'var(--surface)',
-            border: '1px solid var(--border)',
-            borderRadius: '12px',
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden'
-          }}>
-            {/* Message Feed */}
-            <div style={{
-              flex: 1,
-              overflowY: 'auto',
-              padding: '20px',
+        /* ── CHAT VIEW ── */
+        <div
+          className="ai-coach-chat-grid"
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'minmax(0, 1fr) 260px',
+            gap: '16px',
+            height: 'calc(100vh - 210px)',
+            minHeight: '520px',
+          }}
+        >
+          {/* Main Chat Feed Box */}
+          <div
+            style={{
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              borderRadius: '10px',
               display: 'flex',
               flexDirection: 'column',
-              gap: '16px'
-            }}>
+              overflow: 'hidden',
+            }}
+          >
+            {/* Scrollable Message Feed */}
+            <div
+              style={{
+                flex: 1,
+                overflowY: 'auto',
+                padding: '20px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '16px',
+              }}
+            >
               {messages.map((msg, i) => (
                 <div
                   key={i}
@@ -506,30 +691,39 @@ export default function AICoachPage() {
                     display: 'flex',
                     gap: '10px',
                     flexDirection: msg.role === 'user' ? 'row-reverse' : 'row',
-                    alignItems: 'flex-start'
+                    alignItems: 'flex-start',
                   }}
                 >
                   {/* Avatar */}
-                  <div style={{
-                    width: '30px', height: '30px', borderRadius: '50%',
-                    background: msg.role === 'user' ? 'rgba(108,142,255,0.25)' : 'rgba(62,207,142,0.15)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
-                  }}>
-                    {msg.role === 'user' ? <User size={14} color="var(--accent)" /> : <Sparkles size={14} color="var(--green)" />}
+                  <div
+                    style={{
+                      width: '28px',
+                      height: '28px',
+                      borderRadius: '50%',
+                      background: msg.role === 'user' ? 'rgba(108,142,255,0.2)' : 'rgba(62,207,142,0.15)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                    }}
+                  >
+                    {msg.role === 'user' ? <User size={13} color="var(--accent)" /> : <Sparkles size={13} color="var(--green)" />}
                   </div>
 
-                  {/* Bubble */}
-                  <div style={{
-                    maxWidth: '75%',
-                    padding: '12px 16px',
-                    borderRadius: '10px',
-                    fontSize: '13px',
-                    lineHeight: 1.7,
-                    background: msg.role === 'user' ? 'rgba(108,142,255,0.15)' : 'var(--surface-2)',
-                    color: 'var(--text)',
-                    border: `1px solid ${msg.role === 'user' ? 'rgba(108,142,255,0.3)' : 'var(--border)'}`,
-                    whiteSpace: 'pre-wrap'
-                  }}>
+                  {/* Message Bubble */}
+                  <div
+                    style={{
+                      maxWidth: '75%',
+                      padding: '12px 16px',
+                      borderRadius: '8px',
+                      fontSize: '13px',
+                      lineHeight: 1.7,
+                      background: msg.role === 'user' ? 'rgba(108,142,255,0.15)' : 'var(--surface-2)',
+                      color: 'var(--text)',
+                      border: `1px solid ${msg.role === 'user' ? 'rgba(108,142,255,0.3)' : 'var(--border)'}`,
+                      whiteSpace: 'pre-wrap',
+                    }}
+                  >
                     {msg.content}
                   </div>
                 </div>
@@ -538,29 +732,41 @@ export default function AICoachPage() {
               {/* Typing Indicator */}
               {isLoading && (
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                  <div style={{
-                    width: '30px', height: '30px', borderRadius: '50%',
-                    background: 'rgba(62,207,142,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center'
-                  }}>
-                    <Sparkles size={14} color="var(--green)" />
+                  <div
+                    style={{
+                      width: '28px',
+                      height: '28px',
+                      borderRadius: '50%',
+                      background: 'rgba(62,207,142,0.15)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                    }}
+                  >
+                    <Sparkles size={13} color="var(--green)" />
                   </div>
-                  <div style={{
-                    padding: '12px 18px',
-                    background: 'var(--surface-2)',
-                    borderRadius: '10px',
-                    border: '1px solid var(--border)',
-                    display: 'flex',
-                    gap: '5px',
-                    alignItems: 'center'
-                  }}>
+                  <div
+                    style={{
+                      padding: '10px 16px',
+                      background: 'var(--surface-2)',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border)',
+                      display: 'flex',
+                      gap: '5px',
+                      alignItems: 'center',
+                    }}
+                  >
                     {[0, 1, 2].map(i => (
                       <div
                         key={i}
                         style={{
-                          width: '6px', height: '6px', borderRadius: '50%',
+                          width: '6px',
+                          height: '6px',
+                          borderRadius: '50%',
                           background: 'var(--accent)',
                           opacity: 0.8,
-                          animation: `bounce 1s infinite ${i * 0.18}s`
+                          animation: `bounce 1s infinite ${i * 0.18}s`,
                         }}
                       />
                     ))}
@@ -571,7 +777,7 @@ export default function AICoachPage() {
             </div>
 
             {/* Input Bar */}
-            <div style={{ padding: '16px', borderTop: '1px solid var(--border)', background: 'var(--surface-2)' }}>
+            <div style={{ padding: '14px 16px', borderTop: '1px solid var(--border)', background: 'var(--surface-2)' }}>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <input
                   value={input}
@@ -597,15 +803,20 @@ export default function AICoachPage() {
                   }}
                 />
                 <button
+                  type="button"
                   disabled={isLoading || !input.trim()}
                   onClick={() => sendMessage()}
+                  className="interactive-btn"
                   style={{
-                    width: '42px', height: '42px', borderRadius: '8px',
-                    background: input.trim() && !isLoading ? 'var(--accent)' : 'rgba(255,255,255,0.06)',
-                    border: 'none',
+                    width: '42px',
+                    height: '42px',
+                    borderRadius: '8px',
+                    background: input.trim() && !isLoading ? 'var(--accent)' : 'var(--surface-3)',
+                    border: '1px solid var(--border)',
                     cursor: input.trim() && !isLoading ? 'pointer' : 'not-allowed',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    transition: 'all 0.15s'
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                   }}
                 >
                   <Send size={15} color={input.trim() && !isLoading ? '#fff' : 'var(--text-3)'} />
@@ -615,39 +826,38 @@ export default function AICoachPage() {
           </div>
 
           {/* Quick Questions Sidebar */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <div style={{
-              fontSize: '11px', fontWeight: 700, color: 'var(--text-3)',
-              fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.8px',
-              padding: '0 4px'
-            }}>
+          <div className="ai-coach-prompts-sidebar" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div
+              style={{
+                fontSize: '10px',
+                fontWeight: 700,
+                color: 'var(--text-3)',
+                fontFamily: 'var(--font-mono)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.8px',
+                padding: '0 4px',
+              }}
+            >
               Suggested Questions
             </div>
             {QUICK_PROMPTS.map(prompt => (
               <button
                 key={prompt}
+                type="button"
                 disabled={isLoading}
                 onClick={() => sendMessage(prompt)}
+                className="interactive-btn"
                 style={{
-                  padding: '12px 14px', borderRadius: '8px',
+                  padding: '12px 14px',
+                  borderRadius: '8px',
                   background: 'var(--surface)',
                   border: '1px solid var(--border)',
-                  color: 'var(--text-2)', fontSize: '12px',
-                  textAlign: 'left', cursor: isLoading ? 'not-allowed' : 'pointer',
-                  lineHeight: 1.5, fontFamily: 'var(--font-sans)',
-                  transition: 'all 0.15s'
-                }}
-                onMouseEnter={e => {
-                  if (!isLoading) {
-                    e.currentTarget.style.borderColor = 'rgba(108,142,255,0.35)'
-                    e.currentTarget.style.color = 'var(--text)'
-                    e.currentTarget.style.background = 'var(--surface-2)'
-                  }
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.borderColor = 'var(--border)'
-                  e.currentTarget.style.color = 'var(--text-2)'
-                  e.currentTarget.style.background = 'var(--surface)'
+                  color: 'var(--text-2)',
+                  fontSize: '12px',
+                  textAlign: 'left',
+                  cursor: isLoading ? 'not-allowed' : 'pointer',
+                  lineHeight: 1.5,
+                  fontFamily: 'var(--font-sans)',
                 }}
               >
                 {prompt}
