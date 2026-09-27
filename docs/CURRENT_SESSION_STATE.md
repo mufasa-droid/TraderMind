@@ -1,6 +1,6 @@
 # TraderMind — Current Session State & Resumption Guide
 
-> **Last Updated:** September 1, 2026
+> **Last Updated:** September 27, 2026
 > **Git Repository:** `https://github.com/mufasa-droid/TraderMind.git`
 > **Branch:** `main` (clean & up to date)
 
@@ -32,6 +32,9 @@ Every core feature of the platform is fully implemented, responsive, and passing
 
 ## 2. Git Commit History (Recent Milestone Commits)
 
+- `737aab4` — `fix: route analytics fetch to /api/behavioral/analytics`
+- `4b89551` — `feat: redesign dashboard shell and overview with 71UI dark institutional precision`
+- `1df8ff6` — `feat(landing): redesign landing page and tokens with 71UI dark institutional precision`
 - `7d72c23` — `feat: enhance MT5 webhook ingestion resilience and add live deal stream simulator`
 - `e8f8d95` — `feat: implement free MQL5 Desktop EA sync, webhook ingestion endpoint, and UI controls`
 - `4dad7da` — `feat(landing): redesign footer into institutional multi-column layout`
