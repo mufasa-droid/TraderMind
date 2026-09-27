@@ -27,20 +27,31 @@ const DEMO_SHOTS: Shot[] = [
     notes: 'Clean break and retest of H1 consolidation high with ATR expansion.',
     timeframe: 'H1',
     trade_type: 'setup',
-    created_at: new Date(Date.now() - 3600000 * 4).toISOString(),
+    created_at: '2026-09-27T14:30:00.000Z',
   },
   {
     id: '2',
-    url: 'https://images.unsplash.com/photo-1642543492481-44e81e3914a7?auto=format&fit=crop&w=1400&q=80',
+    url: 'https://images.unsplash.com/photo-1642543492481-44e81e3914a7?auto=format&fit=crop&w=1400&q=80&q=80',
     thumbnail_url: 'https://images.unsplash.com/photo-1642543492481-44e81e3914a7?auto=format&fit=crop&w=600&q=80',
     label: 'GBPJPY Loss Post-Mortem',
     symbol: 'GBPJPY',
     notes: 'Revenge entry after initial London stopout. Rule violation: risk creep + FOMO.',
     timeframe: 'M15',
     trade_type: 'review',
-    created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
+    created_at: '2026-09-25T09:15:00.000Z',
   },
 ]
+
+function formatShotDate(iso: string) {
+  if (!iso) return ''
+  try {
+    const d = new Date(iso)
+    if (isNaN(d.getTime())) return iso.slice(0, 10)
+    return d.toISOString().slice(0, 10)
+  } catch {
+    return iso.slice(0, 10)
+  }
+}
 
 export default function ScreenshotsPage() {
   const [shots, setShots] = useState<Shot[]>(DEMO_SHOTS)
@@ -58,6 +69,7 @@ export default function ScreenshotsPage() {
         if (cancelled) return
 
         if (user) {
+          // Rule 3.4: All queries strictly scoped to .eq('user_id', user.id)
           const { data, error } = await supabase
             .from('trade_screenshots')
             .select('*')
@@ -109,7 +121,7 @@ export default function ScreenshotsPage() {
           thumbnail_url: previewUrl,
           label: file.name.replace(/\.[^/.]+$/, '').slice(0, 28),
           symbol: 'MANUAL',
-          notes: 'Uploaded in demo mode session',
+          notes: 'Uploaded in portfolio demo mode session',
           timeframe: 'M15',
           trade_type: 'setup',
           created_at: new Date().toISOString(),
@@ -203,6 +215,7 @@ export default function ScreenshotsPage() {
             cursor: uploading ? 'not-allowed' : 'pointer',
             opacity: uploading ? 0.6 : 1,
             transition: 'opacity 0.2s',
+            fontFamily: 'var(--font-sans)',
           }}
         >
           <Upload size={14} /> {uploading ? 'Uploading…' : 'Upload Chart'}
@@ -217,7 +230,7 @@ export default function ScreenshotsPage() {
       </div>
 
       {/* Grid of Screenshots */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
         {shots.map(s => (
           <div
             key={s.id}
@@ -228,14 +241,14 @@ export default function ScreenshotsPage() {
               overflow: 'hidden',
               display: 'flex',
               flexDirection: 'column',
-              transition: 'border-color 0.2s, transform 0.2s',
+              transition: 'border-color 0.2s',
             }}
           >
             {/* Image Thumbnail */}
             <div
               onClick={() => setSelectedShot(s)}
               style={{
-                height: '170px',
+                height: '175px',
                 background: 'var(--surface-2)',
                 display: 'flex',
                 alignItems: 'center',
@@ -255,6 +268,8 @@ export default function ScreenshotsPage() {
               ) : (
                 <ImageIcon size={28} color="var(--text-3)" />
               )}
+
+              {/* Solid 71UI badges — Zero glassmorphism */}
               {s.symbol && (
                 <span
                   style={{
@@ -263,8 +278,7 @@ export default function ScreenshotsPage() {
                     left: '10px',
                     padding: '3px 8px',
                     borderRadius: '4px',
-                    background: 'rgba(10, 11, 14, 0.8)',
-                    backdropFilter: 'blur(4px)',
+                    background: 'var(--surface-3)',
                     border: '1px solid var(--border)',
                     fontSize: '10px',
                     fontFamily: 'var(--font-mono)',
@@ -283,8 +297,8 @@ export default function ScreenshotsPage() {
                     right: '10px',
                     padding: '3px 8px',
                     borderRadius: '4px',
-                    background: s.trade_type === 'setup' ? 'rgba(62, 207, 142, 0.2)' : 'rgba(108, 142, 255, 0.2)',
-                    border: `1px solid ${s.trade_type === 'setup' ? 'rgba(62, 207, 142, 0.4)' : 'rgba(108, 142, 255, 0.4)'}`,
+                    background: s.trade_type === 'setup' ? 'rgba(62, 207, 142, 0.15)' : 'rgba(108, 142, 255, 0.15)',
+                    border: `1px solid ${s.trade_type === 'setup' ? 'rgba(62, 207, 142, 0.35)' : 'rgba(108, 142, 255, 0.35)'}`,
                     fontSize: '10px',
                     fontFamily: 'var(--font-mono)',
                     fontWeight: 700,
@@ -302,8 +316,8 @@ export default function ScreenshotsPage() {
               <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)', marginBottom: '4px' }}>
                 {s.label || 'Untitled Screenshot'}
               </div>
-              <div style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', marginBottom: '8px' }}>
-                {new Date(s.created_at).toLocaleDateString()} · {s.timeframe ?? 'H1'} · {s.symbol ?? 'N/A'}
+              <div style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums', marginBottom: '8px' }}>
+                {formatShotDate(s.created_at)} · {s.timeframe ?? 'H1'} · {s.symbol ?? 'N/A'}
               </div>
               {s.notes && (
                 <p style={{ fontSize: '12px', color: 'var(--text-2)', lineHeight: 1.5, flex: 1, margin: 0 }}>
@@ -330,6 +344,7 @@ export default function ScreenshotsPage() {
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: '5px',
+                    fontFamily: 'var(--font-sans)',
                   }}
                 >
                   <Eye size={12} /> View Full Size
@@ -376,7 +391,7 @@ export default function ScreenshotsPage() {
         </div>
       )}
 
-      {/* Full Size Modal View */}
+      {/* Full Size Modal View — Solid 71UI Dark, Zero Glassmorphism */}
       {selectedShot && (
         <div
           onClick={() => setSelectedShot(null)}
@@ -384,7 +399,6 @@ export default function ScreenshotsPage() {
             position: 'fixed',
             inset: 0,
             background: 'rgba(0, 0, 0, 0.85)',
-            backdropFilter: 'blur(6px)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -421,8 +435,8 @@ export default function ScreenshotsPage() {
                 <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text)' }}>
                   {selectedShot.label || 'Chart View'}
                 </div>
-                <div style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', marginTop: '2px' }}>
-                  {selectedShot.symbol ? `${selectedShot.symbol} · ` : ''}{selectedShot.timeframe ?? 'H1'} · {new Date(selectedShot.created_at).toLocaleString()}
+                <div style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums', marginTop: '2px' }}>
+                  {selectedShot.symbol ? `${selectedShot.symbol} · ` : ''}{selectedShot.timeframe ?? 'H1'} · {formatShotDate(selectedShot.created_at)}
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -442,6 +456,7 @@ export default function ScreenshotsPage() {
                       color: 'var(--text-2)',
                       fontSize: '11px',
                       textDecoration: 'none',
+                      fontFamily: 'var(--font-sans)',
                     }}
                   >
                     <ExternalLink size={12} /> Open Raw
@@ -494,7 +509,7 @@ export default function ScreenshotsPage() {
             {/* Modal Footer Notes */}
             {selectedShot.notes && (
               <div style={{ padding: '14px 18px', borderTop: '1px solid var(--border)', background: 'var(--surface-2)' }}>
-                <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
+                <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px', fontFamily: 'var(--font-mono)' }}>
                   Behavioral Notes
                 </div>
                 <div style={{ fontSize: '13px', color: 'var(--text)', lineHeight: 1.5 }}>
