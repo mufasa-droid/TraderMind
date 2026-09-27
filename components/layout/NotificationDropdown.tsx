@@ -197,7 +197,7 @@ export default function NotificationDropdown() {
         )}
       </button>
 
-      {/* Glassmorphic Popover Dropdown */}
+      {/* 71UI Institutional Popover Dropdown */}
       {isOpen && (
         <div style={{
           position: 'absolute',
@@ -205,15 +205,13 @@ export default function NotificationDropdown() {
           right: 0,
           width: '370px',
           maxWidth: 'calc(100vw - 32px)',
-          background: 'rgba(17, 19, 24, 0.88)',
-          backdropFilter: 'blur(28px) saturate(190%)',
-          WebkitBackdropFilter: 'blur(28px) saturate(190%)',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          borderRadius: '14px',
-          boxShadow: '0 24px 60px rgba(0, 0, 0, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.12)',
+          background: 'var(--surface)',
+          border: '1px solid var(--border-2)',
+          borderRadius: '10px',
+          boxShadow: '0 16px 40px rgba(0, 0, 0, 0.75)',
           zIndex: 100,
           overflow: 'hidden',
-          animation: 'notifDropdownFade 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+          animation: 'notifDropdownFade 0.18s cubic-bezier(0.23, 1, 0.32, 1)',
         }}>
           {/* Header */}
           <div style={{

@@ -15,10 +15,6 @@ import {
   Menu,
   X,
   Search,
-  Activity,
-  Shield,
-  Sliders,
-  ChevronRight,
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
@@ -52,21 +48,20 @@ function NavItem({
     <Link
       href={href}
       onClick={onClick}
-      className="apple-btn"
+      className="interactive-btn"
       style={{
         display: 'flex',
         alignItems: 'center',
         gap: '12px',
-        padding: '9px 14px',
-        borderRadius: '10px',
+        padding: '9px 12px',
+        borderRadius: '8px',
         fontSize: '13px',
         fontWeight: active ? 600 : 500,
         textDecoration: 'none',
         color: active ? '#FFFFFF' : 'var(--text-2)',
-        background: active ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
-        border: active ? '1px solid rgba(255, 255, 255, 0.12)' : '1px solid transparent',
-        boxShadow: active ? 'inset 0 1px 0 rgba(255, 255, 255, 0.08)' : 'none',
-        transition: 'all 0.15s ease',
+        background: active ? 'var(--surface-2)' : 'transparent',
+        border: active ? '1px solid var(--border-2)' : '1px solid transparent',
+        transition: 'background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out)',
       }}
     >
       <Icon
@@ -74,7 +69,7 @@ function NavItem({
         strokeWidth={active ? 2.2 : 1.8}
         style={{
           color: active ? 'var(--accent)' : 'var(--text-3)',
-          transition: 'color 0.15s ease',
+          transition: 'color var(--dur-fast) var(--ease-out)',
           flexShrink: 0,
         }}
       />
@@ -82,11 +77,10 @@ function NavItem({
       {active && (
         <span
           style={{
-            width: '4px',
-            height: '4px',
+            width: '5px',
+            height: '5px',
             borderRadius: '50%',
             background: 'var(--accent)',
-            boxShadow: '0 0 6px var(--accent)',
           }}
         />
       )}
@@ -218,15 +212,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         }
       `}</style>
 
-      {/* ── DESKTOP MACOS PRO APP SIDEBAR (240px) ── */}
+      {/* ── DESKTOP 71UI INSTITUTIONAL SIDEBAR (240px) ── */}
       <aside
         className="desktop-sidebar"
         style={{
           width: '240px',
-          background: 'rgba(17, 19, 24, 0.75)',
-          backdropFilter: 'blur(28px) saturate(180%)',
-          WebkitBackdropFilter: 'blur(28px) saturate(180%)',
-          borderRight: '1px solid rgba(255, 255, 255, 0.08)',
+          background: 'var(--surface)',
+          borderRight: '1px solid var(--border)',
           flexDirection: 'column',
           height: '100vh',
           position: 'sticky',
@@ -238,53 +230,53 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* Workspace Brand Header */}
         <div
           style={{
-            padding: '18px 20px',
-            borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+            padding: '16px 18px',
+            borderBottom: '1px solid var(--border)',
             display: 'flex',
             alignItems: 'center',
-            gap: '12px',
+            gap: '10px',
           }}
         >
           <div
             style={{
-              width: '30px',
-              height: '30px',
-              borderRadius: '9px',
-              background: 'linear-gradient(135deg, var(--accent), var(--purple))',
+              width: '28px',
+              height: '28px',
+              borderRadius: '6px',
+              background: 'var(--surface-2)',
+              border: '1px solid var(--border-2)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               fontSize: '11px',
               fontWeight: 800,
-              color: '#FFFFFF',
+              color: 'var(--accent)',
               fontFamily: 'var(--font-mono)',
-              boxShadow: '0 0 16px rgba(108, 142, 255, 0.35)',
               flexShrink: 0,
             }}
           >
             TM
           </div>
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: '15px', fontWeight: 700, letterSpacing: '-0.02em', color: '#FFFFFF' }}>
+            <div style={{ fontSize: '14.5px', fontWeight: 700, letterSpacing: '-0.02em', color: '#FFFFFF' }}>
               TraderMind
             </div>
             <div style={{ fontSize: '10.5px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
-              Pro Workspace · v1.0
+              Pro Workspace · v2.4
             </div>
           </div>
         </div>
 
         {/* Quick Action Search Hint */}
-        <div style={{ padding: '14px 16px 6px' }}>
+        <div style={{ padding: '12px 14px 6px' }}>
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              padding: '7px 12px',
-              borderRadius: '8px',
-              background: 'rgba(255, 255, 255, 0.03)',
-              border: '1px solid rgba(255, 255, 255, 0.06)',
+              padding: '6px 10px',
+              borderRadius: '6px',
+              background: 'var(--surface-2)',
+              border: '1px solid var(--border)',
               color: 'var(--text-3)',
               fontSize: '12px',
               cursor: 'default',
@@ -296,11 +288,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
             <span
               style={{
-                fontSize: '10px',
+                fontSize: '9.5px',
                 fontFamily: 'var(--font-mono)',
-                background: 'rgba(255, 255, 255, 0.06)',
+                background: 'var(--surface-3)',
                 padding: '2px 5px',
                 borderRadius: '4px',
+                color: 'var(--text-2)',
               }}
             >
               ⌘K
@@ -311,11 +304,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* Navigation List */}
         <nav
           style={{
-            padding: '10px 14px',
+            padding: '8px 12px',
             flex: 1,
             display: 'flex',
             flexDirection: 'column',
-            gap: '3px',
+            gap: '2px',
             overflowY: 'auto',
           }}
         >
@@ -326,7 +319,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               color: 'var(--text-3)',
               letterSpacing: '0.08em',
               textTransform: 'uppercase',
-              padding: '10px 8px 6px',
+              padding: '8px 8px 4px',
               fontFamily: 'var(--font-mono)',
             }}
           >
@@ -347,20 +340,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* Footer: Broker Connection & User Profile */}
         <div
           style={{
-            padding: '16px 14px',
-            borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+            padding: '14px 12px',
+            borderTop: '1px solid var(--border)',
             display: 'flex',
             flexDirection: 'column',
-            gap: '12px',
+            gap: '10px',
           }}
         >
           {/* MT5 Read-Only Status Card */}
           <Link href="/broker/connect" style={{ textDecoration: 'none', display: 'block' }}>
             <div
-              className="apple-glass-card apple-btn"
+              className="interactive-btn"
               style={{
-                padding: '10px 14px',
-                borderRadius: '12px',
+                padding: '10px 12px',
+                borderRadius: '8px',
+                background: 'var(--surface-2)',
+                border: '1px solid var(--border)',
                 cursor: 'pointer',
               }}
             >
@@ -393,7 +388,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                       height: '6px',
                       borderRadius: '50%',
                       background: 'var(--green)',
-                      boxShadow: '0 0 6px var(--green)',
                       display: 'inline-block',
                     }}
                   />{' '}
@@ -418,26 +412,28 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
           {/* User Profile Capsule */}
           <div
-            className="apple-glass-card apple-btn"
+            className="interactive-btn"
             onClick={() => setIsSettingsOpen(true)}
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: '10px',
               padding: '8px 10px',
-              borderRadius: '12px',
+              borderRadius: '8px',
+              background: 'var(--surface-2)',
+              border: '1px solid var(--border)',
               cursor: 'pointer',
             }}
             title="Click to manage account settings & profile"
           >
             <div
               style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '50%',
+                width: '30px',
+                height: '30px',
+                borderRadius: '6px',
                 flexShrink: 0,
-                background: 'rgba(255, 255, 255, 0.08)',
-                border: '1px solid rgba(255, 255, 255, 0.12)',
+                background: 'var(--surface-3)',
+                border: '1px solid var(--border-2)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -481,7 +477,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 setIsSettingsOpen(true)
               }}
               title="Account Settings"
-              className="apple-btn"
+              className="interactive-btn"
               style={{
                 background: 'transparent',
                 border: 'none',
@@ -489,10 +485,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 padding: '4px',
                 color: 'var(--text-3)',
                 display: 'flex',
-                borderRadius: '6px',
+                borderRadius: '4px',
               }}
             >
-              <Settings size={15} />
+              <Settings size={14} />
             </button>
             <button
               type="button"
@@ -501,7 +497,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 handleSignOut()
               }}
               title="Sign out"
-              className="apple-btn"
+              className="interactive-btn"
               style={{
                 background: 'transparent',
                 border: 'none',
@@ -509,10 +505,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 padding: '4px',
                 color: 'var(--text-3)',
                 display: 'flex',
-                borderRadius: '6px',
+                borderRadius: '4px',
               }}
             >
-              <LogOut size={15} />
+              <LogOut size={14} />
             </button>
           </div>
         </div>
@@ -527,10 +523,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               position: 'fixed',
               inset: 0,
               background: 'rgba(0, 0, 0, 0.75)',
-              backdropFilter: 'blur(12px)',
-              WebkitBackdropFilter: 'blur(12px)',
               zIndex: 90,
-              animation: 'modalFadeIn 0.2s ease-out',
+              animation: 'modalFadeIn 0.18s cubic-bezier(0.23, 1, 0.32, 1)',
             }}
           />
           <aside
@@ -541,22 +535,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               bottom: 0,
               width: '280px',
               maxWidth: '85vw',
-              background: 'rgba(17, 19, 24, 0.95)',
-              backdropFilter: 'blur(30px)',
-              WebkitBackdropFilter: 'blur(30px)',
-              borderRight: '1px solid rgba(255, 255, 255, 0.1)',
+              background: 'var(--surface)',
+              borderRight: '1px solid var(--border-2)',
               display: 'flex',
               flexDirection: 'column',
               zIndex: 100,
               boxShadow: '0 0 60px rgba(0, 0, 0, 0.9)',
-              animation: 'drawerSlide 0.25s var(--spring-smooth)',
+              animation: 'drawerSlide 0.22s cubic-bezier(0.23, 1, 0.32, 1)',
             }}
           >
             {/* Drawer Header */}
             <div
               style={{
-                padding: '18px 20px',
-                borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+                padding: '16px 18px',
+                borderBottom: '1px solid var(--border)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
@@ -565,23 +557,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <div
                   style={{
-                    width: '28px',
-                    height: '28px',
-                    borderRadius: '8px',
-                    background: 'linear-gradient(135deg, var(--accent), var(--purple))',
+                    width: '26px',
+                    height: '26px',
+                    borderRadius: '6px',
+                    background: 'var(--surface-2)',
+                    border: '1px solid var(--border-2)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     fontSize: '11px',
                     fontWeight: 800,
-                    color: '#FFFFFF',
+                    color: 'var(--accent)',
                     fontFamily: 'var(--font-mono)',
                   }}
                 >
                   TM
                 </div>
                 <div>
-                  <div style={{ fontSize: '15px', fontWeight: 700, color: '#FFFFFF' }}>TraderMind</div>
+                  <div style={{ fontSize: '14.5px', fontWeight: 700, color: '#FFFFFF' }}>TraderMind</div>
                   <div style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
                     Pro Workspace
                   </div>
@@ -590,38 +583,32 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <button
                 type="button"
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="apple-btn"
+                className="interactive-btn"
                 style={{
-                  background: 'rgba(255, 255, 255, 0.06)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  borderRadius: '8px',
+                  background: 'var(--surface-2)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '6px',
                   color: 'var(--text-2)',
                   cursor: 'pointer',
-                  padding: '7px',
+                  padding: '6px',
                   display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
                 }}
               >
                 <X size={16} />
               </button>
             </div>
 
-            {/* Drawer Navigation */}
-            <nav style={{ padding: '14px', flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <div
-                style={{
-                  fontSize: '10px',
-                  fontWeight: 700,
-                  color: 'var(--text-3)',
-                  letterSpacing: '0.08em',
-                  textTransform: 'uppercase',
-                  padding: '8px 10px',
-                  fontFamily: 'var(--font-mono)',
-                }}
-              >
-                Navigation
-              </div>
+            {/* Mobile Navigation List */}
+            <nav
+              style={{
+                padding: '12px',
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '4px',
+                overflowY: 'auto',
+              }}
+            >
               {NAV_ITEMS.map(item => (
                 <NavItem
                   key={item.href}
@@ -632,32 +619,36 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   onClick={() => setIsMobileMenuOpen(false)}
                 />
               ))}
-              <div style={{ flex: 1 }} />
             </nav>
 
-            {/* Drawer Footer */}
-            <div style={{ padding: '16px', borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
+            {/* Mobile Drawer Footer */}
+            <div
+              style={{
+                padding: '14px',
+                borderTop: '1px solid var(--border)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '10px',
+              }}
+            >
               <div
-                onClick={() => {
-                  setIsMobileMenuOpen(false)
-                  setIsSettingsOpen(true)
-                }}
-                className="apple-glass-card"
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: '10px',
-                  padding: '10px 12px',
-                  borderRadius: '12px',
-                  cursor: 'pointer',
+                  padding: '8px 10px',
+                  borderRadius: '8px',
+                  background: 'var(--surface-2)',
+                  border: '1px solid var(--border)',
                 }}
               >
                 <div
                   style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '50%',
-                    background: 'rgba(255, 255, 255, 0.08)',
+                    width: '30px',
+                    height: '30px',
+                    borderRadius: '6px',
+                    background: 'var(--surface-3)',
+                    border: '1px solid var(--border-2)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -670,19 +661,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   {initials}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: '13px', fontWeight: 600, color: '#FFFFFF' }}>{userName}</div>
-                  <div style={{ fontSize: '10px', color: 'var(--accent)', fontFamily: 'var(--font-mono)' }}>
-                    Settings & Profile
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: '#FFFFFF', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {userName}
+                  </div>
+                  <div style={{ fontSize: '10px', color: 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {userEmail || 'trader@tradermind.pro'}
                   </div>
                 </div>
                 <button
                   type="button"
-                  onClick={e => {
-                    e.stopPropagation()
-                    handleSignOut()
-                  }}
-                  title="Sign out"
-                  className="apple-btn"
+                  onClick={handleSignOut}
+                  className="interactive-btn"
                   style={{
                     background: 'transparent',
                     border: 'none',
@@ -702,15 +691,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* ── MAIN CONTENT CONTAINER ── */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, maxWidth: '100%', overflowX: 'clip' }}>
-        {/* Apple Translucent Sticky Header (52px) */}
+        {/* Solid Institutional Sticky Header (52px) */}
         <header
           className="dashboard-topbar"
           style={{
             height: '52px',
-            background: 'rgba(10, 11, 14, 0.72)',
-            backdropFilter: 'blur(28px) saturate(180%)',
-            WebkitBackdropFilter: 'blur(28px) saturate(180%)',
-            borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+            background: 'var(--bg)',
+            borderBottom: '1px solid var(--border)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -726,15 +713,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
             <button
               type="button"
-              className="mobile-menu-trigger apple-btn"
+              className="mobile-menu-trigger interactive-btn"
               onClick={() => setIsMobileMenuOpen(true)}
               style={{
-                background: 'rgba(255, 255, 255, 0.06)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                borderRadius: '8px',
+                background: 'var(--surface-2)',
+                border: '1px solid var(--border)',
+                borderRadius: '6px',
                 color: '#FFFFFF',
                 cursor: 'pointer',
-                padding: '7px',
+                padding: '6px',
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexShrink: 0,
@@ -776,8 +763,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   alignItems: 'center',
                   gap: '6px',
                   padding: '3px 8px',
-                  borderRadius: '9999px',
-                  background: 'rgba(62, 207, 142, 0.1)',
+                  borderRadius: '4px',
+                  background: 'rgba(62, 207, 142, 0.08)',
                   border: '1px solid rgba(62, 207, 142, 0.25)',
                 }}
               >
@@ -798,9 +785,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   fontFamily: 'var(--font-mono)',
                   color: 'var(--green)',
                   fontWeight: 700,
-                  background: 'rgba(62, 207, 142, 0.1)',
-                  padding: '2px 7px',
-                  borderRadius: '9999px',
+                  background: 'rgba(62, 207, 142, 0.08)',
+                  padding: '2px 6px',
+                  borderRadius: '4px',
                   border: '1px solid rgba(62, 207, 142, 0.25)',
                 }}
               >
@@ -819,13 +806,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               style={{
                 alignItems: 'center',
                 gap: '8px',
-                fontSize: '11.5px',
+                fontSize: '11px',
                 color: 'var(--text-2)',
                 fontFamily: 'var(--font-mono)',
-                background: 'rgba(255, 255, 255, 0.04)',
-                padding: '5px 12px',
-                borderRadius: '9999px',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
+                background: 'var(--surface-2)',
+                padding: '4px 10px',
+                borderRadius: '6px',
+                border: '1px solid var(--border)',
               }}
             >
               <span
@@ -834,7 +821,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   height: '6px',
                   borderRadius: '50%',
                   background: 'var(--green)',
-                  boxShadow: '0 0 6px var(--green)',
                   display: 'inline-block',
                 }}
               />
@@ -850,10 +836,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 fontSize: '10.5px',
                 color: 'var(--text-2)',
                 fontFamily: 'var(--font-mono)',
-                background: 'rgba(255, 255, 255, 0.04)',
-                padding: '4px 8px',
-                borderRadius: '9999px',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
+                background: 'var(--surface-2)',
+                padding: '3px 7px',
+                borderRadius: '6px',
+                border: '1px solid var(--border)',
               }}
             >
               <span
@@ -885,7 +871,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </main>
       </div>
 
-      {/* macOS Preferences Style Settings Modal */}
+      {/* Settings Modal */}
       <ProfileSettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}

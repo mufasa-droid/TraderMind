@@ -137,15 +137,13 @@ export default function ProfileSettingsModal({
     <div style={{
       position: 'fixed',
       inset: 0,
-      background: 'rgba(5, 6, 8, 0.78)',
-      backdropFilter: 'blur(16px)',
-      WebkitBackdropFilter: 'blur(16px)',
+      background: 'rgba(0, 0, 0, 0.75)',
       zIndex: 1000,
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       padding: '20px',
-      animation: 'modalFadeIn 0.2s ease-out',
+      animation: 'modalFadeIn 0.18s cubic-bezier(0.23, 1, 0.32, 1)',
     }}>
       {/* Click outside backdrop */}
       <div
@@ -158,10 +156,10 @@ export default function ProfileSettingsModal({
         position: 'relative',
         width: '100%',
         maxWidth: '520px',
-        background: 'rgba(17, 19, 24, 0.94)',
-        border: '1px solid rgba(255, 255, 255, 0.12)',
-        borderRadius: '16px',
-        boxShadow: '0 30px 80px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.12)',
+        background: 'var(--surface)',
+        border: '1px solid var(--border-2)',
+        borderRadius: '12px',
+        boxShadow: '0 24px 60px rgba(0, 0, 0, 0.85)',
         zIndex: 1001,
         overflow: 'hidden',
         fontFamily: 'var(--font-sans)',

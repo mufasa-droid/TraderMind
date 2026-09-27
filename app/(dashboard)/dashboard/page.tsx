@@ -71,14 +71,11 @@ type AnalyticsResponse = {
   range: { start: string; end: string; label: string }
 }
 
-// ── APPLE GLASS PANEL STYLES ─────────────────────────────────
-const glassCardStyle = {
-  background: 'rgba(17, 19, 24, 0.72)',
-  backdropFilter: 'blur(24px) saturate(180%)',
-  WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+// ── 71UI INSTITUTIONAL PANEL STYLES (NO GLASSMORPHISM) ────────
+const institutionalCardStyle = {
+  background: 'var(--surface)',
   border: '1px solid var(--border)',
-  borderRadius: '14px',
-  boxShadow: 'var(--glass-highlight)',
+  borderRadius: '10px',
   overflow: 'hidden' as const,
   position: 'relative' as const,
 }
@@ -87,8 +84,9 @@ const cardHeaderStyle = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'space-between',
-  padding: '14px 18px',
-  borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+  padding: '12px 16px',
+  background: 'var(--surface-2)',
+  borderBottom: '1px solid var(--border)',
 }
 
 // ── DUAL-AXIS TOOLTIP ─────────────────────────────────────────
@@ -115,14 +113,12 @@ function CustomEquityTooltip({ active, payload, label }: CustomEquityTooltipProp
   return (
     <div
       style={{
-        background: 'rgba(17, 19, 24, 0.92)',
-        backdropFilter: 'blur(24px) saturate(180%)',
-        WebkitBackdropFilter: 'blur(24px) saturate(180%)',
-        border: '1px solid rgba(255, 255, 255, 0.12)',
-        borderRadius: '10px',
-        padding: '12px 16px',
-        boxShadow: '0 16px 40px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
-        minWidth: '180px',
+        background: 'var(--surface-2)',
+        border: '1px solid var(--border-2)',
+        borderRadius: '8px',
+        padding: '10px 14px',
+        boxShadow: '0 12px 32px rgba(0, 0, 0, 0.7)',
+        minWidth: '170px',
         pointerEvents: 'none',
       }}
     >
@@ -136,7 +132,7 @@ function CustomEquityTooltip({ active, payload, label }: CustomEquityTooltipProp
           letterSpacing: '0.6px',
           marginBottom: '8px',
           paddingBottom: '6px',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+          borderBottom: '1px solid var(--border)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -149,53 +145,39 @@ function CustomEquityTooltip({ active, payload, label }: CustomEquityTooltipProp
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span
-              style={{
-                width: '7px',
-                height: '7px',
-                borderRadius: '50%',
-                background: 'var(--green)',
-                boxShadow: '0 0 8px var(--green)',
-                display: 'inline-block',
-              }}
-            />
-            <span style={{ fontSize: '11.5px', color: 'var(--text-2)' }}>Equity</span>
+            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--green)' }} />
+            <span style={{ fontSize: '11px', color: 'var(--text-2)', fontFamily: 'var(--font-mono)' }}>
+              Equity:
+            </span>
           </div>
           <span
             style={{
-              fontSize: '12.5px',
+              fontSize: '12px',
               fontWeight: 700,
               color: 'var(--green)',
               fontFamily: 'var(--font-mono)',
-              fontFeatureSettings: '"tnum" 1',
+              fontFeatureSettings: '"tnum" 1, "zero" 1',
             }}
           >
-            ${Number(item.equity).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+            ${item.equity.toLocaleString()}
           </span>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span
-              style={{
-                width: '7px',
-                height: '7px',
-                borderRadius: '50%',
-                background: 'var(--accent)',
-                boxShadow: '0 0 8px var(--accent)',
-                display: 'inline-block',
-              }}
-            />
-            <span style={{ fontSize: '11.5px', color: 'var(--text-2)' }}>Discipline</span>
+            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent)' }} />
+            <span style={{ fontSize: '11px', color: 'var(--text-2)', fontFamily: 'var(--font-mono)' }}>
+              Discipline:
+            </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '2px' }}>
             <span
               style={{
-                fontSize: '12.5px',
+                fontSize: '12px',
                 fontWeight: 700,
                 color: 'var(--accent)',
                 fontFamily: 'var(--font-mono)',
-                fontFeatureSettings: '"tnum" 1',
+                fontFeatureSettings: '"tnum" 1, "zero" 1',
               }}
             >
               {item.discipline}
@@ -246,7 +228,7 @@ function MiniSparkline({ data, color, id }: { data: number[]; color: string; id:
     >
       <defs>
         <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity={0.3} />
+          <stop offset="0%" stopColor={color} stopOpacity={0.25} />
           <stop offset="100%" stopColor={color} stopOpacity={0} />
         </linearGradient>
       </defs>
@@ -264,7 +246,7 @@ function MiniSparkline({ data, color, id }: { data: number[]; color: string; id:
   )
 }
 
-// ── APPLE ACTIVITY RING STYLE SCORE CARD ──────────────────────
+// ── 71UI SCORE CARD WITH 2px TOP BORDER (AGENTS.md Section 2.5) ─
 function ScoreCard({
   label, value, delta, deltaPositive, color, barColor, sparkline, id
 }: {
@@ -279,37 +261,19 @@ function ScoreCard({
 }) {
   return (
     <div
-      className="dashboard-score-card apple-glass-card"
+      className="dashboard-score-card"
       style={{
-        ...glassCardStyle,
-        padding: '18px 20px',
+        background: 'var(--surface)',
+        border: '1px solid var(--border)',
+        borderTop: `2px solid ${barColor}`,
+        borderRadius: '10px',
+        padding: '16px 18px',
         position: 'relative',
         minWidth: 0,
         overflow: 'hidden',
-        transition: 'transform 0.15s ease, border-color 0.15s ease',
-      }}
-      onMouseEnter={e => {
-        e.currentTarget.style.transform = 'translateY(-2px)'
-        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.14)'
-      }}
-      onMouseLeave={e => {
-        e.currentTarget.style.transform = 'translateY(0)'
-        e.currentTarget.style.borderColor = 'var(--border)'
+        transition: 'border-color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out)',
       }}
     >
-      {/* 2px Colored Top Accent Bar with Soft Ambient Glow */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: '2px',
-          background: barColor,
-          boxShadow: `0 0 10px ${barColor}`,
-        }}
-      />
-
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px', minWidth: 0 }}>
         <span
           style={{
@@ -338,7 +302,7 @@ function ScoreCard({
               color: deltaPositive ? 'var(--green)' : 'var(--red)',
               background: deltaPositive ? 'rgba(62, 207, 142, 0.1)' : 'rgba(255, 95, 95, 0.1)',
               padding: '2px 6px',
-              borderRadius: '9999px',
+              borderRadius: '4px',
               border: `1px solid ${deltaPositive ? 'rgba(62, 207, 142, 0.25)' : 'rgba(255, 95, 95, 0.25)'}`,
               display: 'inline-flex',
               alignItems: 'center',
@@ -350,13 +314,13 @@ function ScoreCard({
         </div>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginTop: '12px' }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginTop: '10px' }}>
         <span
           style={{
-            fontSize: '34px',
-            fontWeight: 800,
+            fontSize: '32px',
+            fontWeight: 700,
             color,
-            letterSpacing: '-1.2px',
+            letterSpacing: '-1px',
             lineHeight: 1,
             fontFamily: 'var(--font-mono)',
             fontFeatureSettings: '"tnum" 1, "zero" 1',
@@ -364,25 +328,24 @@ function ScoreCard({
         >
           {value}
         </span>
-        <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
+        <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
           /100
         </span>
       </div>
 
-      <div style={{ fontSize: '11px', color: 'var(--text-3)', marginTop: '5px', fontFamily: 'var(--font-mono)' }}>
+      <div style={{ fontSize: '11px', color: 'var(--text-3)', marginTop: '4px', fontFamily: 'var(--font-mono)' }}>
         vs last month
       </div>
 
-      {/* Apple-style Progress Track with Rounded Ends */}
-      <div style={{ marginTop: '14px', height: '4px', background: 'rgba(255, 255, 255, 0.05)', borderRadius: '9999px', overflow: 'hidden' }}>
+      {/* Progress Track */}
+      <div style={{ marginTop: '12px', height: '3px', background: 'var(--surface-3)', borderRadius: '2px', overflow: 'hidden' }}>
         <div
           style={{
-            height: '4px',
-            borderRadius: '9999px',
+            height: '3px',
+            borderRadius: '2px',
             background: barColor,
-            boxShadow: `0 0 8px ${barColor}`,
             width: `${Math.min(100, Math.max(0, value))}%`,
-            transition: 'width 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
+            transition: 'width 0.4s var(--ease-out)',
           }}
         />
       </div>
@@ -390,10 +353,13 @@ function ScoreCard({
   )
 }
 
+// ── ALIGNMENT BADGE ───────────────────────────────────────────
 function AlignmentBadge({ score }: { score: number }) {
-  const color = score >= 75 ? 'var(--green)' : score >= 50 ? 'var(--amber)' : 'var(--red)'
-  const bg = score >= 75 ? 'rgba(62, 207, 142, 0.12)' : score >= 50 ? 'rgba(245, 166, 35, 0.12)' : 'rgba(255, 95, 95, 0.12)'
-  const border = score >= 75 ? 'rgba(62, 207, 142, 0.25)' : score >= 50 ? 'rgba(245, 166, 35, 0.25)' : 'rgba(255, 95, 95, 0.25)'
+  const isHigh = score >= 75
+  const isMed = score >= 50
+  const color = isHigh ? 'var(--green)' : isMed ? 'var(--amber)' : 'var(--red)'
+  const bg = isHigh ? 'rgba(62, 207, 142, 0.1)' : isMed ? 'rgba(245, 166, 35, 0.1)' : 'rgba(255, 95, 95, 0.1)'
+  const border = isHigh ? 'rgba(62, 207, 142, 0.25)' : isMed ? 'rgba(245, 166, 35, 0.25)' : 'rgba(255, 95, 95, 0.25)'
 
   return (
     <span
@@ -401,38 +367,43 @@ function AlignmentBadge({ score }: { score: number }) {
         display: 'inline-flex',
         alignItems: 'center',
         gap: '5px',
-        padding: '3px 8px',
-        borderRadius: '9999px',
+        padding: '2px 8px',
+        borderRadius: '4px',
         background: bg,
         border: `1px solid ${border}`,
         color,
         fontSize: '11px',
         fontFamily: 'var(--font-mono)',
-        fontWeight: 700,
-        fontFeatureSettings: '"tnum" 1',
+        fontWeight: 650,
+        fontFeatureSettings: '"tnum" 1, "zero" 1',
       }}
     >
-      <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: color, boxShadow: `0 0 6px ${color}` }} />
-      {score}
+      <span
+        style={{
+          width: '5px',
+          height: '5px',
+          borderRadius: '50%',
+          background: color,
+        }}
+      />
+      {score}%
     </span>
   )
 }
 
+// ── EMOTION BADGE ─────────────────────────────────────────────
 function EmotionBadge({ emotion }: { emotion: string }) {
-  const colors: Record<string, string> = {
-    Focused: 'var(--green)',
-    Calm: 'var(--green)',
-    Revenge: 'var(--red)',
-    FOMO: 'var(--amber)',
-    Hesitant: 'var(--text-2)',
-  }
+  const isGood = emotion === 'Focused' || emotion === 'Calm'
+  const isBad = emotion === 'Revenge' || emotion === 'Fear'
+  const color = isGood ? 'var(--green)' : isBad ? 'var(--red)' : 'var(--amber)'
+
   return (
     <span
       style={{
-        fontSize: '11.5px',
+        fontSize: '11px',
+        fontFamily: 'var(--font-mono)',
+        color,
         fontWeight: 600,
-        color: colors[emotion] ?? 'var(--text-2)',
-        fontFamily: 'var(--font-sans)',
       }}
     >
       {emotion}
@@ -440,6 +411,71 @@ function EmotionBadge({ emotion }: { emotion: string }) {
   )
 }
 
+// ── RISK EXPOSURE METER ───────────────────────────────────────
+function RiskMeter({ currentAvg = 1.64, optimal = 1.2, maxAllowed = 3.0 }: { currentAvg?: number; optimal?: number; maxAllowed?: number }) {
+  const pct = Math.min(100, Math.round((currentAvg / maxAllowed) * 100))
+  const optPct = Math.round((optimal / maxAllowed) * 100)
+  const isOver = currentAvg > optimal
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>Avg Risk / Trade</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span
+            style={{
+              fontSize: '13px',
+              fontFamily: 'var(--font-mono)',
+              fontWeight: 700,
+              color: isOver ? 'var(--amber)' : 'var(--green)',
+              fontFeatureSettings: '"tnum" 1',
+            }}
+          >
+            {currentAvg.toFixed(2)}%
+          </span>
+          <span style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
+            (opt: {optimal}%)
+          </span>
+        </div>
+      </div>
+
+      <div style={{ position: 'relative', height: '8px', background: 'var(--surface-3)', borderRadius: '4px', overflow: 'hidden' }}>
+        <div
+          style={{
+            height: '100%',
+            width: `${pct}%`,
+            background: isOver
+              ? 'linear-gradient(90deg, var(--green) 0%, var(--amber) 70%, var(--red) 100%)'
+              : 'var(--green)',
+            borderRadius: '4px',
+            transition: 'width 0.4s var(--ease-out)',
+          }}
+        />
+        {/* Optimal threshold vertical tick */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            bottom: 0,
+            left: `${optPct}%`,
+            width: '2px',
+            background: '#FFFFFF',
+            opacity: 0.7,
+          }}
+          title={`Optimal threshold: ${optimal}%`}
+        />
+      </div>
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
+        <span>0%</span>
+        <span style={{ color: 'var(--accent)' }}>Optimal {optimal}%</span>
+        <span>Max {maxAllowed}%</span>
+      </div>
+    </div>
+  )
+}
+
+// ── MAIN DASHBOARD PAGE COMPONENT ─────────────────────────────
 export default function DashboardPage() {
   const [range, setRange] = useState<RangeLabel>('1M')
   const [data, setData] = useState<AnalyticsResponse | null>(null)
@@ -448,60 +484,75 @@ export default function DashboardPage() {
   useEffect(() => {
     let cancelled = false
     setLoading(true)
-    fetch(`/api/behavioral/analytics?range=${range}`, { cache: 'no-store' })
-      .then(async r => {
-        if (!r.ok) throw new Error(`${r.status}`)
-        return r.json()
+
+    fetch(`/api/analytics?range=${range}`)
+      .then(res => (res.ok ? res.json() : null))
+      .then((json: AnalyticsResponse | null) => {
+        if (!cancelled && json && json.analytics) {
+          setData(json)
+        }
       })
-      .then((json: AnalyticsResponse) => {
-        if (!cancelled && json?.analytics) setData(json)
-      })
-      .catch(() => {
-        // Safe fallback to demo data
-      })
+      .catch(() => {})
       .finally(() => {
         if (!cancelled) setLoading(false)
       })
-    return () => { cancelled = true }
+
+    return () => {
+      cancelled = true
+    }
   }, [range])
 
-  const analytics = data?.analytics ?? null
-  const hasLiveTrades = (analytics?.total_trades ?? 0) > 0
+  const analytics = data?.analytics
+  const hasLiveTrades = Boolean(analytics && analytics.total_trades > 0)
+  const tradesLive = data?.recent_trades && data.recent_trades.length > 0 ? data.recent_trades.slice(0, 5) : null
 
+  // Fallbacks
   const discipline = hasLiveTrades ? (analytics?.discipline_score ?? 78) : 78
   const consistency = hasLiveTrades ? (analytics?.behavioral_consistency_score ?? 84) : 84
   const riskQuality = hasLiveTrades ? (analytics?.risk_quality_score ?? 61) : 61
   const emotional = hasLiveTrades ? (analytics?.emotional_stability_score ?? 72) : 72
 
-  const sessionDataLive = hasLiveTrades && Object.values(analytics?.session_performance ?? {}).some(s => s.total_trades > 0)
-    ? Object.values(analytics!.session_performance).map(s => ({
-        session: s.session === 'new_york' ? 'New York' : s.session.charAt(0).toUpperCase() + s.session.slice(1),
-        wr: Math.round(s.win_rate * 10) / 10,
-        trades: s.total_trades,
-      }))
-    : DEMO_SESSION
+  // Equity Curve Data
+  const equityChartData =
+    data?.equity_curve && data.equity_curve.length > 1
+      ? data.equity_curve.map((pt, idx) => ({
+          date: pt.date,
+          equity: Math.round(10000 + pt.cumulative),
+          discipline: DEMO_EQUITY[idx % DEMO_EQUITY.length]?.discipline ?? 75,
+        }))
+      : DEMO_EQUITY
 
-  const equityChartData = hasLiveTrades && (data?.equity_curve?.length ?? 0) > 0
-    ? data!.equity_curve.map(p => ({
-        date: p.date.slice(5),
-        equity: 10000 + p.cumulative,
-        discipline: discipline,
-      }))
-    : DEMO_EQUITY
+  // Session Data
+  const sessionChartData =
+    hasLiveTrades && analytics?.session_performance
+      ? [
+          { session: 'Asian', wr: Math.round((analytics.session_performance.asian?.win_rate ?? 0.55) * 100), trades: analytics.session_performance.asian?.total_trades ?? 8 },
+          { session: 'London', wr: Math.round((analytics.session_performance.london?.win_rate ?? 0.67) * 100), trades: analytics.session_performance.london?.total_trades ?? 19 },
+          { session: 'New York', wr: Math.round((analytics.session_performance.new_york?.win_rate ?? 0.48) * 100), trades: analytics.session_performance.new_york?.total_trades ?? 15 },
+          { session: 'Overlap', wr: Math.round((analytics.session_performance.overlap?.win_rate ?? 0.71) * 100), trades: analytics.session_performance.overlap?.total_trades ?? 5 },
+        ]
+      : DEMO_SESSION
 
-  const tradesLive = hasLiveTrades && (data?.recent_trades?.length ?? 0) > 0 ? data!.recent_trades : null
-  const flagsLive = hasLiveTrades && analytics?.behavioral_flags && Object.values(analytics.behavioral_flags).some(c => (c as number) > 0)
-    ? analytics.behavioral_flags
-    : null
+  // Flags Data
+  const flagsList =
+    data?.behavioral_flags && data.behavioral_flags.length > 0
+      ? data.behavioral_flags.slice(0, 4).map(f => ({
+          type: f.flag_type.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()),
+          count: 1,
+          severity: f.severity,
+        }))
+      : DEMO_FLAGS
 
-  const emotionRows = hasLiveTrades && analytics?.emotion_distribution
-    ? [
-        { label: 'Calm / Focused', pct: Math.round(((analytics.emotion_distribution.calm ?? 0) + (analytics.emotion_distribution.focused ?? 0)) * 10) / 10, color: 'var(--green)' },
-        { label: 'Overconfident', pct: analytics.emotion_distribution.overconfident ?? 0, color: 'var(--amber)' },
-        { label: 'FOMO', pct: analytics.emotion_distribution.fomo ?? 0, color: 'var(--purple)' },
-        { label: 'Revenge / Fear', pct: Math.round(((analytics.emotion_distribution.revenge_trading ?? 0) + (analytics.emotion_distribution.fearful ?? 0) + (analytics.emotion_distribution.stressed ?? 0)) * 10) / 10, color: 'var(--red)' },
-      ]
-    : DEMO_EMOTIONS
+  // Emotions Data
+  const emotionsList =
+    hasLiveTrades && analytics?.emotion_distribution
+      ? [
+          { label: 'Calm / Focused', pct: Math.round(((analytics.emotion_distribution.calm ?? 0) + (analytics.emotion_distribution.focused ?? 0)) * 10) / 10, color: 'var(--green)' },
+          { label: 'Overconfident', pct: analytics.emotion_distribution.overconfident ?? 0, color: 'var(--amber)' },
+          { label: 'FOMO', pct: analytics.emotion_distribution.fomo ?? 0, color: 'var(--purple)' },
+          { label: 'Revenge / Fear', pct: Math.round(((analytics.emotion_distribution.revenge_trading ?? 0) + (analytics.emotion_distribution.fearful ?? 0) + (analytics.emotion_distribution.stressed ?? 0)) * 10) / 10, color: 'var(--red)' },
+        ]
+      : DEMO_EMOTIONS
 
   const avgRiskLive = hasLiveTrades ? (analytics?.avg_risk_per_trade ?? 1.64) : 1.64
 
@@ -510,7 +561,7 @@ export default function DashboardPage() {
       style={{
         display: 'flex',
         flexDirection: 'column',
-        gap: '20px',
+        gap: '18px',
         maxWidth: '1160px',
         width: '100%',
         minWidth: 0,
@@ -529,17 +580,17 @@ export default function DashboardPage() {
         }
         @media (min-width: 640px) and (max-width: 1023px) {
           .dashboard-score-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 12px !important; }
-          .dashboard-main-grid { grid-template-columns: minmax(0, 1fr) !important; gap: 18px !important; }
+          .dashboard-main-grid { grid-template-columns: minmax(0, 1fr) !important; gap: 16px !important; }
           .dashboard-bottom-strip { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 12px !important; }
         }
         @media (min-width: 1024px) {
-          .dashboard-score-grid { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; gap: 14px !important; }
-          .dashboard-main-grid { grid-template-columns: minmax(0, 1fr) 340px !important; gap: 18px !important; }
+          .dashboard-score-grid { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; gap: 12px !important; }
+          .dashboard-main-grid { grid-template-columns: minmax(0, 1fr) 340px !important; gap: 16px !important; }
           .dashboard-bottom-strip { grid-template-columns: repeat(6, minmax(0, 1fr)) !important; gap: 12px !important; }
         }
       `}</style>
 
-      {/* ── 1. PAGE HEADER ROW (Title + Segmented Range Picker) ── */}
+      {/* ── 1. PAGE HEADER ROW ── */}
       <div>
         <div
           style={{
@@ -571,30 +622,29 @@ export default function DashboardPage() {
           <div>
             <h1
               style={{
-                fontSize: '28px',
-                fontWeight: 800,
-                letterSpacing: '-0.03em',
+                fontSize: '26px',
+                fontWeight: 700,
+                letterSpacing: '-0.025em',
                 lineHeight: 1.1,
                 color: '#FFFFFF',
               }}
             >
               Performance Overview
             </h1>
-            <p style={{ fontSize: '12px', color: 'var(--text-3)', marginTop: '6px', fontFamily: 'var(--font-mono)' }}>
+            <p style={{ fontSize: '12px', color: 'var(--text-3)', marginTop: '4px', fontFamily: 'var(--font-mono)' }}>
               {loading ? 'Updating…' : `May 2026 · ${analytics?.total_trades ?? 47} trades · MetaTrader 5 synced`}
             </p>
           </div>
 
-          {/* Apple Segmented Control */}
+          {/* Institutional Segmented Range Control */}
           <div
             style={{
               display: 'flex',
               gap: '2px',
-              background: 'rgba(255, 255, 255, 0.04)',
-              padding: '3px',
-              borderRadius: '9px',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.3)',
+              background: 'var(--surface)',
+              padding: '2px',
+              borderRadius: '6px',
+              border: '1px solid var(--border)',
               flexShrink: 0,
             }}
           >
@@ -603,20 +653,18 @@ export default function DashboardPage() {
                 key={r}
                 type="button"
                 onClick={() => setRange(r)}
-                className="apple-btn"
+                className="interactive-btn"
                 style={{
-                  padding: '6px 14px',
-                  borderRadius: '7px',
+                  padding: '5px 12px',
+                  borderRadius: '4px',
                   fontSize: '11.5px',
                   fontWeight: 650,
                   fontFamily: 'var(--font-mono)',
-                  border: `1px solid ${range === r ? 'rgba(255, 255, 255, 0.12)' : 'transparent'}`,
+                  border: range === r ? '1px solid var(--border-2)' : '1px solid transparent',
                   cursor: 'pointer',
-                  minWidth: '40px',
-                  background: range === r ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+                  minWidth: '38px',
+                  background: range === r ? 'var(--surface-2)' : 'transparent',
                   color: range === r ? '#FFFFFF' : 'var(--text-3)',
-                  boxShadow: range === r ? '0 2px 8px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.15)' : 'none',
-                  transition: 'all 0.15s ease',
                 }}
                 aria-pressed={range === r}
               >
@@ -627,8 +675,8 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* ── 2. SCORE CARDS (4 Grid Cards) ── */}
-      <div className="dashboard-score-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '14px' }}>
+      {/* ── 2. SCORE CARDS (4 Grid Cards with 2px Top Border per AGENTS.md 2.5) ── */}
+      <div className="dashboard-score-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
         <ScoreCard
           label="Discipline Score"
           value={discipline}
@@ -673,30 +721,13 @@ export default function DashboardPage() {
 
       {/* ── 3. AI COACH INSIGHT PANEL ── */}
       <div
-        className="apple-glass-card"
         style={{
-          ...glassCardStyle,
-          padding: '18px 22px',
-          position: 'relative',
-          overflow: 'hidden',
-          border: '1px solid rgba(108, 142, 255, 0.25)',
-          boxShadow: '0 8px 30px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.12)',
+          ...institutionalCardStyle,
+          padding: '16px 20px',
+          borderLeft: '3px solid var(--accent)',
         }}
       >
-        {/* Left Glowing Accent Pill Bar */}
-        <div
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            bottom: 0,
-            width: '4px',
-            background: 'linear-gradient(180deg, var(--accent), var(--purple))',
-            boxShadow: '0 0 12px var(--accent)',
-          }}
-        />
-
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
           <div
             style={{
               display: 'inline-flex',
@@ -714,7 +745,7 @@ export default function DashboardPage() {
           </div>
           <Link
             href="/ai-coach"
-            className="apple-btn"
+            className="interactive-btn"
             style={{
               fontSize: '11.5px',
               color: 'var(--accent)',
@@ -731,22 +762,22 @@ export default function DashboardPage() {
           </Link>
         </div>
 
-        <p style={{ fontSize: '13.5px', lineHeight: 1.6, color: 'var(--text)', margin: '0 0 14px' }}>
+        <p style={{ fontSize: '13px', lineHeight: 1.6, color: 'var(--text)', margin: '0 0 12px' }}>
           Your London session win rate is <strong style={{ color: 'var(--green)', fontWeight: 700 }}>67%</strong> (19 points above average). Protect your edge by maintaining risk sizing after winning streaks — your best results occur when stress levels remain ≤ 3/10.
         </p>
 
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
           {[
-            { label: 'LONDON SESSION 67% WR', bg: 'rgba(62, 207, 142, 0.1)', color: 'var(--green)', border: 'rgba(62, 207, 142, 0.25)' },
-            { label: 'POST-WIN RISK CREEP ×6', bg: 'rgba(245, 166, 35, 0.1)', color: 'var(--amber)', border: 'rgba(245, 166, 35, 0.25)' },
-            { label: 'BREAKOUT WR 71%', bg: 'rgba(62, 207, 142, 0.1)', color: 'var(--green)', border: 'rgba(62, 207, 142, 0.25)' },
-            { label: 'REVENGE TRADING ×3', bg: 'rgba(255, 95, 95, 0.1)', color: 'var(--red)', border: 'rgba(255, 95, 95, 0.25)' },
+            { label: 'LONDON SESSION 67% WR', bg: 'rgba(62, 207, 142, 0.08)', color: 'var(--green)', border: 'rgba(62, 207, 142, 0.25)' },
+            { label: 'POST-WIN RISK CREEP ×6', bg: 'rgba(245, 166, 35, 0.08)', color: 'var(--amber)', border: 'rgba(245, 166, 35, 0.25)' },
+            { label: 'BREAKOUT WR 71%', bg: 'rgba(62, 207, 142, 0.08)', color: 'var(--green)', border: 'rgba(62, 207, 142, 0.25)' },
+            { label: 'REVENGE TRADING ×3', bg: 'rgba(255, 95, 95, 0.08)', color: 'var(--red)', border: 'rgba(255, 95, 95, 0.25)' },
           ].map(tag => (
             <span
               key={tag.label}
               style={{
-                padding: '4px 10px',
-                borderRadius: '9999px',
+                padding: '3px 8px',
+                borderRadius: '4px',
                 fontSize: '10.5px',
                 fontFamily: 'var(--font-mono)',
                 fontWeight: 700,
@@ -768,30 +799,30 @@ export default function DashboardPage() {
         style={{
           display: 'grid',
           gridTemplateColumns: 'minmax(0, 1fr) 340px',
-          gap: '18px',
+          gap: '16px',
           minWidth: 0,
           maxWidth: '100%',
         }}
       >
         {/* ── LEFT COLUMN: Equity Chart + Trade Table ── */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', minWidth: 0, maxWidth: '100%', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', minWidth: 0, maxWidth: '100%', overflow: 'hidden' }}>
 
           {/* Dual-Axis Equity + Discipline Chart */}
-          <div className="apple-glass-card" style={glassCardStyle}>
+          <div style={institutionalCardStyle}>
             <div style={cardHeaderStyle}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Activity size={15} style={{ color: 'var(--green)' }} />
+                <Activity size={14} style={{ color: 'var(--green)' }} />
                 <span style={{ fontSize: '13px', fontWeight: 700, color: '#FFFFFF' }}>
                   Equity Curve & Discipline Overlay
                 </span>
               </div>
-              <div style={{ display: 'flex', gap: '16px' }}>
+              <div style={{ display: 'flex', gap: '14px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--text-2)', fontFamily: 'var(--font-mono)' }}>
-                  <div style={{ width: '12px', height: '2px', background: 'var(--green)', borderRadius: '1px' }} />
+                  <div style={{ width: '10px', height: '2px', background: 'var(--green)', borderRadius: '1px' }} />
                   Equity
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--text-2)', fontFamily: 'var(--font-mono)' }}>
-                  <div style={{ width: '12px', height: '2px', background: 'var(--accent)', borderTop: '2px dashed var(--accent)' }} />
+                  <div style={{ width: '10px', height: '2px', background: 'var(--accent)', borderTop: '2px dashed var(--accent)' }} />
                   Discipline
                 </div>
               </div>
@@ -802,7 +833,7 @@ export default function DashboardPage() {
                 <ComposedChart data={equityChartData} margin={{ top: 8, right: 10, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="equityGradMain" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="var(--green)" stopOpacity={0.22} />
+                      <stop offset="5%" stopColor="var(--green)" stopOpacity={0.2} />
                       <stop offset="95%" stopColor="var(--green)" stopOpacity={0} />
                     </linearGradient>
                   </defs>
@@ -865,14 +896,14 @@ export default function DashboardPage() {
           </div>
 
           {/* Recent Trades Table */}
-          <div className="apple-glass-card" style={glassCardStyle}>
+          <div style={institutionalCardStyle}>
             <div style={cardHeaderStyle}>
               <span style={{ fontSize: '13px', fontWeight: 700, color: '#FFFFFF' }}>
                 Recent Trades
               </span>
               <Link
                 href="/trades"
-                className="apple-btn"
+                className="interactive-btn"
                 style={{
                   fontSize: '11.5px',
                   color: 'var(--accent)',
@@ -892,19 +923,18 @@ export default function DashboardPage() {
             <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', width: '100%', maxWidth: '100%' }}>
               <table style={{ width: '100%', minWidth: '540px', borderCollapse: 'collapse', textAlign: 'left' }}>
                 <thead>
-                  <tr style={{ background: 'rgba(255, 255, 255, 0.02)' }}>
+                  <tr style={{ background: 'var(--surface-2)', borderBottom: '1px solid var(--border)' }}>
                     {['Pair', 'P&L', 'R:R', 'Risk %', 'Emotion', 'Session', 'Alignment'].map(h => (
                       <th
                         key={h}
                         style={{
-                          padding: '10px 16px',
+                          padding: '10px 14px',
                           fontSize: '10px',
                           fontWeight: 700,
                           color: 'var(--text-3)',
                           textTransform: 'uppercase',
                           letterSpacing: '0.8px',
                           fontFamily: 'var(--font-mono)',
-                          borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
                         }}
                       >
                         {h}
@@ -930,19 +960,19 @@ export default function DashboardPage() {
                     <tr
                       key={trade.id}
                       style={{
-                        borderBottom: '1px solid rgba(255, 255, 255, 0.03)',
-                        transition: 'background 0.15s ease',
+                        borderBottom: '1px solid var(--border)',
+                        transition: 'background var(--dur-fast) var(--ease-out)',
                       }}
-                      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)')}
+                      onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-2)')}
                       onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                     >
-                      <td style={{ padding: '12px 16px' }}>
+                      <td style={{ padding: '10px 14px' }}>
                         <div style={{ fontWeight: 700, fontSize: '13px', fontFamily: 'var(--font-mono)', color: 'var(--text)' }}>
                           {trade.symbol}
                         </div>
                         <div
                           style={{
-                            fontSize: '10px',
+                            fontSize: '9.5px',
                             fontWeight: 700,
                             color: trade.direction === 'Long' ? 'var(--green)' : 'var(--red)',
                             fontFamily: 'var(--font-mono)',
@@ -954,7 +984,7 @@ export default function DashboardPage() {
                       </td>
                       <td
                         style={{
-                          padding: '12px 16px',
+                          padding: '10px 14px',
                           color: trade.pnl >= 0 ? 'var(--green)' : 'var(--red)',
                           fontFamily: 'var(--font-mono)',
                           fontWeight: 700,
@@ -966,7 +996,7 @@ export default function DashboardPage() {
                       </td>
                       <td
                         style={{
-                          padding: '12px 16px',
+                          padding: '10px 14px',
                           color: 'var(--text-2)',
                           fontFamily: 'var(--font-mono)',
                           fontSize: '12px',
@@ -977,7 +1007,7 @@ export default function DashboardPage() {
                       </td>
                       <td
                         style={{
-                          padding: '12px 16px',
+                          padding: '10px 14px',
                           color: trade.risk > 2 ? 'var(--amber)' : 'var(--text-2)',
                           fontFamily: 'var(--font-mono)',
                           fontSize: '12px',
@@ -986,7 +1016,7 @@ export default function DashboardPage() {
                       >
                         {trade.risk}%
                       </td>
-                      <td style={{ padding: '12px 16px' }}>
+                      <td style={{ padding: '10px 14px' }}>
                         {trade.emotion === '—' ? (
                           <span style={{ fontSize: '11px', color: 'var(--text-3)' }}>—</span>
                         ) : (
@@ -995,7 +1025,7 @@ export default function DashboardPage() {
                       </td>
                       <td
                         style={{
-                          padding: '12px 16px',
+                          padding: '10px 14px',
                           color: 'var(--text-3)',
                           fontFamily: 'var(--font-mono)',
                           fontSize: '11px',
@@ -1003,7 +1033,7 @@ export default function DashboardPage() {
                       >
                         {trade.session}
                       </td>
-                      <td style={{ padding: '12px 16px' }}>
+                      <td style={{ padding: '10px 14px' }}>
                         <AlignmentBadge score={trade.alignment} />
                       </td>
                     </tr>
@@ -1019,10 +1049,8 @@ export default function DashboardPage() {
 
           {/* Live Trade Evaluation Widget */}
           <div
-            className="apple-glass-card"
             style={{
-              ...glassCardStyle,
-              background: 'rgba(22, 25, 32, 0.8)',
+              ...institutionalCardStyle,
               padding: '16px 18px',
             }}
           >
@@ -1030,11 +1058,11 @@ export default function DashboardPage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span
                   style={{
-                    width: '7px',
-                    height: '7px',
+                    width: '6px',
+                    height: '6px',
                     borderRadius: '50%',
                     background: 'var(--green)',
-                    boxShadow: '0 0 8px var(--green)',
+                    animation: 'pulse 1.8s infinite',
                     display: 'inline-block',
                   }}
                 />
@@ -1043,7 +1071,7 @@ export default function DashboardPage() {
               <span style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>EURUSD · Long</span>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '14px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
               {[
                 { label: 'Alignment', value: '79', color: 'var(--green)' },
                 { label: 'Discipline', value: '82', color: 'var(--accent)' },
@@ -1053,14 +1081,14 @@ export default function DashboardPage() {
                 <div
                   key={s.label}
                   style={{
-                    background: 'rgba(255, 255, 255, 0.03)',
-                    borderRadius: '9px',
-                    padding: '10px 12px',
-                    border: '1px solid rgba(255, 255, 255, 0.06)',
+                    background: 'var(--surface-2)',
+                    borderRadius: '6px',
+                    padding: '8px 10px',
+                    border: '1px solid var(--border)',
                   }}
                 >
                   <div style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>{s.label}</div>
-                  <div style={{ fontSize: '20px', fontWeight: 800, color: s.color, fontFamily: 'var(--font-mono)', marginTop: '2px' }}>
+                  <div style={{ fontSize: '18px', fontWeight: 700, color: s.color, fontFamily: 'var(--font-mono)', marginTop: '2px' }}>
                     {s.value}
                   </div>
                 </div>
@@ -1070,10 +1098,10 @@ export default function DashboardPage() {
             <div
               style={{
                 background: 'rgba(245, 166, 35, 0.08)',
-                border: '1px solid rgba(245, 166, 35, 0.22)',
-                borderRadius: '8px',
-                padding: '11px 13px',
-                fontSize: '12px',
+                border: '1px solid rgba(245, 166, 35, 0.25)',
+                borderRadius: '6px',
+                padding: '10px 12px',
+                fontSize: '11.5px',
                 lineHeight: 1.5,
                 color: 'var(--text-2)',
               }}
@@ -1083,12 +1111,12 @@ export default function DashboardPage() {
           </div>
 
           {/* Behavioral Flags */}
-          <div className="apple-glass-card" style={glassCardStyle}>
+          <div style={institutionalCardStyle}>
             <div style={cardHeaderStyle}>
               <span style={{ fontSize: '13px', fontWeight: 700, color: '#FFFFFF' }}>Behavioral Flags</span>
               <Link
                 href="/behavior"
-                className="apple-btn"
+                className="interactive-btn"
                 style={{
                   fontSize: '11px',
                   color: 'var(--accent)',
@@ -1099,80 +1127,102 @@ export default function DashboardPage() {
                   gap: '4px',
                 }}
               >
-                <span>Details</span>
-                <ChevronRight size={12} />
+                <span>Analysis</span>
+                <ChevronRight size={13} />
               </Link>
             </div>
-            <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {(flagsLive
-                ? Object.entries(flagsLive)
-                    .filter(([, count]) => (count as number) > 0)
-                    .sort((a, b) => (b[1] as number) - (a[1] as number))
-                    .slice(0, 4)
-                    .map(([type, count]) => ({
-                      type: type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
-                      count: count as number,
-                      severity: (count as number) > 3 ? ('high' as const) : (count as number) > 1 ? ('medium' as const) : ('low' as const),
-                    }))
-                : DEMO_FLAGS
-              ).map(flag => (
-                <div
-                  key={flag.type}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px',
-                    padding: '9px 12px',
-                    background: 'rgba(255, 255, 255, 0.03)',
-                    borderRadius: '8px',
-                    border: '1px solid rgba(255, 255, 255, 0.06)',
-                  }}
-                >
+
+            <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {flagsList.map(flag => {
+                const isHigh = flag.severity === 'high'
+                const isMed = flag.severity === 'medium'
+                const dotColor = isHigh ? 'var(--red)' : isMed ? 'var(--amber)' : 'var(--green)'
+
+                return (
                   <div
+                    key={flag.type}
                     style={{
-                      width: '7px',
-                      height: '7px',
-                      borderRadius: '50%',
-                      flexShrink: 0,
-                      background: flag.severity === 'high' ? 'var(--red)' : flag.severity === 'medium' ? 'var(--amber)' : 'var(--green)',
-                      boxShadow: `0 0 6px ${flag.severity === 'high' ? 'var(--red)' : flag.severity === 'medium' ? 'var(--amber)' : 'var(--green)'}`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '8px 10px',
+                      borderRadius: '6px',
+                      background: 'var(--surface-2)',
+                      border: '1px solid var(--border)',
                     }}
-                  />
-                  <div style={{ flex: 1, fontSize: '12px', fontWeight: 500, color: 'var(--text)' }}>
-                    {flag.type}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span
+                        style={{
+                          width: '6px',
+                          height: '6px',
+                          borderRadius: '50%',
+                          background: dotColor,
+                          flexShrink: 0,
+                        }}
+                      />
+                      <span style={{ fontSize: '12px', color: 'var(--text)', fontWeight: 500 }}>
+                        {flag.type}
+                      </span>
+                    </div>
+
+                    <span
+                      style={{
+                        fontSize: '11px',
+                        fontFamily: 'var(--font-mono)',
+                        fontWeight: 700,
+                        color: dotColor,
+                        padding: '2px 6px',
+                        borderRadius: '4px',
+                        background: 'rgba(255, 255, 255, 0.04)',
+                        border: '1px solid var(--border)',
+                      }}
+                    >
+                      {flag.count} {flag.count === 1 ? 'event' : 'events'}
+                    </span>
                   </div>
-                  <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
-                    ×{flag.count}
-                  </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </div>
 
           {/* Session Performance */}
-          <div className="apple-glass-card" style={glassCardStyle}>
+          <div style={institutionalCardStyle}>
             <div style={cardHeaderStyle}>
-              <span style={{ fontSize: '13px', fontWeight: 700, color: '#FFFFFF' }}>Session Performance</span>
+              <span style={{ fontSize: '13px', fontWeight: 700, color: '#FFFFFF' }}>Session Win Rates</span>
+              <span style={{ fontSize: '10.5px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>UTC</span>
             </div>
-            <div style={{ padding: '14px 16px', width: '100%', minWidth: 0, overflow: 'hidden' }}>
-              <ResponsiveContainer width="100%" height={125}>
-                <BarChart data={sessionDataLive} margin={{ top: 0, right: 0, left: -22, bottom: 0 }}>
+
+            <div style={{ padding: '14px 14px 8px' }}>
+              <ResponsiveContainer width="100%" height={120}>
+                <BarChart data={sessionChartData} margin={{ top: 0, right: 0, left: -24, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.04)" vertical={false} />
-                  <XAxis dataKey="session" tick={{ fontSize: 9, fill: 'var(--text-3)', fontFamily: 'var(--font-mono)' }} axisLine={false} tickLine={false} />
-                  <YAxis domain={[0, 100]} tick={{ fontSize: 9, fill: 'var(--text-3)', fontFamily: 'var(--font-mono)' }} axisLine={false} tickLine={false} />
+                  <XAxis
+                    dataKey="session"
+                    tick={{ fontSize: 9.5, fill: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    domain={[0, 100]}
+                    tick={{ fontSize: 9.5, fill: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}
+                    axisLine={false}
+                    tickLine={false}
+                    tickFormatter={v => `${v}%`}
+                  />
                   <Tooltip
                     contentStyle={{
-                      background: 'rgba(17, 19, 24, 0.9)',
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
-                      borderRadius: '8px',
+                      background: 'var(--surface-2)',
+                      border: '1px solid var(--border-2)',
+                      borderRadius: '6px',
                       fontSize: '11px',
                       fontFamily: 'var(--font-mono)',
                       color: 'var(--text)',
                     }}
                     formatter={(v: any) => [`${v}%`, 'Win Rate']}
                   />
-                  <Bar dataKey="wr" radius={[4, 4, 0, 0]}>
-                    {sessionDataLive.map((entry, index) => (
+                  <Bar dataKey="wr" radius={[3, 3, 0, 0]}>
+                    {sessionChartData.map((entry, index) => (
                       <Cell
                         key={`cell-${index}`}
                         fill={entry.wr >= 65 ? 'var(--green)' : entry.wr >= 55 ? 'var(--accent)' : 'var(--amber)'}
@@ -1182,32 +1232,39 @@ export default function DashboardPage() {
                 </BarChart>
               </ResponsiveContainer>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginTop: '12px' }}>
-                {sessionDataLive.map(s => (
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: '6px',
+                  marginTop: '10px',
+                  paddingTop: '10px',
+                  borderTop: '1px solid var(--border)',
+                }}
+              >
+                {sessionChartData.map(s => (
                   <div
                     key={s.session}
                     style={{
-                      background: 'rgba(255, 255, 255, 0.03)',
-                      borderRadius: '8px',
-                      padding: '8px 10px',
-                      border: '1px solid rgba(255, 255, 255, 0.06)',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      background: 'var(--surface-2)',
                     }}
                   >
-                    <div style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>{s.session}</div>
-                    <div
+                    <span style={{ fontSize: '11px', color: 'var(--text-2)' }}>{s.session}</span>
+                    <span
                       style={{
-                        fontSize: '16px',
-                        fontWeight: 700,
+                        fontSize: '11px',
                         fontFamily: 'var(--font-mono)',
+                        fontWeight: 700,
                         color: s.wr >= 65 ? 'var(--green)' : s.wr >= 55 ? 'var(--accent)' : 'var(--amber)',
-                        fontFeatureSettings: '"tnum" 1, "zero" 1',
                       }}
                     >
                       {s.wr}%
-                    </div>
-                    <div style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
-                      {s.trades} trades
-                    </div>
+                    </span>
                   </div>
                 ))}
               </div>
@@ -1215,36 +1272,28 @@ export default function DashboardPage() {
           </div>
 
           {/* Emotional Breakdown */}
-          <div className="apple-glass-card" style={glassCardStyle}>
+          <div style={institutionalCardStyle}>
             <div style={cardHeaderStyle}>
-              <span style={{ fontSize: '13px', fontWeight: 700, color: '#FFFFFF' }}>Emotional Breakdown</span>
+              <span style={{ fontSize: '13px', fontWeight: 700, color: '#FFFFFF' }}>Emotional Distribution</span>
+              <span style={{ fontSize: '10.5px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>% Trades</span>
             </div>
+
             <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {emotionRows.map(e => (
+              {emotionsList.map(e => (
                 <div key={e.label}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-                    <span style={{ fontSize: '11px', color: 'var(--text-2)' }}>{e.label}</span>
-                    <span
-                      style={{
-                        fontSize: '12px',
-                        fontWeight: 700,
-                        color: e.color,
-                        fontFamily: 'var(--font-mono)',
-                        fontFeatureSettings: '"tnum" 1, "zero" 1',
-                      }}
-                    >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <span style={{ fontSize: '11.5px', color: 'var(--text-2)' }}>{e.label}</span>
+                    <span style={{ fontSize: '11.5px', fontFamily: 'var(--font-mono)', fontWeight: 700, color: e.color }}>
                       {e.pct}%
                     </span>
                   </div>
-                  <div style={{ height: '4px', background: 'rgba(255, 255, 255, 0.05)', borderRadius: '9999px', overflow: 'hidden' }}>
+                  <div style={{ height: '4px', background: 'var(--surface-3)', borderRadius: '2px', overflow: 'hidden' }}>
                     <div
                       style={{
-                        height: '4px',
-                        borderRadius: '9999px',
+                        height: '100%',
+                        width: `${e.pct}%`,
                         background: e.color,
-                        boxShadow: `0 0 6px ${e.color}`,
-                        width: `${Math.min(100, e.pct)}%`,
-                        transition: 'width 0.5s ease',
+                        borderRadius: '2px',
                       }}
                     />
                   </div>
@@ -1253,94 +1302,75 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Risk Meter */}
-          <div className="apple-glass-card" style={glassCardStyle}>
+          {/* Risk Exposure Meter */}
+          <div style={institutionalCardStyle}>
             <div style={cardHeaderStyle}>
-              <span style={{ fontSize: '13px', fontWeight: 700, color: '#FFFFFF' }}>Avg Risk Per Trade</span>
+              <span style={{ fontSize: '13px', fontWeight: 700, color: '#FFFFFF' }}>Risk Exposure Range</span>
+              <span style={{ fontSize: '10.5px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>Guardrail</span>
             </div>
-            <div style={{ padding: '14px 18px 16px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '8px' }}>
-                <span style={{ fontSize: '11px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>Monthly Average</span>
-                <span
-                  style={{
-                    fontSize: '22px',
-                    fontWeight: 800,
-                    color: avgRiskLive > 2 ? 'var(--red)' : avgRiskLive > 1.5 ? 'var(--amber)' : 'var(--green)',
-                    fontFamily: 'var(--font-mono)',
-                    fontFeatureSettings: '"tnum" 1, "zero" 1',
-                  }}
-                >
-                  {avgRiskLive.toFixed(2)}%
-                </span>
-              </div>
-              <div style={{ height: '6px', background: 'rgba(255, 255, 255, 0.06)', borderRadius: '9999px', overflow: 'hidden' }}>
-                <div
-                  style={{
-                    height: '6px',
-                    borderRadius: '9999px',
-                    background: 'linear-gradient(90deg, var(--green), var(--amber), var(--red))',
-                    width: `${Math.min(100, (avgRiskLive / 3) * 100)}%`,
-                  }}
-                />
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', fontSize: '10.5px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
-                <span>0.0%</span>
-                <span style={{ color: 'var(--green)', fontWeight: 650 }}>optimal ≤ 1.2%</span>
-                <span>3.0%</span>
-              </div>
+            <div style={{ padding: '14px 16px' }}>
+              <RiskMeter currentAvg={avgRiskLive} optimal={1.2} maxAllowed={3.0} />
             </div>
           </div>
 
         </div>
       </div>
 
-      {/* ── 5. BOTTOM STATS STRIP (6 Metrics) ── */}
-      <div className="dashboard-bottom-strip" style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '12px' }}>
+      {/* ── 5. BOTTOM STATS STRIP (6 Equal Stat Cards per AGENTS.md 2.5) ── */}
+      <div
+        className="dashboard-bottom-strip"
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(6, 1fr)',
+          gap: '12px',
+        }}
+      >
         {[
-          { label: 'Win Rate', value: hasLiveTrades ? `${analytics!.win_rate}%` : '59.6%', color: 'var(--green)' },
-          { label: 'Avg R:R', value: hasLiveTrades ? `${analytics!.avg_reward_risk}R` : '2.3R', color: 'var(--green)' },
-          { label: 'Max Drawdown', value: hasLiveTrades ? `${analytics!.max_drawdown_pct}%` : '-4.2%', color: 'var(--red)' },
-          { label: 'Profit Factor', value: hasLiveTrades ? `${analytics!.profit_factor}` : '1.87', color: 'var(--amber)' },
-          { label: 'Net P&L', value: hasLiveTrades ? `${analytics!.net_pnl >= 0 ? '+' : '-'}$${Math.abs(Math.round(analytics!.net_pnl)).toLocaleString()}` : '+$1,247', color: 'var(--green)' },
-          { label: 'Best Streak', value: hasLiveTrades ? `${analytics!.max_win_streak} wins` : '6 wins', color: 'var(--green)' },
+          { label: 'Win Rate', value: hasLiveTrades ? `${(analytics?.win_rate ?? 59.6).toFixed(1)}%` : '59.6%', color: 'var(--green)' },
+          { label: 'Avg R:R', value: hasLiveTrades ? `${(analytics?.avg_reward_risk ?? 2.3).toFixed(1)}R` : '2.3R', color: 'var(--green)' },
+          { label: 'Max Drawdown', value: hasLiveTrades ? `−${(analytics?.max_drawdown ?? 4.2).toFixed(1)}%` : '−4.2%', color: 'var(--red)' },
+          { label: 'Profit Factor', value: hasLiveTrades ? (analytics?.profit_factor ?? 1.87).toFixed(2) : '1.87', color: 'var(--amber)' },
+          { label: 'Net P&L', value: hasLiveTrades ? `+$${Math.round(analytics?.net_pnl ?? 1247).toLocaleString()}` : '+$1,247', color: 'var(--green)' },
+          { label: 'Best Streak', value: hasLiveTrades ? `${analytics?.max_win_streak ?? 6} wins` : '6 wins', color: 'var(--green)' },
         ].map(stat => (
           <div
             key={stat.label}
-            className="dashboard-stat-card apple-glass-card"
+            className="dashboard-stat-card"
             style={{
-              ...glassCardStyle,
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              borderRadius: '8px',
               padding: '14px 16px',
-              transition: 'transform 0.15s ease, border-color 0.15s ease',
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.transform = 'translateY(-2px)'
-              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.14)'
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.transform = 'translateY(0)'
-              e.currentTarget.style.borderColor = 'var(--border)'
+              minWidth: 0,
+              overflow: 'hidden',
             }}
           >
             <div
               style={{
-                fontSize: '10px',
-                fontWeight: 700,
+                fontSize: '10.5px',
                 color: 'var(--text-3)',
                 fontFamily: 'var(--font-mono)',
                 textTransform: 'uppercase',
-                letterSpacing: '0.8px',
+                letterSpacing: '0.6px',
+                marginBottom: '6px',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
               }}
             >
               {stat.label}
             </div>
             <div
               style={{
-                fontSize: '20px',
-                fontWeight: 800,
+                fontSize: '18px',
+                fontWeight: 700,
                 color: stat.color,
                 fontFamily: 'var(--font-mono)',
                 fontFeatureSettings: '"tnum" 1, "zero" 1',
-                marginTop: '6px',
+                lineHeight: 1.1,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
               }}
             >
               {stat.value}
@@ -1348,7 +1378,6 @@ export default function DashboardPage() {
           </div>
         ))}
       </div>
-
     </div>
   )
 }
