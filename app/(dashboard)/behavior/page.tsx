@@ -7,12 +7,12 @@ import {
   ZAxis, Tooltip, CartesianGrid, BarChart, Bar, Cell
 } from 'recharts'
 import {
-  Brain, AlertTriangle, Zap, ShieldAlert, Sparkles,
-  TrendingDown, TrendingUp, Clock, Activity, Target
+  Brain, AlertTriangle, ShieldAlert, Sparkles,
+  Activity, Target, Clock, RefreshCw
 } from 'lucide-react'
 import type { PerformanceAnalytics, Trade, BehavioralFlag } from '@/types'
 
-// ── DEFAULT DATA (AGENTS.md Section 2.6) ─────────────────────
+// ── DEFAULT DEMO DATA (AGENTS.md Section 2.6 & Section 10) ────
 const RADAR_DATA = [
   { subject: 'Discipline', score: 78, fullMark: 100 },
   { subject: 'Risk Mgmt', score: 61, fullMark: 100 },
@@ -20,18 +20,6 @@ const RADAR_DATA = [
   { subject: 'Emotional', score: 72, fullMark: 100 },
   { subject: 'Entry Quality', score: 79, fullMark: 100 },
   { subject: 'Exit Quality', score: 58, fullMark: 100 },
-]
-
-const SCATTER_DATA = [
-  { emotion: 1, rr: 2.4, pnl: 312, size: 100 },
-  { emotion: 1, rr: 3.1, pnl: 540, size: 120 },
-  { emotion: 1, rr: 1.9, pnl: 228, size: 90 },
-  { emotion: 1, rr: 1.7, pnl: 187, size: 80 },
-  { emotion: 2, rr: 2.8, pnl: 430, size: 110 },
-  { emotion: 3, rr: -0.6, pnl: -95, size: 70 },
-  { emotion: 3, rr: -1.0, pnl: -142, size: 80 },
-  { emotion: 4, rr: -1.0, pnl: -180, size: 90 },
-  { emotion: 5, rr: -1.0, pnl: -220, size: 100 },
 ]
 
 const EMOTION_LABELS: Record<number, string> = {
@@ -49,6 +37,18 @@ const EMOTION_COLORS: Record<number, string> = {
   4: 'var(--red)',
   5: 'var(--red)',
 }
+
+const SCATTER_DATA = [
+  { emotion: 1, rr: 2.4, pnl: 312, size: 100 },
+  { emotion: 1, rr: 3.1, pnl: 540, size: 120 },
+  { emotion: 1, rr: 1.9, pnl: 228, size: 90 },
+  { emotion: 1, rr: 1.7, pnl: 187, size: 80 },
+  { emotion: 2, rr: 2.8, pnl: 430, size: 110 },
+  { emotion: 3, rr: -0.6, pnl: -95, size: 70 },
+  { emotion: 3, rr: -1.0, pnl: -142, size: 80 },
+  { emotion: 4, rr: -1.0, pnl: -180, size: 90 },
+  { emotion: 5, rr: -1.0, pnl: -220, size: 100 },
+]
 
 const HOURLY_DATA = [
   { hour: '00:00', wr: 48, trades: 1 },
@@ -73,70 +73,50 @@ interface TimelineItem {
 }
 
 const TIMELINE: TimelineItem[] = [
-  { date: 'May 26', event: 'Revenge trading detected after EURUSD stop-out. Entered GBPJPY within 4 minutes of loss.', type: 'danger', delta: '−8 pts' },
-  { date: 'May 25', event: 'Calm & focused across all 3 trades. London session discipline score hit weekly high.', type: 'positive', delta: '+5 pts' },
+  { date: 'May 26', event: 'Revenge trading detected after EURUSD stop-out. Entered GBPJPY within 4 minutes of loss. Violated 30-minute rule.', type: 'danger', delta: '−8 pts' },
+  { date: 'May 25', event: 'Calm and focused across all 3 trades. London session discipline score hit weekly high of 84.', type: 'positive', delta: '+5 pts' },
   { date: 'May 24', event: 'Post-win risk creep detected. Risk jumped from 1.1% to 2.1% after 2 consecutive wins.', type: 'warning', delta: '−4 pts' },
   { date: 'May 23', event: 'Perfect session: 2 trades, both journaled, all rules respected. Best behavioral day this month.', type: 'positive', delta: '+8 pts' },
-  { date: 'May 22', event: 'FOMO entry on BTCUSD during a news spike. Setup did not meet standard criteria.', type: 'warning', delta: '−3 pts' },
+  { date: 'May 22', event: 'FOMO entry on BTCUSD during a news spike. Setup did not meet standard entry criteria.', type: 'warning', delta: '−3 pts' },
 ]
 
 const ALERTS = [
   {
-    severity: 'critical',
-    color: 'var(--red)',
-    bg: 'rgba(255, 95, 95, 0.05)',
-    border: 'rgba(255, 95, 95, 0.22)',
-    glow: 'rgba(255, 95, 95, 0.15)',
+    type: 'critical',
     icon: ShieldAlert,
+    color: 'var(--red)',
+    bg: 'rgba(255, 95, 95, 0.06)',
+    border: 'rgba(255, 95, 95, 0.22)',
     title: 'Revenge Trading After London Losses',
     stat: '−$485 Impact',
-    desc: '3 revenge trades this month, all entered within 5 minutes of a loss. Combined cost: −$485. Average loss on these trades: −$162 vs your −$28 average.',
+    desc: '3 revenge trades this month, all entered within 5 minutes of a loss. Combined cost: −$485. Average loss on these trades: −$162 vs your −$28 average on planned trades.',
   },
   {
-    severity: 'warning',
-    color: 'var(--amber)',
-    bg: 'rgba(245, 166, 35, 0.05)',
-    border: 'rgba(245, 166, 35, 0.22)',
-    glow: 'rgba(245, 166, 35, 0.15)',
+    type: 'warning',
     icon: AlertTriangle,
+    color: 'var(--amber)',
+    bg: 'rgba(245, 166, 35, 0.06)',
+    border: 'rgba(245, 166, 35, 0.22)',
     title: 'Post-Win Risk Creep Detected',
     stat: '1.1% → 1.9% Risk',
-    desc: 'After 3+ consecutive wins, your average risk increases from 1.1% to 1.9%. Detected 6 times this month — all 6 trades following a win streak produced below-average R:R.',
+    desc: 'After 3+ consecutive wins, your average risk increases from 1.1% to 1.9% — a 73% increase. Detected 6 times this month. All 6 produced below-average R:R results.',
   },
   {
-    severity: 'insight',
-    color: 'var(--accent)',
-    bg: 'rgba(108, 142, 255, 0.05)',
-    border: 'rgba(108, 142, 255, 0.22)',
-    glow: 'rgba(108, 142, 255, 0.15)',
+    type: 'insight',
     icon: Sparkles,
+    color: 'var(--accent)',
+    bg: 'rgba(108, 142, 255, 0.06)',
+    border: 'rgba(108, 142, 255, 0.22)',
     title: 'Best State: Calm & Focused',
     stat: '71% Win Rate',
-    desc: '58% of trades taken while calm or focused. Win rate in this state: 71% vs 38% in negative emotional states. Your best trades consistently have stress ≤3/10.',
+    desc: '58% of trades taken while calm or focused produce a 71% win rate vs 38% in negative emotional states. Trades entered with stress ≤3/10 are your statistically strongest setups.',
   },
 ]
 
-// ── APPLE GLASS PANEL STYLES ─────────────────────────────────
-const glassCardStyle = {
-  background: 'rgba(17, 19, 24, 0.72)',
-  backdropFilter: 'blur(24px) saturate(180%)',
-  WebkitBackdropFilter: 'blur(24px) saturate(180%)',
-  border: '1px solid var(--border)',
-  borderRadius: '14px',
-  boxShadow: 'var(--glass-highlight)',
-  overflow: 'hidden' as const,
-  position: 'relative' as const,
-}
+type RangeLabel = '1W' | '1M' | '3M' | 'YTD' | 'ALL'
+const RANGES: RangeLabel[] = ['1W', '1M', '3M', 'YTD', 'ALL']
 
-const cardHeaderStyle = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  padding: '14px 18px',
-  borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
-}
-
-// ── CUSTOM GLASS TOOLTIPS ────────────────────────────────────
+// ── CUSTOM INSTITUTIONAL TOOLTIPS (SOLID OPAQUE, ZERO BLUR) ───
 interface CustomScatterTooltipProps {
   active?: boolean
   payload?: Array<{
@@ -160,14 +140,13 @@ function CustomScatterTooltip({ active, payload }: CustomScatterTooltipProps) {
   return (
     <div
       style={{
-        background: 'rgba(17, 19, 24, 0.94)',
-        backdropFilter: 'blur(20px) saturate(180%)',
-        WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-        border: '1px solid rgba(255, 255, 255, 0.12)',
-        borderRadius: '10px',
+        background: '#161920',
+        border: '1px solid rgba(255, 255, 255, 0.1)',
+        borderRadius: '8px',
         padding: '10px 14px',
-        boxShadow: '0 16px 36px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+        boxShadow: '0 12px 28px rgba(0, 0, 0, 0.6)',
         minWidth: '160px',
+        fontFamily: 'var(--font-mono)',
         pointerEvents: 'none',
       }}
     >
@@ -178,7 +157,7 @@ function CustomScatterTooltip({ active, payload }: CustomScatterTooltipProps) {
           justifyContent: 'space-between',
           gap: '12px',
           paddingBottom: '6px',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.07)',
           marginBottom: '8px',
         }}
       >
@@ -189,24 +168,23 @@ function CustomScatterTooltip({ active, payload }: CustomScatterTooltipProps) {
               height: '7px',
               borderRadius: '50%',
               background: emotionColor,
-              boxShadow: `0 0 6px ${emotionColor}`,
             }}
           />
-          <span style={{ fontSize: '11px', fontWeight: 700, color: '#FFFFFF' }}>{emotionName} State</span>
+          <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text)' }}>{emotionName} State</span>
         </div>
-        <span style={{ fontSize: '9px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>TRADE</span>
+        <span style={{ fontSize: '9px', color: 'var(--text-3)' }}>EXECUTION</span>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
           <span style={{ color: 'var(--text-2)' }}>Reward:Risk</span>
-          <span style={{ fontWeight: 700, fontFamily: 'var(--font-mono)', color: item.rr >= 0 ? 'var(--green)' : 'var(--red)' }}>
+          <span style={{ fontWeight: 700, color: item.rr >= 0 ? 'var(--green)' : 'var(--red)', fontVariantNumeric: 'tabular-nums' }}>
             {item.rr >= 0 ? '+' : ''}{item.rr.toFixed(1)}R
           </span>
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
           <span style={{ color: 'var(--text-2)' }}>Realized P&L</span>
-          <span style={{ fontWeight: 700, fontFamily: 'var(--font-mono)', color: item.pnl >= 0 ? 'var(--green)' : 'var(--red)' }}>
+          <span style={{ fontWeight: 700, color: item.pnl >= 0 ? 'var(--green)' : 'var(--red)', fontVariantNumeric: 'tabular-nums' }}>
             {item.pnl >= 0 ? `+$${item.pnl}` : `-$${Math.abs(item.pnl)}`}
           </span>
         </div>
@@ -237,14 +215,13 @@ function CustomHourlyTooltip({ active, payload }: CustomHourlyTooltipProps) {
   return (
     <div
       style={{
-        background: 'rgba(17, 19, 24, 0.94)',
-        backdropFilter: 'blur(20px) saturate(180%)',
-        WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-        border: '1px solid rgba(255, 255, 255, 0.12)',
-        borderRadius: '10px',
+        background: '#161920',
+        border: '1px solid rgba(255, 255, 255, 0.1)',
+        borderRadius: '8px',
         padding: '10px 14px',
-        boxShadow: '0 16px 36px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+        boxShadow: '0 12px 28px rgba(0, 0, 0, 0.6)',
         minWidth: '150px',
+        fontFamily: 'var(--font-mono)',
         pointerEvents: 'none',
       }}
     >
@@ -255,20 +232,20 @@ function CustomHourlyTooltip({ active, payload }: CustomHourlyTooltipProps) {
           justifyContent: 'space-between',
           marginBottom: '8px',
           paddingBottom: '5px',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.07)',
         }}
       >
-        <span style={{ fontSize: '11px', fontWeight: 700, fontFamily: 'var(--font-mono)', color: '#FFFFFF' }}>
+        <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text)' }}>
           {item.hour} UTC
         </span>
-        <span style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
+        <span style={{ fontSize: '10px', color: 'var(--text-3)' }}>
           {item.trades} trades
         </span>
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <span style={{ fontSize: '11px', color: 'var(--text-2)' }}>Win Rate</span>
-        <span style={{ fontSize: '13px', fontWeight: 700, color, fontFamily: 'var(--font-mono)' }}>
+        <span style={{ fontSize: '13px', fontWeight: 700, color, fontVariantNumeric: 'tabular-nums' }}>
           {item.wr}%
         </span>
       </div>
@@ -277,22 +254,27 @@ function CustomHourlyTooltip({ active, payload }: CustomHourlyTooltipProps) {
 }
 
 export default function BehaviorPage() {
+  const [range, setRange] = useState<RangeLabel>('1M')
   const [data, setData] = useState<{
     analytics?: PerformanceAnalytics
     recent_trades?: Trade[]
     behavioral_flags?: BehavioralFlag[]
   } | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     let cancelled = false
-    fetch('/api/behavioral/analytics?range=1M', { cache: 'no-store' })
+    setLoading(true)
+
+    fetch(`/api/behavioral/analytics?range=${range}`)
       .then(async r => {
         if (!r.ok) throw new Error(await r.text())
         return r.json()
       })
       .then(j => {
-        if (!cancelled) setData(j)
+        if (!cancelled && j && j.analytics) {
+          setData(j)
+        }
       })
       .catch(() => {
         // graceful demo fallback
@@ -300,13 +282,14 @@ export default function BehaviorPage() {
       .finally(() => {
         if (!cancelled) setLoading(false)
       })
+
     return () => { cancelled = true }
-  }, [])
+  }, [range])
 
   const analytics = data?.analytics ?? null
   const recentTrades = data?.recent_trades ?? []
   const flags = data?.behavioral_flags ?? []
-  const hasLiveTrades = (analytics?.total_trades ?? 0) > 0
+  const hasLiveTrades = Boolean(analytics && analytics.total_trades > 0)
 
   // Calibrated or live radar data
   const radarData = hasLiveTrades ? [
@@ -347,11 +330,10 @@ export default function BehaviorPage() {
         display: 'flex',
         flexDirection: 'column',
         gap: '20px',
-        maxWidth: '1160px',
+        maxWidth: '1200px',
         margin: '0 auto',
         width: '100%',
         minWidth: 0,
-        overflowX: 'clip',
       }}
     >
       <style>{`
@@ -374,7 +356,7 @@ export default function BehaviorPage() {
       <div>
         <div
           style={{
-            fontSize: '11px',
+            fontSize: '10px',
             fontWeight: 700,
             color: 'var(--accent)',
             letterSpacing: '0.8px',
@@ -383,11 +365,12 @@ export default function BehaviorPage() {
             display: 'flex',
             alignItems: 'center',
             gap: '6px',
+            textTransform: 'uppercase',
           }}
         >
           <span>TRADERMIND</span>
           <span style={{ color: 'var(--text-3)' }}>/</span>
-          <span>INTELLIGENCE</span>
+          <span>BEHAVIORAL INTELLIGENCE</span>
         </div>
 
         <div
@@ -406,36 +389,35 @@ export default function BehaviorPage() {
                 style={{
                   width: '32px',
                   height: '32px',
-                  borderRadius: '9px',
-                  background: 'linear-gradient(135deg, rgba(108, 142, 255, 0.2), rgba(180, 142, 255, 0.15))',
-                  border: '1px solid rgba(108, 142, 255, 0.3)',
+                  borderRadius: '8px',
+                  background: 'var(--surface-2)',
+                  border: '1px solid var(--border)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   color: 'var(--accent)',
-                  boxShadow: '0 0 16px rgba(108, 142, 255, 0.25)',
                 }}
               >
                 <Brain size={18} />
               </div>
               <h1
                 style={{
-                  fontSize: '28px',
+                  fontSize: '26px',
                   fontWeight: 800,
                   letterSpacing: '-0.03em',
                   lineHeight: 1.1,
-                  color: '#FFFFFF',
+                  color: 'var(--text)',
                 }}
               >
                 Behavioral Intelligence
               </h1>
             </div>
             <p style={{ fontSize: '12px', color: 'var(--text-3)', marginTop: '6px', fontFamily: 'var(--font-mono)' }}>
-              {loading ? 'Synthesizing psychological telemetry…' : `47 closed trades · Psychological profile, emotional biases & decision analytics`}
+              {loading ? 'Synthesizing psychological telemetry…' : `Deep psychological analysis · Cognitive patterns & decision biases`}
             </p>
           </div>
 
-          {/* Quick Telemetry Summary Pills */}
+          {/* Quick Telemetry & Date Range Picker */}
           <div
             style={{
               display: 'flex',
@@ -449,17 +431,17 @@ export default function BehaviorPage() {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px',
-                padding: '5px 10px',
-                borderRadius: '9999px',
-                background: 'rgba(255, 255, 255, 0.04)',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
+                padding: '4px 10px',
+                borderRadius: '6px',
+                background: 'var(--surface)',
+                border: '1px solid var(--border)',
                 fontSize: '11px',
                 fontFamily: 'var(--font-mono)',
                 color: 'var(--text-2)',
               }}
             >
-              <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: 'var(--green)' }} />
-              <span>Optimal: <strong style={{ color: '#FFFFFF' }}>08:00–12:00 UTC</strong></span>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--green)' }} />
+              <span>Optimal: <strong style={{ color: 'var(--text)' }}>08:00–12:00 UTC</strong></span>
             </div>
 
             <div
@@ -467,8 +449,8 @@ export default function BehaviorPage() {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px',
-                padding: '5px 10px',
-                borderRadius: '9999px',
+                padding: '4px 10px',
+                borderRadius: '6px',
                 background: 'rgba(255, 95, 95, 0.08)',
                 border: '1px solid rgba(255, 95, 95, 0.2)',
                 fontSize: '11px',
@@ -476,7 +458,42 @@ export default function BehaviorPage() {
                 color: 'var(--red)',
               }}
             >
-              <span>Revenge Risk: <strong style={{ color: 'var(--red)' }}>6.4%</strong></span>
+              <span>Revenge Risk: <strong>6.4%</strong></span>
+            </div>
+
+            {/* Date Range Picker */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '2px',
+                background: 'var(--surface)',
+                border: '1px solid var(--border)',
+                borderRadius: '6px',
+                padding: '2px',
+              }}
+            >
+              {RANGES.map(r => (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() => setRange(r)}
+                  style={{
+                    padding: '4px 9px',
+                    fontSize: '11px',
+                    fontFamily: 'var(--font-mono)',
+                    fontWeight: 600,
+                    borderRadius: '4px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    transition: 'all 0.12s ease',
+                    background: range === r ? 'var(--surface-3)' : 'transparent',
+                    color: range === r ? 'var(--text)' : 'var(--text-3)',
+                  }}
+                >
+                  {r}
+                </button>
+              ))}
             </div>
           </div>
         </div>
@@ -489,24 +506,14 @@ export default function BehaviorPage() {
           return (
             <div
               key={alert.title}
-              className="apple-glass-card"
               style={{
-                ...glassCardStyle,
                 background: alert.bg,
-                borderColor: alert.border,
+                border: `1px solid ${alert.border}`,
+                borderRadius: '10px',
                 padding: '18px 20px',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
-                transition: 'border-color 0.15s ease, background 0.15s ease',
-              }}
-              onMouseEnter={e => {
-                e.currentTarget.style.borderColor = alert.color
-                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)'
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.borderColor = alert.border
-                e.currentTarget.style.background = alert.bg
               }}
             >
               <div>
@@ -517,12 +524,12 @@ export default function BehaviorPage() {
                         width: '24px',
                         height: '24px',
                         borderRadius: '6px',
-                        background: 'rgba(255, 255, 255, 0.06)',
+                        background: 'rgba(255, 255, 255, 0.04)',
+                        border: '1px solid rgba(255, 255, 255, 0.08)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         color: alert.color,
-                        boxShadow: `0 0 10px ${alert.glow}`,
                       }}
                     >
                       <Icon size={14} />
@@ -537,7 +544,7 @@ export default function BehaviorPage() {
                         letterSpacing: '0.8px',
                       }}
                     >
-                      {alert.severity}
+                      {alert.type}
                     </span>
                   </div>
 
@@ -549,7 +556,7 @@ export default function BehaviorPage() {
                       color: alert.color,
                       background: 'rgba(255, 255, 255, 0.05)',
                       padding: '2px 7px',
-                      borderRadius: '9999px',
+                      borderRadius: '4px',
                       border: `1px solid ${alert.border}`,
                     }}
                   >
@@ -557,11 +564,11 @@ export default function BehaviorPage() {
                   </span>
                 </div>
 
-                <div style={{ fontSize: '14px', fontWeight: 700, marginBottom: '8px', color: '#FFFFFF' }}>
+                <div style={{ fontSize: '13px', fontWeight: 700, marginBottom: '6px', color: 'var(--text)' }}>
                   {alert.title}
                 </div>
 
-                <p style={{ fontSize: '12.5px', lineHeight: 1.6, color: 'var(--text-2)', margin: 0 }}>
+                <p style={{ fontSize: '12px', lineHeight: 1.6, color: 'var(--text-2)', margin: 0 }}>
                   {alert.desc}
                 </p>
               </div>
@@ -574,34 +581,49 @@ export default function BehaviorPage() {
       <div className="behavior-charts-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
 
         {/* Panel 1: Behavioral Profile Radar Chart */}
-        <div className="apple-glass-card" style={glassCardStyle}>
-          <div style={cardHeaderStyle}>
+        <div
+          style={{
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
+            borderRadius: '10px',
+            overflow: 'hidden',
+          }}
+        >
+          <div
+            style={{
+              padding: '12px 16px',
+              borderBottom: '1px solid var(--border)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Activity size={15} style={{ color: 'var(--accent)' }} />
-              <span style={{ fontSize: '13px', fontWeight: 700, color: '#FFFFFF' }}>
+              <Activity size={14} style={{ color: 'var(--accent)' }} />
+              <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>
                 Behavioral Profile Radar
               </span>
             </div>
-            <span style={{ fontSize: '10.5px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
+            <span style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
               6 Target Dimensions
             </span>
           </div>
 
-          <div style={{ padding: '16px 10px 8px', width: '100%', minWidth: 0, overflow: 'hidden' }}>
-            <ResponsiveContainer width="100%" height={270}>
-              <RadarChart data={radarData} margin={{ top: 12, right: 32, bottom: 12, left: 32 }}>
-                <PolarGrid stroke="rgba(255, 255, 255, 0.08)" />
+          <div style={{ padding: '16px 12px 8px', width: '100%', minWidth: 0, overflow: 'hidden' }}>
+            <ResponsiveContainer width="100%" height={260}>
+              <RadarChart data={radarData} margin={{ top: 10, right: 30, bottom: 10, left: 30 }}>
+                <PolarGrid stroke="rgba(255, 255, 255, 0.07)" />
                 <PolarAngleAxis
                   dataKey="subject"
-                  tick={{ fontSize: 11, fill: 'var(--text-2)', fontFamily: 'var(--font-mono)' }}
+                  tick={{ fontSize: 11, fill: '#8B90A0', fontFamily: 'var(--font-mono)' }}
                 />
                 <Radar
                   dataKey="score"
                   stroke="var(--accent)"
                   fill="var(--accent)"
-                  fillOpacity={0.2}
-                  strokeWidth={2}
-                  dot={{ fill: 'var(--accent)', r: 3.5, stroke: 'var(--surface)', strokeWidth: 1.5 }}
+                  fillOpacity={0.15}
+                  strokeWidth={1.5}
+                  dot={{ fill: 'var(--accent)', r: 3 }}
                 />
               </RadarChart>
             </ResponsiveContainer>
@@ -609,20 +631,35 @@ export default function BehaviorPage() {
         </div>
 
         {/* Panel 2: Emotion vs Reward:Risk Scatter Chart */}
-        <div className="apple-glass-card" style={glassCardStyle}>
-          <div style={cardHeaderStyle}>
+        <div
+          style={{
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
+            borderRadius: '10px',
+            overflow: 'hidden',
+          }}
+        >
+          <div
+            style={{
+              padding: '12px 16px',
+              borderBottom: '1px solid var(--border)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Target size={15} style={{ color: 'var(--green)' }} />
-              <span style={{ fontSize: '13px', fontWeight: 700, color: '#FFFFFF' }}>
+              <Target size={14} style={{ color: 'var(--green)' }} />
+              <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>
                 Emotion vs. Reward:Risk (R)
               </span>
             </div>
-            <span style={{ fontSize: '10.5px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
+            <span style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
               Position Size Scaled
             </span>
           </div>
 
-          <div style={{ padding: '14px 10px 6px' }}>
+          <div style={{ padding: '14px 12px 6px' }}>
             <ResponsiveContainer width="100%" height={220}>
               <ScatterChart margin={{ top: 10, right: 20, left: -10, bottom: 10 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.04)" />
@@ -632,44 +669,43 @@ export default function BehaviorPage() {
                   domain={[0.5, 5.5]}
                   ticks={[1, 2, 3, 4, 5]}
                   tickFormatter={(v: number) => EMOTION_LABELS[v] ?? ''}
-                  tick={{ fontSize: 10, fill: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}
+                  tick={{ fontSize: 10, fill: '#8B90A0', fontFamily: 'var(--font-mono)' }}
                   axisLine={false}
                   tickLine={false}
                 />
                 <YAxis
                   dataKey="rr"
-                  tick={{ fontSize: 10, fill: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}
+                  tick={{ fontSize: 10, fill: '#8B90A0', fontFamily: 'var(--font-mono)' }}
                   axisLine={false}
                   tickLine={false}
                   tickFormatter={(v: number) => `${v}R`}
                 />
-                <ZAxis dataKey="size" range={[50, 220]} />
+                <ZAxis dataKey="size" range={[60, 220]} />
                 <Tooltip content={<CustomScatterTooltip />} cursor={{ strokeDasharray: '3 3', stroke: 'rgba(255, 255, 255, 0.15)' }} />
                 {scatterData.map((d: { emotion: number; rr: number; pnl: number; size: number }, i: number) => (
                   <Scatter
                     key={i}
                     data={[d]}
                     fill={EMOTION_COLORS[d.emotion] ?? 'var(--accent)'}
-                    fillOpacity={0.8}
+                    fillOpacity={0.85}
                   />
                 ))}
               </ScatterChart>
             </ResponsiveContainer>
 
-            {/* Scatter Legend */}
-            <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', padding: '6px 0 10px', flexWrap: 'wrap' }}>
+            {/* Scatter Legend Below Chart */}
+            <div style={{ display: 'flex', gap: '14px', justifyContent: 'center', padding: '8px 0 6px', flexWrap: 'wrap' }}>
               {Object.entries(EMOTION_LABELS).map(([k, label]) => (
                 <div key={k} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <div
                     style={{
-                      width: '8px',
-                      height: '8px',
+                      width: '7px',
+                      height: '7px',
                       borderRadius: '50%',
                       background: EMOTION_COLORS[Number(k)],
-                      boxShadow: `0 0 6px ${EMOTION_COLORS[Number(k)]}`,
                     }}
                   />
-                  <span style={{ fontSize: '10.5px', color: 'var(--text-2)', fontFamily: 'var(--font-mono)' }}>{label}</span>
+                  <span style={{ fontSize: '10.5px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>{label}</span>
                 </div>
               ))}
             </div>
@@ -677,15 +713,30 @@ export default function BehaviorPage() {
         </div>
 
         {/* Panel 3: Hourly Win Rate Bar Chart */}
-        <div className="apple-glass-card" style={glassCardStyle}>
-          <div style={cardHeaderStyle}>
+        <div
+          style={{
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
+            borderRadius: '10px',
+            overflow: 'hidden',
+          }}
+        >
+          <div
+            style={{
+              padding: '12px 16px',
+              borderBottom: '1px solid var(--border)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Clock size={15} style={{ color: 'var(--teal)' }} />
-              <span style={{ fontSize: '13px', fontWeight: 700, color: '#FFFFFF' }}>
+              <Clock size={14} style={{ color: 'var(--teal)' }} />
+              <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>
                 Win Rate by Hour (UTC)
               </span>
             </div>
-            <span style={{ fontSize: '10.5px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
+            <span style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
               24h Session Distribution
             </span>
           </div>
@@ -696,19 +747,19 @@ export default function BehaviorPage() {
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.04)" vertical={false} />
                 <XAxis
                   dataKey="hour"
-                  tick={{ fontSize: 9.5, fill: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}
+                  tick={{ fontSize: 9.5, fill: '#8B90A0', fontFamily: 'var(--font-mono)' }}
                   axisLine={false}
                   tickLine={false}
                 />
                 <YAxis
                   domain={[0, 100]}
-                  tick={{ fontSize: 9.5, fill: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}
+                  tick={{ fontSize: 9.5, fill: '#8B90A0', fontFamily: 'var(--font-mono)' }}
                   axisLine={false}
                   tickLine={false}
                   tickFormatter={(v: number) => `${v}%`}
                 />
                 <Tooltip content={<CustomHourlyTooltip />} cursor={{ fill: 'rgba(255, 255, 255, 0.03)' }} />
-                <Bar dataKey="wr" radius={[4, 4, 0, 0]}>
+                <Bar dataKey="wr" radius={[3, 3, 0, 0]}>
                   {HOURLY_DATA.map((entry, i) => (
                     <Cell
                       key={i}
@@ -722,15 +773,30 @@ export default function BehaviorPage() {
         </div>
 
         {/* Panel 4: Behavioral Patterns Timeline */}
-        <div className="apple-glass-card" style={glassCardStyle}>
-          <div style={cardHeaderStyle}>
+        <div
+          style={{
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
+            borderRadius: '10px',
+            overflow: 'hidden',
+          }}
+        >
+          <div
+            style={{
+              padding: '12px 16px',
+              borderBottom: '1px solid var(--border)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Activity size={15} style={{ color: 'var(--purple)' }} />
-              <span style={{ fontSize: '13px', fontWeight: 700, color: '#FFFFFF' }}>
+              <Activity size={14} style={{ color: 'var(--purple)' }} />
+              <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>
                 Behavioral Event Log
               </span>
             </div>
-            <span style={{ fontSize: '10.5px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
+            <span style={{ fontSize: '10px', color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
               May 2026 Audit Trail
             </span>
           </div>
@@ -745,12 +811,8 @@ export default function BehaviorPage() {
                     display: 'flex',
                     gap: '12px',
                     alignItems: 'flex-start',
-                    padding: '6px 8px',
-                    borderRadius: '8px',
-                    transition: 'background 0.15s ease',
+                    padding: '4px 0',
                   }}
-                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)')}
-                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                 >
                   <div
                     style={{
@@ -760,7 +822,6 @@ export default function BehaviorPage() {
                       marginTop: '6px',
                       flexShrink: 0,
                       background: dotColor,
-                      boxShadow: `0 0 6px ${dotColor}`,
                     }}
                   />
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -774,17 +835,17 @@ export default function BehaviorPage() {
                           fontWeight: 700,
                           color: item.delta.startsWith('+') ? 'var(--green)' : 'var(--red)',
                           fontFamily: 'var(--font-mono)',
-                          fontFeatureSettings: '"tnum" 1',
+                          fontVariantNumeric: 'tabular-nums',
                           background: item.delta.startsWith('+') ? 'rgba(62, 207, 142, 0.1)' : 'rgba(255, 95, 95, 0.1)',
                           padding: '1px 6px',
-                          borderRadius: '9999px',
+                          borderRadius: '4px',
                           border: `1px solid ${item.delta.startsWith('+') ? 'rgba(62, 207, 142, 0.25)' : 'rgba(255, 95, 95, 0.25)'}`,
                         }}
                       >
                         {item.delta}
                       </span>
                     </div>
-                    <p style={{ fontSize: '12.5px', color: 'var(--text-2)', lineHeight: 1.5, margin: 0 }}>
+                    <p style={{ fontSize: '12px', color: 'var(--text-2)', lineHeight: 1.5, margin: 0 }}>
                       {item.event}
                     </p>
                   </div>
