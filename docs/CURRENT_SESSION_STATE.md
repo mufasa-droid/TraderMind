@@ -32,6 +32,7 @@ Every core feature of the platform is fully implemented, responsive, and passing
 
 ## 2. Git Commit History (Recent Milestone Commits)
 
+- `4febe13` — `feat: redesign AI coach hub with 71UI dark institutional precision`
 - `77ea802` — `feat: redesign behavioral intelligence page with 71UI dark institutional precision`
 - `737aab4` — `fix: route analytics fetch to /api/behavioral/analytics`
 - `4b89551` — `feat: redesign dashboard shell and overview with 71UI dark institutional precision`
